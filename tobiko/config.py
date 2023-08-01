@@ -30,6 +30,7 @@ LOG = log.getLogger(__name__)
 
 CONFIG_MODULES = ['tobiko.common._case',
                   'tobiko.openstack.glance.config',
+                  'tobiko.openstack.manila.config',
                   'tobiko.openstack.keystone.config',
                   'tobiko.openstack.neutron.config',
                   'tobiko.openstack.nova.config',
@@ -418,3 +419,8 @@ def is_prevent_create() -> bool:
 def skip_if_prevent_create(reason='TOBIKO_PREVENT_CREATE is True'):
     return tobiko.skip_if(reason=reason,
                           predicate=is_prevent_create)
+
+
+def skip_unless_prevent_create(reason='TOBIKO_PREVENT_CREATE is False'):
+    return tobiko.skip_unless(reason=reason,
+                              predicate=is_prevent_create)

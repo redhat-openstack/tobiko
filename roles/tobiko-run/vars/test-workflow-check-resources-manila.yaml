@@ -1,0 +1,8 @@
+---
+
+test_workflow_steps:
+  - tox_description: 'check manila resources'
+    tox_envlist: manila
+    tox_step_name: check_manila_resources
+    tox_environment:
+      TOBIKO_PREVENT_CREATE: yes

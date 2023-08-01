@@ -359,7 +359,7 @@ python-keystoneclient===4.4.0
 python-ldap===3.4.0
 python-linstor===1.13.0
 python-magnumclient===3.6.0
-python-manilaclient===3.3.1
+python-manilaclient===4.5.1
 python-masakariclient===7.2.0
 python-memcached===1.59
 python-mistralclient===4.4.0

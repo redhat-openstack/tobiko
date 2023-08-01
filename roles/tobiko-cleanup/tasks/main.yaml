@@ -38,3 +38,11 @@
         grep "^tobiko\." | \
         xargs -r {{ openstack_cmd }} image delete
   ignore_errors: yes
+
+- name: "cleanup Manila shares created by Tobiko tests"
+  shell: |
+    source {{ stackrc_file }}
+    openstack share list -f value -c 'Name' | \
+        grep "^tobiko" | \
+        xargs -r openstack share delete --force
+  ignore_errors: yes

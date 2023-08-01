@@ -25,6 +25,7 @@ python-designateclient==4.4.0
 python-glanceclient==3.2.2
 python-heatclient==2.3.0
 python-ironicclient==4.6.1
+python-manilaclient==4.5.1
 python-neutronclient==7.2.1
 python-novaclient==17.2.1
 python-octaviaclient==2.2.0

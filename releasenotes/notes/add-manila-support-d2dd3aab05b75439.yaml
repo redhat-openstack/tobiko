@@ -1,0 +1,4 @@
+---
+features:
+  - |
+    Added Manila support and testing. Now Manila tests can be run on tobiko as well.
