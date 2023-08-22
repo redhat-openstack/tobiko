@@ -206,14 +206,25 @@ class DisruptTripleoNodesTest(testtools.TestCase):
 
     def tearDown(self):
         super(DisruptTripleoNodesTest, self).tearDown()
-        for vm in self.vms_detailed_info or []:
+        for i, vm in enumerate(self.vms_detailed_info or []):
             if vm is None or vm.get('id') is None:
-                continue
-            vm_id = vm['id']
+                # server_name pattern comes from multi_ip_test_stack.yaml
+                server_name = "group_of_vms_%d" % i
+                try:
+                    server = nova_osp.find_server(unique=True,
+                                                  name=server_name)
+                except tobiko.ObjectNotFound:
+                    LOG.debug(f"Server {server_name} not found. "
+                              "Perhaps it was never created.")
+                    continue
+                vm_id = server.id
+            else:
+                vm_id = vm['id']
             try:
                 nova_osp.delete_server(vm_id)
             except nova_osp.ServerNotFoundError:
-                LOG.debug(f"Server {vm_id} not found")
+                LOG.debug(f"Server {vm_id} not found. "
+                          "Perhaps it was already deleted.")
 
     @testtools.skipIf(has_external_lb, SKIP_MESSAGE_EXTLB)
     def test_z99_reboot_controller_galera_main_vip(self):
