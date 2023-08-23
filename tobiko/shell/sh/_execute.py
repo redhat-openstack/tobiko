@@ -158,21 +158,23 @@ def execute(command, environment=None, timeout=None, shell=None,
                            stdin=stdin,
                            login=login,
                            expect_exit_status=expect_exit_status,
-                           decode_streams=decode_streams)
+                           decode_streams=decode_streams,
+                           timeout=timeout)
 
 
 def execute_process(process: _process.ShellProcessFixture,
                     stdin=None,
                     expect_exit_status=0,
                     login=None,
-                    decode_streams=True) \
+                    decode_streams=True,
+                    timeout=None) \
         -> ShellExecuteResult:
     error = None
     status = None
     try:
         with process:
             if stdin and isinstance(stdin, DATA_TYPES):
-                process.send_all(data=stdin)
+                process.send_all(data=stdin, timeout=timeout)
     except _exception.ShellTimeoutExpired:
         status = ShellExecuteStatus.TIMEDOUT
         if expect_exit_status is not None:
