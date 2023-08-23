@@ -201,6 +201,9 @@ class Retry(object):
                         _time.sleep(sleep_time)
                         elapsed_time = _time.time() - start_time
 
+            if not sleep_time:  # sleep_time is None or 0.
+                LOG.debug(f"retrying without waiting... ({attempt.details})")
+
     @property
     def details(self) -> str:
         details = []

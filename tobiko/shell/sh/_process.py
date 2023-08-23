@@ -349,7 +349,7 @@ class ShellProcessFixture(tobiko.SharedFixture):
         try:
             attempt.check_limits()
         except tobiko.RetryTimeLimitError:
-            pass
+            LOG.exception("retry timeout expired")
         else:
             return
         # Eventually raises ShellCommandTimeout exception
