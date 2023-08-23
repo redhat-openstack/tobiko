@@ -431,6 +431,7 @@ def execute_pcs(command_args: list,
                 ssh_client: ssh.SSHClientFixture = None,
                 pcs_command: sh.ShellCommand = None,
                 add_stderr: bool = False,
+                timeout: float = 40.,
                 **execute_params) -> str:
     if ssh_client is None:
         ssh_client = topology.find_openstack_node(
@@ -444,7 +445,7 @@ def execute_pcs(command_args: list,
     command = pcs_command + command_args
     result = sh.execute(
         command, ssh_client=ssh_client, stdin=False, stdout=True, stderr=True,
-        **execute_params)
+        timeout=timeout, **execute_params)
 
     if add_stderr:
         output = '\n'.join([result.stdout, result.stderr])
