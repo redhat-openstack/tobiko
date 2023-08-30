@@ -179,10 +179,22 @@ class OctaviaBasicFaultTest(testtools.TestCase):
         # Finding the amphora haproxy unit name and stop it
         amp_haproxy_unit_command = (
             "systemctl list-units | awk '/haproxy-/{print $1}'")
-        amp_haproxy_unit = octavia.run_command_on_amphora(
-            command=amp_haproxy_unit_command,
-            lb_id=self.lb.id,
-            lb_vip=self.lb.vip_address)
+
+        for attempt in tobiko.retry(timeout=300., interval=5.):
+            amp_haproxy_unit = octavia.run_command_on_amphora(
+                command=amp_haproxy_unit_command,
+                lb_id=self.lb.id,
+                lb_vip=self.lb.vip_address)
+
+            if amp_haproxy_unit:
+                break
+
+            # it will raise tobiko.RetryTimeLimitError in case of timeout
+            attempt.check_limits()
+
+            LOG.debug(f"Waiting for haproxy instance on LB {self.lb.id} to get"
+                      " the haproxy unit id")
+
         LOG.info(f'The amp_haproxy_unit is {amp_haproxy_unit}')
 
         octavia.run_command_on_amphora(
