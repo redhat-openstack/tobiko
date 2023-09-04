@@ -38,6 +38,7 @@ list_services = _client.list_services
 nova_client = _client.nova_client
 NovaClientFixture = _client.NovaClientFixture
 wait_for_server_status = _client.wait_for_server_status
+wait_for_guest_os_ready = _client.wait_for_guest_os_ready
 WaitForServerStatusError = _client.WaitForServerStatusError
 WaitForServerStatusTimeout = _client.WaitForServerStatusTimeout
 shutoff_server = _client.shutoff_server

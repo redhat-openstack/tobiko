@@ -20,6 +20,7 @@ import typing
 from abc import ABC
 
 import netaddr
+from oslo_concurrency import lockutils
 from oslo_log import log
 
 import tobiko
@@ -278,20 +279,24 @@ class ServerStackFixture(heat.HeatStackFixture, abc.ABC):
             hypervisors = nova.list_servers_hypervisors(self.same_host)
             if hypervisor not in hypervisors:
                 self.migrate_server(live=True,
-                                    host=hypervisors.unique)
+                                    host=hypervisors.unique,
+                                    wait_for_guest_os=True)
 
     def validate_different_host_scheduler_hints(self, hypervisor):
         if self.different_host:
             hypervisors = nova.list_servers_hypervisors(self.different_host)
             if hypervisor in hypervisors:
-                self.migrate_server(live=True)
+                self.migrate_server(live=True, wait_for_guest_os=True)
 
     def migrate_server(self,
                        live=False,
                        host: str = None,
-                       block_migration: bool = None) \
+                       block_migration: bool = None,
+                       wait_for_guest_os: bool = False) \
             -> nova.NovaServer:
         server = nova.activate_server(server=self.server_id)
+        if wait_for_guest_os:
+            nova.wait_for_guest_os_ready(server)
         if live:
             nova.live_migrate_server(server,
                                      host=host,
@@ -423,6 +428,17 @@ class CloudInitServerStackFixture(ServerStackFixture, ABC):
     swap_size: typing.Optional[int] = None
     #: nax SWAP file size in bytes
     swap_maxsize: typing.Optional[int] = None
+
+    @lockutils.synchronized(
+        'cloudinit_server_setup_fixture',
+        external=True, lock_path=tobiko.LOCK_DIR)
+    def setup_fixture(self):
+        super(CloudInitServerStackFixture, self).setup_fixture()
+        nova.wait_for_guest_os_ready(server_id=self.server_id,
+                                     timeout=900.)
+        if self.has_floating_ip:
+            self.assert_is_reachable()
+            self.wait_for_cloud_init_done()
 
     @property
     def is_reachable_timeout(self) -> tobiko.Seconds:

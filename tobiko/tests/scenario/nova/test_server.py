@@ -14,7 +14,6 @@
 #    under the License.
 from __future__ import absolute_import
 
-import abc
 import contextlib
 import random
 
@@ -188,18 +187,7 @@ class CirrosServerTest(BaseServerTest):
     stack = tobiko.required_fixture(CirrosServerStackFixture)
 
 
-class CloudInitServerStackFixture(stacks.CloudInitServerStackFixture,
-                                  abc.ABC):
-
-    def validate_created_stack(self):
-        stack = super().validate_created_stack()
-        self.wait_for_cloud_init_done()
-        self.assert_is_reachable()
-        return stack
-
-
-class UbuntuMinimalServerStackFixture(CloudInitServerStackFixture,
-                                      stacks.UbuntuMinimalServerStackFixture):
+class UbuntuMinimalServerStackFixture(stacks.UbuntuMinimalServerStackFixture):
     pass
 
 
@@ -209,8 +197,7 @@ class UbuntuMinimalServerTest(BaseServerTest):
     stack = tobiko.required_fixture(UbuntuMinimalServerStackFixture)
 
 
-class UbuntuServerStackFixture(CloudInitServerStackFixture,
-                               stacks.UbuntuServerStackFixture):
+class UbuntuServerStackFixture(stacks.UbuntuServerStackFixture):
     pass
 
 

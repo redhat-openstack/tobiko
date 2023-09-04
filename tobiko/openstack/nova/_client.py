@@ -314,6 +314,28 @@ def get_console_output(server: typing.Optional[ServerType] = None,
     return None
 
 
+def wait_for_guest_os_ready(server: typing.Optional[ServerType] = None,
+                            server_id: typing.Optional[str] = None,
+                            timeout: tobiko.Seconds = 120.,
+                            interval: tobiko.Seconds = 5.,
+                            client: NovaClientType = None) -> None:
+
+    def system_booted():
+        console_output = get_console_output(
+            server=server, server_id=server_id, client=client) or ''
+        for line in console_output.splitlines():
+            if 'login:' in line.lower():
+                return True
+        return False
+
+    for _ in tobiko.retry(timeout=timeout, interval=interval):
+        if system_booted():
+            LOG.debug('VM boot completed successfully')
+            return
+        else:
+            LOG.debug('VM boot not completed yet')
+
+
 class HasNovaClientMixin(object):
 
     nova_client: NovaClientType = None
