@@ -288,6 +288,10 @@ class ServerStackFixture(heat.HeatStackFixture, abc.ABC):
             if hypervisor in hypervisors:
                 self.migrate_server(live=True, wait_for_guest_os=True)
 
+    def wait_for_guest_os_ready(self, timeout=None):
+        nova.wait_for_guest_os_ready(server_id=self.server_id,
+                                     timeout=timeout)
+
     def migrate_server(self,
                        live=False,
                        host: str = None,
@@ -296,7 +300,7 @@ class ServerStackFixture(heat.HeatStackFixture, abc.ABC):
             -> nova.NovaServer:
         server = nova.activate_server(server=self.server_id)
         if wait_for_guest_os:
-            nova.wait_for_guest_os_ready(server)
+            self.wait_for_guest_os_ready()
         if live:
             nova.live_migrate_server(server,
                                      host=host,
@@ -434,11 +438,14 @@ class CloudInitServerStackFixture(ServerStackFixture, ABC):
         external=True, lock_path=tobiko.LOCK_DIR)
     def setup_fixture(self):
         super(CloudInitServerStackFixture, self).setup_fixture()
-        nova.wait_for_guest_os_ready(server_id=self.server_id,
-                                     timeout=900.)
+        self.wait_for_guest_os_ready()
         if self.has_floating_ip:
             self.assert_is_reachable()
             self.wait_for_cloud_init_done()
+
+    def wait_for_guest_os_ready(self, timeout=900.):
+        super(CloudInitServerStackFixture, self).wait_for_guest_os_ready(
+            timeout=timeout)
 
     @property
     def is_reachable_timeout(self) -> tobiko.Seconds:
