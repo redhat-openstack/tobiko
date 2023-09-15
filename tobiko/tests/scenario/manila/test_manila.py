@@ -18,9 +18,11 @@ from __future__ import absolute_import
 import testtools
 from oslo_log import log
 
+import tobiko
 from tobiko import config
 from tobiko.openstack import keystone
 from tobiko.openstack import manila
+from tobiko.openstack import stacks
 
 LOG = log.getLogger(__name__)
 CONF = config.CONF
@@ -35,20 +37,18 @@ class ManilaApiTestCase(testtools.TestCase):
     After upgrade/disruptions/etc, check the share is still valid and it can be
     extended.
     """
-    @classmethod
-    def setUpClass(cls):
-        if config.get_bool_env('TOBIKO_PREVENT_CREATE'):
-            LOG.debug('skipping creation of manila resources')
-            cls.share = manila.get_shares_by_name(manila.SHARE_NAME)[0]
-        else:
-            manila.ensure_default_share_type_exists()
-            cls.share = manila.create_share(name=manila.SHARE_NAME)
+    share_fixture = tobiko.required_fixture(stacks.ManilaShareFixture)
+    share = None
 
-        manila.wait_for_share_status(cls.share['id'])
+    def setUp(self):
+        super(ManilaApiTestCase, self).setUp()
+        self.share = self.share_fixture.share
 
     @config.skip_if_prevent_create()
     def test_1_create_share(self):
-        self.assertEqual(manila.SHARE_NAME, self.share['name'])
+        manila.wait_for_share_status(self.share['id'])
+        found_shares = manila.get_shares_by_name(self.share['name'])
+        self.assertEqual(len(found_shares), 1)
 
     @config.skip_unless_prevent_create()
     def test_2_extend_share(self):

@@ -18,6 +18,7 @@ from __future__ import absolute_import
 from tobiko.openstack.stacks import _cirros
 from tobiko.openstack.stacks import _designate
 from tobiko.openstack.stacks import _l3ha
+from tobiko.openstack.stacks import _manila
 from tobiko.openstack.stacks import _neutron
 from tobiko.openstack.stacks import _nova
 from tobiko.openstack.stacks import _octavia
@@ -101,3 +102,6 @@ AdvancedPeerServerStackFixture = _advanced_vm.AdvancedPeerServerStackFixture
 
 VlanNetworkStackFixture = _vlan.VlanNetworkStackFixture
 VlanProxyServerStackFixture = _vlan.VlanProxyServerStackFixture
+
+# Manila resources
+ManilaShareFixture = _manila.ManilaShareFixture
