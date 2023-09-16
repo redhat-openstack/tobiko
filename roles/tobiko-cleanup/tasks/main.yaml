@@ -1,9 +1,10 @@
 ---
 - name: "cleanup Loadbalancers created by Tobiko tests"
   shell: |
-    {{ openstack_cmd }} loadbalancer list -f value -c 'name' | \
-        grep "^tobiko\." | \
-        xargs -r {{ openstack_cmd }} loadbalancer delete --cascade --wait
+    for lb in $({{ openstack_cmd }} loadbalancer list -f value -c 'name' | grep "^tobiko\.")
+    do
+        {{ openstack_cmd }} loadbalancer delete --cascade --wait $lb
+    done
   ignore_errors: yes
 
 - name: "cleanup Heat stacks created by Tobiko tests"
