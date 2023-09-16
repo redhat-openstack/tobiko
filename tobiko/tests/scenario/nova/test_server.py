@@ -58,6 +58,7 @@ class BaseServerTest(testtools.TestCase):
         self.assert_is_unreachable()
 
         self.ensure_server(status='ACTIVE')
+        self.stack.wait_for_guest_os_ready()
         self.assert_is_reachable()
 
     @pytest.mark.server_migrate
