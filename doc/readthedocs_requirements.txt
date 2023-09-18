@@ -6,3 +6,4 @@
 -r ../test-requirements.txt
 -r ../extra-requirements.txt
 -r ./requirements.txt
+sphinx_rtd_theme>=0.5.1       # MIT
