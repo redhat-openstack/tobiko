@@ -278,8 +278,8 @@ class CirrosServerWithStatelessSecurityGroupFixture(
     """Heat stack for testing a floating IP instance with port security"""
 
     #: Resources stack with security group to allow ping Nova servers
-    security_groups_stack = tobiko.required_fixture(
-        stacks.StatelessSecurityGroupFixture)
+    security_groups_stack: tobiko.RequiredFixture = \
+        tobiko.required_fixture(stacks.StatelessSecurityGroupFixture)
 
     @property
     def security_groups(self) -> typing.List[str]:
