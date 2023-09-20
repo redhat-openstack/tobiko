@@ -438,7 +438,14 @@ class CloudInitServerStackFixture(ServerStackFixture, ABC):
         external=True, lock_path=tobiko.LOCK_DIR)
     def setup_fixture(self):
         super(CloudInitServerStackFixture, self).setup_fixture()
-        self.wait_for_guest_os_ready()
+
+        if config.get_bool_env('TOBIKO_PREVENT_CREATE'):
+            LOG.debug("skip wait_for_guest_os_ready during check-resources "
+                      "steps because the console output may be empty in some "
+                      "cases, such as hypervisor reboot")
+        else:
+            self.wait_for_guest_os_ready()
+
         if self.has_floating_ip:
             self.assert_is_reachable()
             self.wait_for_cloud_init_done()
