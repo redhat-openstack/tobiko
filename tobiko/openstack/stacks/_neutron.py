@@ -302,6 +302,11 @@ class SubnetPoolFixture(_fixture.ResourceFixture):
     _not_found_exception_tuple: typing.Type[
         neutron.NoSuchSubnetPool] = (neutron.NoSuchSubnetPool)
 
+    def __init__(self, prefixes=None, default_prefixlen=None):
+        super().__init__()
+        self.prefixes = prefixes or self.prefixes
+        self.default_prefixlen = default_prefixlen or self.default_prefixlen
+
     @property
     def subnet_pool_id(self):
         return self.resource_id
@@ -611,6 +616,11 @@ class StatelessSecurityGroupFixture(_fixture.ResourceFixture):
     _not_found_exception_tuple: typing.Type[nc_exceptions.NotFound] = (
         neutron.NotFound)
 
+    def __init__(self, description=None, rules=None):
+        super().__init__()
+        self.description = description or self.description
+        self.rules = rules or self.rules
+
     @property
     def security_group_id(self):
         return self.resource_id
@@ -634,7 +644,8 @@ class StatelessSecurityGroupFixture(_fixture.ResourceFixture):
             neutron.create_security_group_rule(
                 sg['id'], add_cleanup=False, **rule)
 
-        return sg
+        # return the updated SG, including the rules just added
+        return self.resource_find()
 
     def resource_delete(self):
         neutron.delete_security_group(self.security_group_id)

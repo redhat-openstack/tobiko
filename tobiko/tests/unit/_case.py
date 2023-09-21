@@ -48,10 +48,11 @@ class PatchEnvironFixture(tobiko.SharedFixture):
 
 class FixtureManagerPatch(tobiko.FixtureManager, _patch.PatchFixture):
 
-    def init_fixture(self, obj, name, fixture_id):
+    def init_fixture(self, obj, name, fixture_id, **kwargs):
         fixture = super().init_fixture(obj=obj,
                                        name=name,
-                                       fixture_id=fixture_id)
+                                       fixture_id=fixture_id,
+                                       **kwargs)
         self.addCleanup(tobiko.cleanup_fixture, fixture)
         return fixture
 

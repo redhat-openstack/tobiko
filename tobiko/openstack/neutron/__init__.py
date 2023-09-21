@@ -146,6 +146,7 @@ get_subnet_pool = _subnet_pool.get_subnet_pool
 create_subnet_pool = _subnet_pool.create_subnet_pool
 delete_subnet_pool = _subnet_pool.delete_subnet_pool
 find_subnet_pool = _subnet_pool.find_subnet_pool
+list_subnet_pools = _subnet_pool.list_subnet_pools
 
 list_security_groups = _security_group.list_security_groups
 get_security_group = _security_group.get_security_group
