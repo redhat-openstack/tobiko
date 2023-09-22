@@ -136,7 +136,10 @@ resources:
       image: {get_param: image}
       flavor: {get_param: flavor}
       networks:
-        - port: {get_resource: port}
+        if:
+        - "has_vlan"
+        - [port: {get_attr: [trunk, port_id]}]
+        - [port: {get_resource: port}]
       scheduler_hints: {get_param: scheduler_hints}
       config_drive: {get_param: config_drive}
       user_data_format: RAW
