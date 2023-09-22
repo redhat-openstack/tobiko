@@ -165,7 +165,7 @@ class DisruptTripleoNodesTest(testtools.TestCase):
     def test_0vercloud_health_check(self):
         OvercloudHealthCheck.run_before(skip_mac_table_size_test=False)
 
-    @nova.skip_background_vm_ping_checks
+    @nova.skip_background_vm_ping_checks_when_nondvr
     def test_z99_hard_reboot_controllers_recovery(self):
         OvercloudHealthCheck.run_before()
         cloud_disruptions.reset_all_controller_nodes()
@@ -215,6 +215,7 @@ class DisruptTripleoNodesTest(testtools.TestCase):
             except nova_osp.ServerNotFoundError:
                 LOG.debug(f"Server {vm_id} not found")
 
+    @nova.skip_background_vm_ping_checks_when_nondvr
     @testtools.skipIf(has_external_lb, SKIP_MESSAGE_EXTLB)
     def test_z99_reboot_controller_galera_main_vip(self):
         # This test case may fail at times if RHBZ#2124877 is not resolved
@@ -231,24 +232,28 @@ class DisruptTripleoNodesTest(testtools.TestCase):
         cloud_disruptions.check_no_duplicate_ips(
             self.vms_detailed_info, ports_before_stack_creation)
 
+    @nova.skip_background_vm_ping_checks_when_nondvr
     @testtools.skipIf(has_external_lb, SKIP_MESSAGE_EXTLB)
     def test_z99_reboot_controller_main_vip(self):
         OvercloudHealthCheck.run_before()
         cloud_disruptions.reset_controller_main_vip()
         OvercloudHealthCheck.run_after()
 
+    @nova.skip_background_vm_ping_checks_when_nondvr
     @testtools.skipIf(has_external_lb, SKIP_MESSAGE_EXTLB)
     def test_z99_reboot_controller_non_main_vip(self):
         OvercloudHealthCheck.run_before()
         cloud_disruptions.reset_controllers_non_main_vip()
         OvercloudHealthCheck.run_after()
 
+    @nova.skip_background_vm_ping_checks_when_nondvr
     @testtools.skipIf(has_external_lb, SKIP_MESSAGE_EXTLB)
     def test_z99_crash_controller_main_vip(self):
         OvercloudHealthCheck.run_before()
         cloud_disruptions.crash_controller_main_vip()
         OvercloudHealthCheck.run_after()
 
+    @nova.skip_background_vm_ping_checks_when_nondvr
     @overcloud.skip_unless_kexec_tools_installed
     @testtools.skipIf(has_external_lb, SKIP_MESSAGE_EXTLB)
     def test_z99_crash_controller_non_main_vip(self):
@@ -256,6 +261,7 @@ class DisruptTripleoNodesTest(testtools.TestCase):
         cloud_disruptions.crash_controllers_non_main_vip()
         OvercloudHealthCheck.run_after()
 
+    @nova.skip_background_vm_ping_checks_when_nondvr
     @pacemaker.skip_if_fencing_not_deployed
     @testtools.skipIf(has_external_lb, SKIP_MESSAGE_EXTLB)
     def test_network_disruptor_main_vip(self):
@@ -317,6 +323,7 @@ class DisruptTripleoNodesTest(testtools.TestCase):
         cloud_disruptions.request_galera_sst()
         OvercloudHealthCheck.run_after()
 
+    @nova.skip_background_vm_ping_checks_when_nondvr
     @pytest.mark.flaky(reruns=0)
     def test_controllers_shutdown(self):
         OvercloudHealthCheck.run_before()

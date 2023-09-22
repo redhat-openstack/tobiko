@@ -268,7 +268,20 @@ def skip_background_vm_ping_checks(func):
     must be dropped for the duration of the test - func"""
     @wraps(func)
     def wrapper(*args):  # pylint: disable=W0613
+        tobiko.add_cleanup(skip_check_or_start_background_vm_ping)
         check_or_start_background_vm_ping()
         func(*args)
-        skip_check_or_start_background_vm_ping()
+    return wrapper
+
+
+def skip_background_vm_ping_checks_when_nondvr(func):
+    """Similar to skip_background_vm_ping_checks, but the background ping
+    checks and the restart of the background ping process is only executed when
+    DVR is disabled"""
+    @wraps(func)
+    def wrapper(*args):  # pylint: disable=W0613
+        if not overcloud.is_dvr_enabled():
+            tobiko.add_cleanup(skip_check_or_start_background_vm_ping)
+            check_or_start_background_vm_ping()
+        func(*args)
     return wrapper
