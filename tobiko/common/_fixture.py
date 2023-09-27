@@ -568,7 +568,11 @@ class SharedFixture(fixtures.Fixture):
 
     def cleanUp(self, raise_first=True):
         """Executes registered cleanups if any"""
-        if not self._cleanup_executed:
+        from tobiko import config
+        if config.get_bool_env('TOBIKO_PREVENT_CREATE'):
+            LOG.debug('Skipping %r fixture cleanup due to '
+                      'TOBIKO_PREVENT_CREATE', self.fixture_name)
+        elif not self._cleanup_executed:
             LOG.debug('Clean up fixture %r', self.fixture_name)
             self.addCleanup(self.cleanup_fixture)
         result = super(SharedFixture, self).cleanUp(raise_first=raise_first)
