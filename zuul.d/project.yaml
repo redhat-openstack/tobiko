@@ -4,28 +4,38 @@
       - build-openstack-docs-pti
       - build-release-notes-jobs-python3
       - check-requirements
-      - devstack-tobiko
-      - devstack-tobiko-designate
-      - devstack-tobiko-functional
-      - devstack-tobiko-heat
-      - devstack-tobiko-minimal
-      - devstack-tobiko-neutron
-      - devstack-tobiko-nova
-      - devstack-tobiko-octavia
-      - devstack-tobiko-ovs
-      - devstack-tobiko-sanity
-      - devstack-tobiko-storage
-      - docs-on-readthedocs
       - openstack-cover-jobs
-      - openstack-python3-yoga-jobs
-      - openstack-python3-yoga-jobs-arm64
-      - openstack-python3-zed-jobs
-      - openstack-python3-zed-jobs-arm64
       - publish-to-pypi
-      - tobiko-docker
-      - tobiko-infrared
-    vars:
-        rtd_webhook_id: '84947'
+    check:
+      jobs:
+        # NOTE(slaweq): this UT job is from the openstack-python3-train-jobs
+        # template but we don't need to run py37 job and this is also in that
+        # template
+        - openstack-tox-py36
+        - devstack-tobiko-functional:
+            # NOTE(slaweq): OSP-16.2 is based on the stable/train but some
+            # projects, like e.g. Nova already EOL'ed stable/train so lets use
+            # stable/wallaby here instead
+            override-checkout: stable/wallaby
+            nodeset: openstack-single-node-focal
+            vars:
+              devstack_localrc:
+                USE_PYTHON3: true
+        - devstack-tobiko-sanity:
+            # NOTE(slaweq): OSP-16.2 is based on the stable/train but some
+            # projects, like e.g. Nova already EOL'ed stable/train so lets use
+            # stable/wallaby here instead
+            override-checkout: stable/wallaby
+            nodeset: openstack-single-node-focal
+            vars:
+              devstack_localrc:
+                USE_PYTHON3: true
+    gate:
+      jobs:
+        # NOTE(slaweq): this UT job is from the openstack-python3-train-jobs
+        # template but we don't need to run py37 job and this is also in that
+        # template
+        - openstack-tox-py36
     periodic:
       jobs:
         - requirements-check:
