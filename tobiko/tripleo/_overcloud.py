@@ -445,3 +445,15 @@ def setup_overcloud_keystone_credentials():
         keystone.register_default_keystone_credentials(
             credentials=overcloud_keystone_credentials(),
             position=0)
+
+
+@functools.lru_cache()
+def is_dvr_enabled():
+    controller0 = topology.list_openstack_nodes(group='controller')[0]
+    container_runtime = tripleo.get_container_runtime_name()
+    command = (f"{container_runtime} exec neutron_api crudini --get "
+               "/etc/neutron/neutron.conf DEFAULT enable_dvr")
+    enable_dvr = sh.execute(command,
+                            ssh_client=controller0.ssh_client,
+                            sudo=True).stdout.lower()
+    return "true" in enable_dvr
