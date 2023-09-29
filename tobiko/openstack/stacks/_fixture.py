@@ -56,10 +56,6 @@ class ResourceFixture(tobiko.SharedFixture, abc.ABC):
     _resource: typing.Optional[object] = None
     _not_found_exception_tuple: typing.Type[Exception] = (Exception)
 
-    def __init__(self):
-        self.name = self.fixture_name
-        super().__init__()
-
     @property
     def resource_id(self):
         if self.resource:
@@ -88,6 +84,7 @@ class ResourceFixture(tobiko.SharedFixture, abc.ABC):
         pass
 
     def setup_fixture(self):
+        self.name = self.fixture_name
         if config.get_bool_env('TOBIKO_PREVENT_CREATE'):
             LOG.debug("%r should have been already created: %r",
                       self.name,
@@ -95,7 +92,9 @@ class ResourceFixture(tobiko.SharedFixture, abc.ABC):
         else:
             self.try_create_resource()
 
-        if self.resource:
+        if self.resource is None:
+            tobiko.fail("%r not found!", self.name)
+        else:
             tobiko.addme_to_shared_resource(__name__, self.name)
 
     def try_create_resource(self):
