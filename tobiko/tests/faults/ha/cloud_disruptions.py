@@ -119,7 +119,8 @@ def disrupt_node(node_name, disrupt_method=network_disruption):
     LOG.info('disrupt exec: {} on server: {}'.format(disrupt_method,
                                                      node.name))
 
-    if isinstance(disrupt_method, sh.RebootHostMethod):
+    if isinstance(disrupt_method, sh.RebootHostMethod) \
+            or is_network_disruption(disrupt_method):
         check_overcloud_node_uptime(node.ssh_client, start_time)
     else:
         check_overcloud_node_responsive(node)
@@ -204,8 +205,8 @@ def disrupt_all_controller_nodes(disrupt_method=sh.hard_reset_method,
 
     start_time = {}
     for controller in nodes:
+        start_time[controller.name] = tobiko.time()
         if isinstance(disrupt_method, sh.RebootHostMethod):
-            start_time[controller.name] = tobiko.time()
             reboot_node(controller.name, wait=sequentially,
                         reboot_method=disrupt_method)
         else:
@@ -214,12 +215,16 @@ def disrupt_all_controller_nodes(disrupt_method=sh.hard_reset_method,
             LOG.info('disrupt exec: {} on server: {}'.format(disrupt_method,
                                                              controller.name))
             tobiko.cleanup_fixture(controller.ssh_client)
+            if sequentially and is_network_disruption(disrupt_method):
+                check_overcloud_node_uptime(
+                    controller.ssh_client, start_time[controller.name])
         if sequentially:
             check_overcloud_node_responsive(controller)
 
     if not sequentially:
         for controller in nodes:
-            if isinstance(disrupt_method, sh.RebootHostMethod):
+            if isinstance(disrupt_method, sh.RebootHostMethod) \
+                    or is_network_disruption(disrupt_method):
                 check_overcloud_node_uptime(
                     controller.ssh_client, start_time[controller.name])
             else:
@@ -479,6 +484,14 @@ def network_undisrupt_controllers_non_main_vip():
     disrupt_controller_main_vip(disrupt_method=get_undisrupt_network(
                                 is_ipv6addr_main_vip()),
                                 inverse=True)
+
+
+def is_network_disruption(disrupt_method):
+    if re.search("ip6?tables", disrupt_method) \
+                 and not re.search("restore", disrupt_method):
+        return True
+    else:
+        return False
 
 
 def get_network_disruption(isIpv6=False):
