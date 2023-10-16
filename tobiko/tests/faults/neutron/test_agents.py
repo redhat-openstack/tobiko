@@ -460,7 +460,7 @@ class L3AgentTest(BaseAgentTest):
 
         return active_agent
 
-    # FIXME- Sleep(30 sec) temporarly to make sure the L3 agent had time
+    # Note- Sleep(30 sec) to make sure the L3 agent has time to
     # fully provision all the resources - rhbz#2133743
     def start_agent(self, hosts: typing.Optional[typing.List[str]] = None):
         super(L3AgentTest, self).start_agent(hosts)
