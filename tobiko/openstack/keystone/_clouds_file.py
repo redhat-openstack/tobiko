@@ -179,6 +179,8 @@ def parse_credentials(file_spec: str,
         raise _credentials.NoSuchKeystoneCredentials(
             reason=f"'password' is {password!r} for cloud name "
                    f"{cloud_name!r} in {file_spec!r}")
+    elif not isinstance(password, str):
+        password = str(password)
 
     cacert = clouds_config.get('cacert')
     project_name = (auth.get('project_name') or
