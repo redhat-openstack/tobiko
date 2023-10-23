@@ -27,6 +27,7 @@ get_shares_by_name = _client.get_shares_by_name
 delete_share = _client.delete_share
 extend_share = _client.extend_share
 list_shares = _client.list_shares
+ensure_default_share_type_exists = _client.ensure_default_share_type_exists
 
 # Waiters
 wait_for_share_status = _waiters.wait_for_share_status
