@@ -30,7 +30,10 @@ CONF = config.CONF
 class ManilaClientFixture(_client.OpenstackClientFixture):
 
     def init_client(self, session):
-        return manilaclient.Client(session=session)
+        cacert = (session.cert or CONF.tobiko.tripleo.undercloud_cacert_file
+                  if 'https://' in session.auth.auth_url
+                  else None)
+        return manilaclient.Client(session=session, cacert=cacert)
 
 
 class ManilaClientManager(_client.OpenstackClientManager):
