@@ -25,6 +25,13 @@ OPTIONS = [
     cfg.IntOpt('size',
                default=1,
                help="Default size in GB for shares created by share tests."),
+    cfg.StrOpt('default_share_type_name',
+               default='default',
+               help="Default share type's name"),
+    cfg.BoolOpt('spec_driver_handles_share_servers',
+                default=False,
+                help="Specifies whether the driver handles the share servers "
+                     "or not"),
 ]
 
 

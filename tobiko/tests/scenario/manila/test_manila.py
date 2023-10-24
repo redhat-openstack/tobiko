@@ -41,6 +41,7 @@ class ManilaApiTestCase(testtools.TestCase):
             LOG.debug('skipping creation of manila resources')
             cls.share = manila.get_shares_by_name(manila.SHARE_NAME)[0]
         else:
+            manila.ensure_default_share_type_exists()
             cls.share = manila.create_share(name=manila.SHARE_NAME)
 
         manila.wait_for_share_status(cls.share['id'])

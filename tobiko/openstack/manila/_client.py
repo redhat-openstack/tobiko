@@ -105,3 +105,22 @@ def get_shares_by_name(share_name, client=None):
         s for s in share_list if s['name'] == share_name
     ]
     return shares
+
+
+def list_share_types(client=None):
+    return manila_client(client).share_types.list()
+
+
+def create_share_type(name, spec_driver_handles_share_servers,
+                      client=None):
+    return manila_client(client).share_types.create(
+        name, spec_driver_handles_share_servers)
+
+
+def ensure_default_share_type_exists(client=None):
+    name = CONF.tobiko.manila.default_share_type_name
+    dhss = CONF.tobiko.manila.spec_driver_handles_share_servers
+    for share_type in list_share_types(client=client):
+        if share_type.name == name:
+            return
+    create_share_type(name, dhss, client=client)
