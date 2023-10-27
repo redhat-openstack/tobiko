@@ -33,7 +33,13 @@ LOG = log.getLogger(__name__)
 class KeystoneClientFixture(_client.OpenstackClientFixture):
 
     def init_client(self, session):
-        return keystoneclient.Client(session=session)
+        from tobiko import config
+        if config.CONF.tobiko.keystone.interface is None:
+            return keystoneclient.Client(session=session)
+        else:
+            return keystoneclient.Client(
+                session=session,
+                interface=config.CONF.tobiko.keystone.interface)
 
 
 class KeystoneClientManager(_client.OpenstackClientManager):

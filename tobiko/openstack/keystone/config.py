@@ -62,7 +62,10 @@ OPTIONS = [
                 help="Directories where to look for clouds files"),
     cfg.ListOpt('clouds_file_names',
                 default=['clouds.yaml', 'clouds.yml', 'clouds.json'],
-                help="Clouds file names")]
+                help="Clouds file names"),
+    cfg.StrOpt('interface',
+               default=None,
+               help="default value in case keystone interface is needed")]
 
 
 def register_tobiko_options(conf):
