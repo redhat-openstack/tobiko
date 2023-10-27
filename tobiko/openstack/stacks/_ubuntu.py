@@ -134,6 +134,9 @@ class UbuntuImageFixture(UbuntuMinimalImageFixture,
         """From OSP17 and above, Ubuntu stack should use a different interface name.
         This method returns the interface name, depending on the OSP version.
         """
+        if_name = CONF.tobiko.ubuntu.interface_name
+        if if_name is not None:
+            return if_name
         from tobiko import tripleo
         if tripleo.has_overcloud(min_version='17.0'):
             return 'enp3s0'
