@@ -36,7 +36,8 @@ tox_expected_rcs:
   - '{{ tox_succeeded_rc }}'
 ignore_test_failures: no
 
-pytest_addopts: ''
+pytest_addopts: '{{ pytest_addopts_global }}'
+pytest_addopts_global: ''
 pytest_markers: "{% if not test_flaky%}not flaky{% endif %}"
 pytest_maxfail: ''
 test_flaky: false

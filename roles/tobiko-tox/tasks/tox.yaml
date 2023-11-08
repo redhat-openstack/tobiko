@@ -50,7 +50,7 @@
 
 - name: reset values used to generate tox_constrain_env after executing a test suite
   set_fact:
-    pytest_addopts: ''
+    pytest_addopts: '{{ pytest_addopts_global }}'
     test_flaky: false
     pytest_markers: "{% if not test_flaky%}not flaky{% endif %}"
     pytest_maxfail: ''
