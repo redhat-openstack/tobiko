@@ -47,7 +47,8 @@ class TripleoTopology(topology.OpenStackTopology):
         neutron.NEUTRON_OVN_METADATA_AGENT: 'tripleo_ovn_metadata_agent',
         neutron.OVN_CONTROLLER: 'tripleo_ovn_controller',
         neutron.OVN_BGP_AGENT: 'tripleo_ovn_bgp_agent',
-        neutron.FRR: 'tripleo_frr'
+        neutron.FRR: 'tripleo_frr',
+        neutron.NEUTRON: 'tripleo_neutron_api'
     }
 
     agent_to_container_name_mappings = {
