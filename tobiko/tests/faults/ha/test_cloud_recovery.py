@@ -161,6 +161,36 @@ class DisruptTripleoNodesTest(testtools.TestCase):
     disruptive_action: a function that runs some
     disruptive scenario on a overcloud"""
     vms_detailed_info = None
+    undisrupt_network_at_teardown = False
+
+    def tearDown(self):
+        super(DisruptTripleoNodesTest, self).tearDown()
+
+        # this loop is run after test_z99_reboot_controller_galera_main_vip
+        for i, vm in enumerate(self.vms_detailed_info or []):
+            if vm is None or vm.get('id') is None:
+                # server_name pattern comes from multi_ip_test_stack.yaml
+                server_name = "group_of_vms_%d" % i
+                try:
+                    server = nova_osp.find_server(unique=True,
+                                                  name=server_name)
+                except tobiko.ObjectNotFound:
+                    LOG.debug(f"Server {server_name} not found. "
+                              "Perhaps it was never created.")
+                    continue
+                vm_id = server.id
+            else:
+                vm_id = vm['id']
+            try:
+                nova_osp.delete_server(vm_id)
+            except nova_osp.ServerNotFoundError:
+                LOG.debug(f"Server {vm_id} not found. "
+                          "Perhaps it was already deleted.")
+
+        # this is run after test_network_disruptor_main_vip
+        if self.undisrupt_network_at_teardown:
+            self.undisrupt_network_at_teardown = False
+            cloud_disruptions.network_undisrupt_controller_main_vip()
 
     def test_0vercloud_health_check(self):
         OvercloudHealthCheck.run_before(skip_mac_table_size_test=False)
@@ -203,28 +233,6 @@ class DisruptTripleoNodesTest(testtools.TestCase):
     #     # otherwise sidecar containers will not run after computes reboot
     #     nova.start_all_instances()
     #     OvercloudHealthCheck.run_after(passive_checks_only=True)
-
-    def tearDown(self):
-        super(DisruptTripleoNodesTest, self).tearDown()
-        for i, vm in enumerate(self.vms_detailed_info or []):
-            if vm is None or vm.get('id') is None:
-                # server_name pattern comes from multi_ip_test_stack.yaml
-                server_name = "group_of_vms_%d" % i
-                try:
-                    server = nova_osp.find_server(unique=True,
-                                                  name=server_name)
-                except tobiko.ObjectNotFound:
-                    LOG.debug(f"Server {server_name} not found. "
-                              "Perhaps it was never created.")
-                    continue
-                vm_id = server.id
-            else:
-                vm_id = vm['id']
-            try:
-                nova_osp.delete_server(vm_id)
-            except nova_osp.ServerNotFoundError:
-                LOG.debug(f"Server {vm_id} not found. "
-                          "Perhaps it was already deleted.")
 
     @nova.skip_background_vm_ping_checks_when_nondvr
     @testtools.skipIf(has_external_lb, SKIP_MESSAGE_EXTLB)
@@ -277,9 +285,9 @@ class DisruptTripleoNodesTest(testtools.TestCase):
     @testtools.skipIf(has_external_lb, SKIP_MESSAGE_EXTLB)
     def test_network_disruptor_main_vip(self):
         OvercloudHealthCheck.run_before()
+        self.undisrupt_network_at_teardown = True
         cloud_disruptions.network_disrupt_controller_main_vip()
         OvercloudHealthCheck.run_after()
-        cloud_disruptions.network_undisrupt_controller_main_vip()
 
     # @pacemaker.skip_if_fencing_not_deployed
     # def test_network_disruptor_non_main_vip(self):
