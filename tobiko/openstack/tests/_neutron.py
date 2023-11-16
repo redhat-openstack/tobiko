@@ -339,12 +339,18 @@ def dump_ovn_databases():
 
 def find_ovn_db_ctl_files():
     """Search for ovnsb_db.ctl and ovnnb_db.ctl files"""
+    test_case = tobiko.get_test_case()
     node = topology.list_openstack_nodes(group='controller')[0]
     ctl_files = {}
     for db in OVNDBS:
         cmd = 'find /var/ -name ovn{}_db.ctl'.format(db)
-        found = sh.execute(cmd, ssh_client=node.ssh_client, sudo=True).stdout
-        ctl_files[db] = found.strip()
+        found = sh.execute(cmd,
+                           ssh_client=node.ssh_client,
+                           expect_exit_status=None,
+                           sudo=True).stdout
+        ctl_file_candidates = found.strip().splitlines()
+        test_case.assertEqual(1, len(ctl_file_candidates))
+        ctl_files[db] = ctl_file_candidates[0]
     LOG.debug('OVN DB ctl files found: {}'.format(ctl_files))
     return ctl_files
 
