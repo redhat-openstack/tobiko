@@ -1,4 +1,4 @@
-# Copyright 2019 Red Hat
+# Copyright 2023 Red Hat
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -13,13 +13,11 @@
 #    under the License.
 from __future__ import absolute_import
 
+from tobiko.rhosp import _version_utils
+from tobiko.rhosp import _topology
 
-def setup_tobiko_config(conf):
-    # pylint: disable=unused-argument
-    from tobiko.tripleo import _ansible
-    from tobiko.tripleo import overcloud
-    from tobiko.tripleo import topology
+RhospTopology = _topology.RhospTopology
+RhospNode = _topology.RhospNode
 
-    _ansible.setup_undercloud_ansible_playbook()
-    overcloud.setup_overcloud_keystone_credentials()
-    topology.setup_tripleo_topology()
+get_rhosp_release = _version_utils.get_rhosp_release
+get_rhosp_version = _version_utils.get_rhosp_version

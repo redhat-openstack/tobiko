@@ -23,9 +23,9 @@ from oslo_log import log
 import tobiko
 from tobiko import config
 from tobiko.openstack import keystone
+from tobiko import rhosp
 from tobiko.shell import ssh
 from tobiko.shell import sh
-from tobiko.tripleo import _rhosp
 
 
 CONF = config.CONF
@@ -218,7 +218,7 @@ def undercloud_keystone_credentials() -> keystone.KeystoneCredentialsFixture:
 @functools.lru_cache()
 def undercloud_version() -> tobiko.Version:
     ssh_client = undercloud_ssh_client()
-    return _rhosp.get_rhosp_version(connection=ssh_client)
+    return rhosp.get_rhosp_version(connection=ssh_client)
 
 
 def check_undercloud(min_version: tobiko.Version = None,

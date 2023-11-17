@@ -825,7 +825,7 @@ def test_controllers_shutdown():
     LOG.info("Ensure all controller nodes are running: "
              f"{all_node_names}")
     for node in all_nodes:
-        node.power_on_overcloud_node()
+        node.power_on_node()
     topology.assert_reachable_nodes(all_nodes)
 
     LOG.debug('Check VM is running while all controllers nodes are on')
@@ -840,8 +840,8 @@ def test_controllers_shutdown():
     LOG.info(f"Power off {quorum_level} random controller nodes: "
              f"{node_names}")
     for node in nodes:
-        node.power_off_overcloud_node()
-        test_case.addCleanup(node.power_on_overcloud_node)
+        node.power_off_node()
+        test_case.addCleanup(node.power_on_node)
     topology.assert_unreachable_nodes(nodes, retry_count=1)
     topology.assert_reachable_nodes(node
                                     for node in all_nodes
@@ -860,7 +860,7 @@ def test_controllers_shutdown():
     random.shuffle(nodes)
     LOG.info(f"Power on controller nodes: {node_names}")
     for node in nodes:
-        node.power_on_overcloud_node()
+        node.power_on_node()
 
     LOG.debug("Check all controller nodes are running again: "
               f"{all_node_names}")

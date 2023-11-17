@@ -1,4 +1,4 @@
-# Copyright 2019 Red Hat
+# Copyright 2023 Red Hat
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -16,10 +16,8 @@ from __future__ import absolute_import
 
 def setup_tobiko_config(conf):
     # pylint: disable=unused-argument
-    from tobiko.tripleo import _ansible
-    from tobiko.tripleo import overcloud
-    from tobiko.tripleo import topology
+    from tobiko.podified import _openshift
+    from tobiko.podified import _topology
 
-    _ansible.setup_undercloud_ansible_playbook()
-    overcloud.setup_overcloud_keystone_credentials()
-    topology.setup_tripleo_topology()
+    if _openshift.has_podified_cp():
+        _topology.setup_podified_topology()

@@ -90,7 +90,7 @@ class OctaviaBasicFaultTest(testtools.TestCase):
         LOG.debug('Rebooting compute node...')
 
         # Reboot Amphora's compute node will initiate a failover
-        amphora_compute_host.reboot_overcloud_node()
+        amphora_compute_host.reboot_node()
 
         LOG.debug('Compute node has been rebooted')
 
