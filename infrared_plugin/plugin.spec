@@ -161,6 +161,10 @@ subparsers:
             type: Bool
             help: OSP env was done with an external load balancer
             ansible_variable: has_external_load_balancer
+          manila-share-protocol:
+            type: Value
+            help: Protocol used when creating a manila share object
+            ansible_variable: manila_share_protocol
 
       - title: Run stage
         options:

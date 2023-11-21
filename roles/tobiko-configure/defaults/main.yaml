@@ -21,6 +21,9 @@ test_default_conf:
     ubuntu_connection_timeout: "{{ ubuntu_connection_timeout }}"
     ubuntu_is_reachable_timeout: "{{ ubuntu_is_reachable_timeout }}"
 
+  manila:
+    share_protocol: "{{ manila_share_protocol }}"
+
 test_log_debug: ''
 
 test_case_timeout: 1800.
@@ -40,3 +43,5 @@ ceph_rgw: ''
 
 ubuntu_connection_timeout: ''
 ubuntu_is_reachable_timeout: ''
+
+manila_share_protocol: ''
