@@ -590,7 +590,7 @@ pcs_resource_list = ['haproxy', 'galera', 'redis', 'ovn-dbs', 'cinder',
 
 sidecar_container_list = [
     'neutron-haproxy-ovnmeta', 'neutron-haproxy-qrouter',
-    'neutron-dnsmasq-qdhcp', 'neutron-keepalived-qrouter']
+    'neutron-dnsmasq-qdhcp', 'neutron-keepalived-qrouter', 'neutron-radvd']
 
 
 def remove_containers_from_comparison(comparable_containers_df):
