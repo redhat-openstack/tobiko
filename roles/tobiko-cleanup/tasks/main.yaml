@@ -1,7 +1,7 @@
 ---
 - name: "cleanup Loadbalancers created by Tobiko tests"
   shell: |
-    for lb in $({{ openstack_cmd }} loadbalancer list -f value -c 'name' | grep "^tobiko\.")
+    for lb in $({{ openstack_cmd }} loadbalancer list -f value -c 'name' | grep "^tobiko")
     do
         {{ openstack_cmd }} loadbalancer delete --cascade --wait $lb
     done
