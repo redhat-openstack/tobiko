@@ -286,7 +286,16 @@ def str_is_not_ip(check_str):
 
 
 def ip_to_hostname(oc_ip):
-    return get_ip_to_nodes_dict()[oc_ip]
+    ip_to_nodes_dict = get_ip_to_nodes_dict()
+    oc_ipv6 = oc_ip.replace(".", ":")
+    if netaddr.valid_ipv4(oc_ip) or netaddr.valid_ipv6(oc_ip):
+        return ip_to_nodes_dict[oc_ip]
+    elif netaddr.valid_ipv6(oc_ipv6):
+        LOG.debug("The provided string was a modified IPv6 address: %s",
+                  oc_ip)
+        return ip_to_nodes_dict[oc_ipv6]
+    else:
+        tobiko.fail("wrong IP value provided %s" % oc_ip)
 
 
 def actual_node_groups(groups):

@@ -153,27 +153,30 @@ class PodmanClientFixture(tobiko.SharedFixture):
                     'key_filename', [])
                 key_file = key_files[0] if len(key_files) > 0 else None
                 socket = podman_remote_socket
-                podman_remote_socket_uri = f'unix:/tmp/podman.sock_{host}'
+                # replace : with . in case of IPv6 addresses
+                podman_socket_file = (
+                    f'/tmp/podman.sock_{host.replace(":", ".")}')
+                podman_remote_socket_uri = f'unix:{podman_socket_file}'
 
                 remote_uri = f'ssh://{username}@{host}{socket}'
 
                 if podman_version_3():
                     # check if a ssh tunnel exists, if not create one
                     psall = str(subprocess.check_output(('ps', '-ef')))
-                    if f'ssh -L /tmp/podman.sock_{host}' not in psall:
-                        if os.path.exists(f"/tmp/podman.sock_{host}"):
+                    if f'ssh -L {podman_socket_file}' not in psall:
+                        if os.path.exists(podman_socket_file):
                             subprocess.call(
-                                ['rm', '-f', f'/tmp/podman.sock_{host}'])
+                                ['rm', '-f', podman_socket_file])
                         # start a background  ssh tunnel with the remote host
                         command = [
                             'ssh', '-o', 'strictHostKeyChecking=no', '-L',
-                            f'/tmp/podman.sock_{host}:/run/podman/podman.sock',
+                            f'{podman_socket_file}:/run/podman/podman.sock',
                             '-l', username, host, '-N', '-f']
                         if key_file:
                             command += ['-i', key_file]
                         subprocess.call(command)
                         for _ in tobiko.retry(timeout=60., interval=1.):
-                            if os.path.exists(f'/tmp/podman.sock_{host}'):
+                            if os.path.exists(podman_socket_file):
                                 break
                     client = podman.PodmanClient(
                         base_url=podman_remote_socket_uri)
