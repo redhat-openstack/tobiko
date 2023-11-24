@@ -40,6 +40,7 @@ OVN_METADATA_AGENT = 'networking-ovn-metadata-agent'
 NEUTRON_OVN_METADATA_AGENT = 'neutron-ovn-metadata-agent'
 OVN_BGP_AGENT = 'ovn-bgp-agent'
 FRR = 'frr'
+NEUTRON = 'neutron'
 
 
 class AgentNotFoundOnHost(tobiko.TobikoException):

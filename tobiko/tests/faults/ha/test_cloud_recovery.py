@@ -363,6 +363,12 @@ class DisruptTripleoNodesTest(testtools.TestCase):
             topology.get_agent_service_name(neutron.FRR))
         OvercloudHealthCheck.run_after()
 
+    def test_restart_neutron(self):
+        OvercloudHealthCheck.run_before()
+        cloud_disruptions.restart_service_on_all_nodes(
+            topology.get_agent_service_name(neutron.NEUTRON))
+        OvercloudHealthCheck.run_after()
+
 # [..]
 # more tests to follow
 # run health checks
