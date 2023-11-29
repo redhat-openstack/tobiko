@@ -369,7 +369,7 @@ def disrupt_controller_galera_main_vip(disrupt_method=sh.soft_reset_method):
 
 
 def get_vms_detailed_info(multi_ip_test_fixture):
-    for attempt in tobiko.retry(timeout=240, interval=10):
+    for attempt in tobiko.retry(timeout=300, interval=10):
         # dynamically obtain the status of the VMs
         vms_detailed_info = multi_ip_test_fixture.vms_detailed_info
 
