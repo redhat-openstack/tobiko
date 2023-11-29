@@ -268,6 +268,14 @@ subparsers:
                 Timeout error is raised if an ubuntu instance is not reachable
                 before it expires
             ansible_variable: ubuntu_is_reachable_timeout
+          cleanup-containerlist-file:
+            type: Bool
+            help:  |
+                 Remove containers-list file (saved during a resource creation
+                 stage) before running a Tobiko second stage, if we expect changes
+                 to the containers list (For example, after the FFU upgrade).
+            default: False
+            ansible_variable: cleanup_containerlist_file
 
 
       - title: Cleanup stage
