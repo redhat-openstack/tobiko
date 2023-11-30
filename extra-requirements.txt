@@ -3,7 +3,7 @@
 ansi2html                # LGPLv3+
 dpkt                     # BSD
 pandas                   # BSD
-podman                   # Apache-2.0
+podman==4.7.0            # Apache-2.0
 pytest-cov               # MIT
 pytest-reportportal      # Apache-2.0
 pytest-rerunfailures     # MPL-2.0
