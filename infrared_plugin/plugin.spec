@@ -202,8 +202,10 @@ subparsers:
             ansible_variable: tox_python
           pytest-addopts:
             type: Value
-            help: Extra options to be passed to PyTest
-            ansible_variable: pytest_addopts
+            help: >
+                Extra options to be passed to PyTest. This value is overriden
+                when it is defined at workflow level too.
+            ansible_variable: pytest_addopts_global
           pytest-markers:
             type: Value
             help: >

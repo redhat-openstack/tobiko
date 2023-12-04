@@ -1,0 +1,36 @@
+---
+features:
+  - |
+    Added new input argument `--skipregex`
+    When it is used, tests are skipped when the regex is found in their test
+    names. Fully qualified test names are used for this search.
+
+    | Example: tobiko.tests.unit.test_exception.TestException.test_init
+
+    * It can be used from CLI with pytest
+
+    .. code-block:: text
+
+      $ .tox/py3/bin/pytest --skipregex='test_join_chunks_.*_bytes|test_join_chunks_with_unicodes' tobiko/tests/unit
+
+    * It can be used from CLI with tox
+
+    .. code-block:: text
+
+      $ PYTEST_ADDOPTS="--skipregex='test_join_chunks_.*_bytes|test_join_chunks_with_unicodes'" TOX_PYTHON=python3.9 tox -e py3
+
+    * It can be used from the Tobiko Infrared plugin by using the --pytest-addopts
+      option (limitation: the skipregex is applied to all the steps from the
+      the executed Tobiko workflow)
+
+    .. code-block:: text
+
+      $ infrared tobiko ... --pytest-addopts "--skipregex='test_join_chunks_.*_bytes|test_join_chunks_with_unicodes'"
+
+    * It can be used from a zuul job by configuring the following variable
+      within the zuul job yaml file (limitation: the skipregex is applied to
+      all the steps from the executed Tobiko workflow)
+
+    .. code-block:: text
+
+      pytest_addopts_global: "--skipregex='test_join_chunks_.*_bytes|test_join_chunks_with_unicodes'"

@@ -16,6 +16,7 @@ from __future__ import absolute_import
 
 from datetime import datetime
 import os
+import re
 import subprocess
 
 from oslo_log import log
@@ -172,3 +173,21 @@ def pytest_runtest_call(item):
 @pytest.fixture(scope="session", autouse=True)
 def cleanup_shelves():
     tobiko.initialize_shelves()
+
+
+def pytest_addoption(parser):
+    parser.addoption("--skipregex", action="store",
+                     default="", help="skip tests matching the provided regex")
+
+
+def pytest_collection_modifyitems(config, items):
+    skipregex = config.getoption("--skipregex")
+    if not skipregex:
+        # --skipregex not given in cli, therefore move on
+        return
+    skip_listed = pytest.mark.skip(reason="matches --skipregex")
+    for item in items:
+        fully_qualified_test_name = '.'.join([item.obj.__module__,
+                                              item.getmodpath()])
+        if re.search(skipregex, fully_qualified_test_name):
+            item.add_marker(skip_listed)
