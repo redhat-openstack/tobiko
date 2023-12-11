@@ -5,6 +5,7 @@
     source {{ stackrc_file }}
     openstack quota set --{{ item.key }} {{ item.value }} $OS_PROJECT_NAME
   with_dict: "{{ quota | default({}) }}"
+  delegate_to: "{{ groups.undercloud|first }}"
 
 - name: ensure auto ssh key exchange in test host
   block:

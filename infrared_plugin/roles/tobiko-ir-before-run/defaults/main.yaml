@@ -1,4 +1,4 @@
 ---
 
 # OpenStack client credentials
-stackrc_file: '{{ ansible_user_dir }}/overcloudrc'
+stackrc_file: '~/overcloudrc'
