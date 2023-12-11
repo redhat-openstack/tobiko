@@ -677,7 +677,7 @@ def remove_one_grastate_galera():
     pcs_haproxy = pacemaker.HAPROXY_RESOURCE
     pcs_galera = pacemaker.GALERA_RESOURCE
 
-    if not CONF.tobiko.tripleo.has_external_load_balancer:
+    if not CONF.tobiko.rhosp.has_external_load_balancer:
         LOG.info(f'disable {pcs_haproxy}')
         if f"resource '{pcs_haproxy}' is not running on any node" not in \
                 pacemaker.run_pcs_resource_operation(
@@ -711,7 +711,7 @@ def remove_one_grastate_galera():
                 operation_wait=90):
         raise PcsEnableException()
 
-    if not CONF.tobiko.tripleo.has_external_load_balancer:
+    if not CONF.tobiko.rhosp.has_external_load_balancer:
         LOG.info(f'enable {pcs_haproxy}')
         if f"resource '{pcs_haproxy}' is running on node" not in \
                 pacemaker.run_pcs_resource_operation(pcs_haproxy,

@@ -154,7 +154,7 @@ def overcloud_node_ip_address(ip_version: int = None,
                               **params):
     if instance is None:
         instance = find_overcloud_node(**params)
-    ip_version = ip_version or CONF.tobiko.tripleo.overcloud_ip_version
+    ip_version = ip_version or CONF.tobiko.rhosp.ip_version
     network_name = network_name or CONF.tobiko.tripleo.overcloud_network_name
     address = metalsmith.find_instance_ip_address(instance=instance,
                                                   ip_version=ip_version,
@@ -169,8 +169,7 @@ class OvercloudSshKeyFileFixture(tobiko.SharedFixture):
 
     @property
     def key_filename(self):
-        return tobiko.tobiko_config_path(
-            CONF.tobiko.tripleo.overcloud_ssh_key_filename)
+        return tobiko.tobiko_config_path(CONF.tobiko.rhosp.ssh_key_filename)
 
     def setup_fixture(self):
         self.setup_key_file()
@@ -235,7 +234,7 @@ class OvercloudHostConfig(tobiko.SharedFixture):
         if self.host is None:
             self.host = self.hostname
         if self.port is None:
-            self.port = CONF.tobiko.tripleo.overcloud_ssh_port
+            self.port = CONF.tobiko.rhosp.ssh_port
         if self.username is None:
             self.username = get_overcloud_ssh_username()
         if self.key_filename is None:
@@ -393,8 +392,8 @@ def check_overcloud(min_version: str = None,
 
 @functools.lru_cache()
 def get_overcloud_ssh_username():
-    if CONF.tobiko.tripleo.overcloud_ssh_username is not None:
-        return CONF.tobiko.tripleo.overcloud_ssh_username
+    if CONF.tobiko.rhosp.ssh_username is not None:
+        return CONF.tobiko.rhosp.ssh_username
 
     if tobiko.match_version(_undercloud.undercloud_version(),
                             min_version='17.0'):
@@ -417,7 +416,7 @@ class OvercloudCloudsFileKeystoneCredentialsFixture(
 
     @staticmethod
     def _get_default_cloud_name() -> typing.Optional[str]:
-        return tobiko.tobiko_config().tripleo.overcloud_cloud_name
+        return tobiko.tobiko_config().rhosp.cloud_name
 
 
 class OvercloudEnvironKeystoneCredentialsFixture(

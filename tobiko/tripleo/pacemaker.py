@@ -160,7 +160,7 @@ class PacemakerResourcesStatus(object):
             return False
 
     def vips_resource_healthy(self):
-        if CONF.tobiko.tripleo.has_external_load_balancer:
+        if CONF.tobiko.rhosp.has_external_load_balancer:
             LOG.info("external load balancer used - "
                      "we can skip vips_resource sanity")
             return True
@@ -180,7 +180,7 @@ class PacemakerResourcesStatus(object):
                 return False
 
     def ha_proxy_cinder_healthy(self):
-        if CONF.tobiko.tripleo.has_external_load_balancer:
+        if CONF.tobiko.rhosp.has_external_load_balancer:
             LOG.info("external load balancer used "
                      "- we can skip ha_proxy_resource sanity")
             return True

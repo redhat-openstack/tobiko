@@ -95,12 +95,12 @@ class OvercloudMetalsmithApiTest(testtools.TestCase):
         self.assertIn(host_config.host, instance_ips)
         self.assertIsInstance(host_config.hostname, str)
         netaddr.IPAddress(host_config.hostname)
-        self.assertEqual(CONF.tobiko.tripleo.overcloud_ssh_port,
+        self.assertEqual(CONF.tobiko.rhosp.ssh_port,
                          host_config.port)
         self.assertEqual(tripleo.get_overcloud_ssh_username(),
                          host_config.username)
         key_filename = tobiko.tobiko_config_path(
-            CONF.tobiko.tripleo.overcloud_ssh_key_filename)
+            CONF.tobiko.rhosp.ssh_key_filename)
         self.assertEqual(key_filename, host_config.key_filename)
         self.assertTrue(os.path.isfile(key_filename))
         self.assertTrue(os.path.isfile(key_filename + '.pub'))

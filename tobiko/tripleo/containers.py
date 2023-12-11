@@ -364,7 +364,7 @@ def ceph_rgw_expected():
     """Returns True if 'ceph_rgw' parameter in the config file is set to 'true'
     or ceph rgw containers were detected running by Tobiko.
     """
-    return CONF.tobiko.tripleo.ceph_rgw or assert_ceph_rgw_container_running()
+    return CONF.tobiko.rhosp.ceph_rgw or assert_ceph_rgw_container_running()
 
 
 def skip_if_ceph_rgw():

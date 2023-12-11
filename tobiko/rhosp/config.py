@@ -18,7 +18,60 @@ import itertools
 from oslo_config import cfg
 
 
+# Group with config options common for RHOSP deployments
+# (both Tripleo and Podified)
+RHOSP_GROUP_NAME = 'rhosp'
+# Group with config options related only for Tripleo based deployments
 TRIPLEO_GROUP_NAME = 'tripleo'
+# Group with config options related only for podified (NextGen) deployments
+PODIFIED_GROUP_NAME = "podified"
+
+RHOSP_OPTIONS = [
+    cfg.IntOpt('ssh_port',
+               default=None,
+               deprecated_name='overcloud_ssh_port',
+               deprecated_group=TRIPLEO_GROUP_NAME,
+               help="TCP port of SSH server on overcloud or EDPM compute "
+                    "hosts"),
+    cfg.StrOpt('ssh_username',
+               default=None,
+               deprecated_name='overcloud_ssh_username',
+               deprecated_group=TRIPLEO_GROUP_NAME,
+               help="Default username used to connect to overcloud or EDPM "
+                    "compute nodes"),
+    cfg.StrOpt('ssh_key_filename',
+               default='~/.ssh/osp_ssh_key',
+               deprecated_name='overcloud_ssh_key_filename',
+               deprecated_group=TRIPLEO_GROUP_NAME,
+               help="SSH key filename used to login to Overcloud or EDPM "
+                    "compute nodes"),
+    cfg.StrOpt('cloud_name',
+               default='overcloud',
+               deprecated_name='overcloud_cloud_name',
+               deprecated_group=TRIPLEO_GROUP_NAME,
+               help='cloud name to be used for loading credentials '),
+    cfg.IntOpt('ip_version',
+               deprecated_name='overcloud_ip_version',
+               deprecated_group=TRIPLEO_GROUP_NAME,
+               help=("Default IP address version to be used to connect to "
+                     "overcloud or EDPM compute nodes")),
+
+    cfg.StrOpt('inventory_file',
+               default='.ansible/inventory/tripleo.yaml',
+               deprecated_group=TRIPLEO_GROUP_NAME,
+               help="path to where to export tripleo inventory file"),
+
+    cfg.BoolOpt('has_external_load_balancer',
+                default=False,
+                deprecated_group=TRIPLEO_GROUP_NAME,
+                help="OSP env was done with an external load balancer"),
+
+    cfg.BoolOpt('ceph_rgw',
+                default=False,
+                deprecated_group=TRIPLEO_GROUP_NAME,
+                help="whether Ceph RGW is deployed"),
+]
+
 TRIPLEO_OPTIONS = [
     # Undercloud options
     cfg.StrOpt('undercloud_ssh_hostname',
@@ -46,65 +99,25 @@ TRIPLEO_OPTIONS = [
                help='Path to cacert file that can be used to send https '
                     'request from the undercloud'),
 
-    # TODO(slaweq): those options may be also applicable for edpm nodes so
-    # maybe we will need to rename them to use in both topologies
-    # Overcloud options
-    cfg.IntOpt('overcloud_ssh_port',
-               default=None,
-               help="TCP port of SSH server on overcloud hosts"),
-    cfg.StrOpt('overcloud_ssh_username',
-               default=None,
-               help="Default username used to connect to overcloud nodes"),
-    cfg.StrOpt('overcloud_ssh_key_filename',
-               default='~/.ssh/id_overcloud',
-               help="SSH key filename used to login to Overcloud nodes"),
     cfg.ListOpt('overcloud_rcfile',
                 default=['~/overcloudrc', '~/qe-Cloud-0rc'],
                 help="Overcloud RC filenames"),
-    cfg.StrOpt('overcloud_cloud_name',
-               default='overcloud',
-               help='overcloud cloud name to be used for loading credentials '
-                    'from the overcloud clouds files'),
-    cfg.IntOpt('overcloud_ip_version',
-               help=("Default IP address version to be used to connect to "
-                     "overcloud nodes ")),
     cfg.StrOpt('overcloud_network_name',
                help="Name of network used to connect to overcloud nodes"),
     cfg.DictOpt('overcloud_groups_dict',
                 help='Dictionary with the node groups corresponding to '
                      'different hostname prefixes',
                 default={'ctrl': 'controller', 'cmp': 'compute'}),
-
-    # NOTE(slaweq): same here
-    # Other options
-    cfg.StrOpt('inventory_file',
-               default='.ansible/inventory/tripleo.yaml',
-               help="path to where to export tripleo inventory file"),
-
-    cfg.BoolOpt('has_external_load_balancer',
-                default=False,
-                help="OSP env was done with an external load balancer"),
-
-    cfg.BoolOpt('ceph_rgw',
-                default=False,
-                help="whether Ceph RGW is deployed"),
-]
-
-PODIFIED_GROUP_NAME = "podified"
-PODIFIED_OPTIONS = [
-    cfg.StrOpt('edpm_ssh_key_filename',
-               default='~/.ssh/id_podified_edpm',
-               help="SSH key filename used to login to EDPM nodes"),
 ]
 
 
 def register_tobiko_options(conf):
+    conf.register_opts(group=cfg.OptGroup(RHOSP_GROUP_NAME),
+                       opts=RHOSP_OPTIONS)
     conf.register_opts(group=cfg.OptGroup(TRIPLEO_GROUP_NAME),
                        opts=TRIPLEO_OPTIONS)
-    conf.register_opts(group=cfg.OptGroup(PODIFIED_GROUP_NAME),
-                       opts=PODIFIED_OPTIONS)
 
 
 def list_options():
-    return [(TRIPLEO_GROUP_NAME, itertools.chain(TRIPLEO_OPTIONS)),
-            (PODIFIED_GROUP_NAME, itertools.chain(PODIFIED_OPTIONS))]
+    return [(RHOSP_GROUP_NAME, itertools.chain(RHOSP_OPTIONS)),
+            (TRIPLEO_GROUP_NAME, itertools.chain(TRIPLEO_OPTIONS))]

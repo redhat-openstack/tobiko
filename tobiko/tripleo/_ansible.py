@@ -23,6 +23,7 @@ from oslo_log import log
 from packaging import version
 
 import tobiko
+from tobiko import config
 from tobiko.shell import ansible
 from tobiko.shell import sh
 from tobiko.shell import ssh
@@ -53,7 +54,7 @@ skip_if_missing_tripleo_ansible_inventory = \
 @functools.lru_cache()
 def get_tripleo_ansible_inventory_file() -> typing.Optional[str]:
     if _undercloud.has_undercloud():
-        inventory_file = _config.get_tripleo_config().inventory_file
+        inventory_file = config.CONF.tobiko.rhosp.inventory_file
         if inventory_file:
             inventory_file = tobiko.tobiko_config_path(inventory_file)
             fetch_tripleo_inventary_file(inventory_file=inventory_file)

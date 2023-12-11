@@ -19,6 +19,7 @@ from tobiko.tests import unit
 
 CONF = config.CONF
 TRIPLEO_CONF = CONF.tobiko.tripleo
+RHOSP_CONF = CONF.tobiko.rhosp
 
 
 class TripleoConfigTest(unit.TobikoUnitTest):
@@ -53,18 +54,21 @@ class UndercloudConfigTest(unit.TobikoUnitTest):
 
 class OvercloudConfigTest(unit.TobikoUnitTest):
 
-    def test_overcloud_ssh_port(self):
-        value = TRIPLEO_CONF.overcloud_ssh_port
+    def test_overcloud_rcfile(self):
+        for rcfile in TRIPLEO_CONF.overcloud_rcfile:
+            self.assertIsInstance(rcfile, str)
+
+
+class RhospConfigTest(unit.TobikoUnitTest):
+
+    def test_ssh_port(self):
+        value = RHOSP_CONF.ssh_port
         if value is not None:
             self.assertIsInstance(value, int)
             self.assertGreater(value, 0)
             self.assertLess(value, 2 ** 16)
 
-    def test_overcloud_ssh_username(self):
-        value = TRIPLEO_CONF.overcloud_ssh_username
+    def test_ssh_username(self):
+        value = RHOSP_CONF.ssh_username
         if value is not None:
             self.assertIsInstance(value, str)
-
-    def test_overcloud_rcfile(self):
-        for rcfile in TRIPLEO_CONF.overcloud_rcfile:
-            self.assertIsInstance(rcfile, str)

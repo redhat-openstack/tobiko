@@ -57,7 +57,7 @@ class EdpmSshKeyFileFixture(tobiko.SharedFixture):
     @property
     def key_filename(self):
         return tobiko.tobiko_config_path(
-            CONF.tobiko.podified.edpm_ssh_key_filename)
+            CONF.tobiko.rhosp.ssh_key_filename)
 
     def setup_fixture(self):
         self.setup_key_file()
@@ -102,11 +102,9 @@ class EdpmHostConfig(tobiko.SharedFixture):
 
     def setup_fixture(self):
         if self.port is None:
-            # TODO(slaweq): add config option
-            self.port = 22
+            self.port = CONF.tobiko.rhosp.ssh_port
         if self.username is None:
-            # TODO(slaweq): add config option
-            self.username = 'cloud-admin'
+            self.username = CONF.tobiko.rhosp.ssh_username
         if self.key_filename is None:
             self.key_filename = self.key_file.key_filename
 

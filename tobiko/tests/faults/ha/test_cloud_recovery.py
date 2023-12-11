@@ -42,7 +42,7 @@ CONF = config.CONF
 LOG = log.getLogger(__name__)
 SKIP_MESSAGE_EXTLB = ('Tests requiring a main VIP should be skipped when an '
                       'external load balancer is used')
-has_external_lb = CONF.tobiko.tripleo.has_external_load_balancer
+has_external_lb = CONF.tobiko.rhosp.has_external_load_balancer
 
 
 def overcloud_health_checks(passive_checks_only=False,
