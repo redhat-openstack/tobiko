@@ -1,11 +1,13 @@
 ---
 
 - block:
-  - name: install latest Docker compose using pip
+  - name: install Docker compose using pip
     become: true
-    shell: |
-      set -x
-      python3 -m pip install docker-compose
+    pip:
+      name: "{{ item }}"
+    with_items:
+      - "docker<7.0"
+      - "docker-compose"
 
   - name: get docker compose location path
     shell: which docker-compose
