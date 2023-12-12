@@ -67,3 +67,18 @@
     - groups.get("undercloud")
     - test_host is defined
     - test_host not in groups.undercloud
+
+- name: Remove the containers list file, if required
+  block:
+    - name: Save the containers list file, if exists
+      copy:
+        dest: ~/expected_containers_list_df.old.csv
+        src: ~/expected_containers_list_df.csv
+        remote_src: yes
+      failed_when: false
+
+    - name: Remove the original containers list file
+      file:
+        path: ~/expected_containers_list_df.csv
+        state: absent
+  when: cleanup_containerlist_file | bool
