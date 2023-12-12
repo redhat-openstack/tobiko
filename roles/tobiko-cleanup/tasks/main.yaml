@@ -41,8 +41,7 @@
 
 - name: "cleanup Manila shares created by Tobiko tests"
   shell: |
-    source {{ stackrc_file }}
-    openstack share list -f value -c 'Name' | \
+    {{ openstack_cmd }} share list -f value -c 'Name' | \
         grep "^tobiko" | \
-        xargs -r openstack share delete --force
+        xargs -r {{ openstack_cmd }} share delete --force
   ignore_errors: yes

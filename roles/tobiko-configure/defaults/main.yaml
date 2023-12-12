@@ -29,9 +29,6 @@ test_log_debug: ''
 test_case_timeout: 1800.
 test_runner_timeout: 14400.
 
-# OpenStack client credentials
-stackrc_file: '{{ ansible_user_dir }}/overcloudrc'
-
 undercloud_hostname: '{{ groups.get("undercloud", []) | first | default("undercloud-0") }}'
 undercloud_ssh_hostname: ''
 undercloud_ssh_key_filename: ''
