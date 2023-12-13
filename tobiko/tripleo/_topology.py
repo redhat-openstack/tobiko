@@ -25,18 +25,18 @@ from tobiko import config
 from tobiko.openstack import neutron
 from tobiko.openstack import nova
 from tobiko.openstack import topology
+from tobiko import rhosp
 from tobiko.shell import files
 from tobiko.shell import sh
 from tobiko.shell import ssh
 from tobiko.tripleo import _overcloud
-from tobiko.tripleo import _rhosp
 from tobiko.tripleo import _undercloud
 
 CONF = config.CONF
 LOG = log.getLogger(__name__)
 
 
-class TripleoTopology(topology.OpenStackTopology):
+class TripleoTopology(rhosp.RhospTopology):
 
     agent_to_service_name_mappings = {
         neutron.DHCP_AGENT: 'tripleo_neutron_dhcp',
@@ -62,8 +62,6 @@ class TripleoTopology(topology.OpenStackTopology):
         neutron.OVN_BGP_AGENT: 'ovn_bgp_agent',
         neutron.FRR: 'frr'
     }
-
-    has_containers = True
 
     config_file_mappings = {
         'ml2_conf.ini': '/var/lib/config-data/puppet-generated/neutron'
@@ -154,7 +152,7 @@ class TripleoTopology(topology.OpenStackTopology):
         return subgroups
 
 
-class TripleoTopologyNode(topology.OpenStackTopologyNode):
+class TripleoTopologyNode(rhosp.RhospNode):
 
     def __init__(self,
                  topology: topology.OpenStackTopology,
@@ -186,37 +184,6 @@ class TripleoTopologyNode(topology.OpenStackTopologyNode):
     l3_agent_conf_path = (
         '/var/lib/config-data/neutron/etc/neutron/l3_agent.ini')
 
-    def reboot_overcloud_node(self,
-                              reactivate_servers=True):
-        """Reboot overcloud node
-
-        This method reboots an overcloud node and may start every Nova
-        server which is not in SHUTOFF status before restarting.
-
-        :param reactivate_servers: whether or not to re-start the servers which
-            are hosted on the compute node after the reboot
-        """
-
-        running_servers: typing.List[nova.NovaServer] = []
-        if reactivate_servers:
-            running_servers = self.list_running_servers()
-            LOG.debug(f'Servers to restart after reboot: {running_servers}')
-
-        self.power_off_overcloud_node()
-        self.power_on_overcloud_node()
-
-        if running_servers:
-            LOG.info(f'Restart servers after rebooting overcloud compute node '
-                     f'{self.name}...')
-            for server in running_servers:
-                nova.wait_for_server_status(server=server.id,
-                                            status='SHUTOFF')
-                LOG.debug(f'Re-activate server {server.name} with ID '
-                          f'{server.id}')
-                nova.activate_server(server=server)
-                LOG.debug(f'Server {server.name} with ID {server.id} has '
-                          f'been reactivated')
-
     def list_running_servers(self) -> typing.List[nova.NovaServer]:
         running_servers = list()
         for server in nova.list_servers():
@@ -227,7 +194,7 @@ class TripleoTopologyNode(topology.OpenStackTopologyNode):
                     running_servers.append(server)
         return running_servers
 
-    def power_on_overcloud_node(self):
+    def power_on_node(self):
         if self.overcloud_instance is None:
             raise TypeError(f"Node {self.name} is not and Overcloud server")
         self.ssh_client.close()
@@ -237,16 +204,13 @@ class TripleoTopologyNode(topology.OpenStackTopologyNode):
         LOG.debug(f"Overcloud node {self.name} power is on ("
                   f"hostname={hostname})")
 
-    def power_off_overcloud_node(self):
+    def power_off_node(self):
         if self.overcloud_instance is None:
             raise TypeError(f"Node {self.name} is not and Overcloud server")
         self.ssh_client.close()
         LOG.debug(f"Ensuring overcloud node {self.name} power is off...")
         _overcloud.power_off_overcloud_node(instance=self.overcloud_instance)
         LOG.debug(f"Overcloud server node {self.name} power is off.")
-
-    def _get_rhosp_version(self) -> tobiko.Version:
-        return _rhosp.get_rhosp_version(connection=self.connection)
 
 
 def is_valid_overcloud_group_name(group_name: str, node_name: str = None):

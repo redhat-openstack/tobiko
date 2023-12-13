@@ -15,7 +15,6 @@ from __future__ import absolute_import
 
 from tobiko.tripleo import _ansible
 from tobiko.tripleo import _overcloud as overcloud
-from tobiko.tripleo import _rhosp
 from tobiko.tripleo import _topology as topology
 from tobiko.tripleo import _undercloud as undercloud
 from tobiko.tripleo import containers
@@ -55,9 +54,6 @@ skip_unless_has_overcloud = overcloud.skip_unless_has_overcloud
 get_overcloud_ssh_username = overcloud.get_overcloud_ssh_username
 skip_if_ceph_rgw = containers.skip_if_ceph_rgw
 get_container_runtime_name = containers.get_container_runtime_name
-
-get_rhosp_release = _rhosp.get_rhosp_release
-get_rhosp_version = _rhosp.get_rhosp_version
 
 TripleoTopology = topology.TripleoTopology
 

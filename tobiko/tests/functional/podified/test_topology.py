@@ -1,4 +1,6 @@
-# Copyright 2019 Red Hat
+# Copyright (c) 2023 Red Hat, Inc.
+#
+# All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -13,13 +15,18 @@
 #    under the License.
 from __future__ import absolute_import
 
+import tobiko
+from tobiko.tests.functional.openstack import test_topology
+from tobiko import podified
 
-def setup_tobiko_config(conf):
-    # pylint: disable=unused-argument
-    from tobiko.tripleo import _ansible
-    from tobiko.tripleo import overcloud
-    from tobiko.tripleo import topology
 
-    _ansible.setup_undercloud_ansible_playbook()
-    overcloud.setup_overcloud_keystone_credentials()
-    topology.setup_tripleo_topology()
+@podified.skip_if_not_podified
+class PodifiedTopologyTest(test_topology.OpenStackTopologyTest):
+
+    @property
+    def topology(self) -> podified.PodifiedTopology:
+        return tobiko.setup_fixture(podified.PodifiedTopology)
+
+    def test_controller_group(self):
+        self.skipTest("Discovery of the OCP workers is "
+                      "not implemented yet.")

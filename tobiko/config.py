@@ -42,6 +42,8 @@ CONFIG_MODULES = ['tobiko.common._case',
                   'tobiko.shell.iperf3.config',
                   'tobiko.shell.sh.config',
                   'tobiko.shiftstack.config',
+                  'tobiko.rhosp.config',
+                  'tobiko.podified.config',
                   'tobiko.tripleo.config']
 
 
