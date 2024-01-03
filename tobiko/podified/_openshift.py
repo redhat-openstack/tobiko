@@ -24,6 +24,13 @@ OSP_CONTROLPLANE = 'openstackcontrolplane'
 OSP_DP_NODESET = 'openstackdataplanenodeset'
 DP_SSH_SECRET_NAME = 'secret/dataplane-ansible-ssh-private-key-secret'
 
+OVN_DP_SERVICE_NAME = 'ovn'
+COMPUTE_DP_SERVICE_NAMES = ['nova', 'nova-custom']
+
+EDPM_COMPUTE_GROUP = 'edpm-compute'
+EDPM_NETWORKER_GROUP = 'edpm-networker'
+EDPM_OTHER_GROUP = 'edpm-other'
+
 
 def _is_oc_client_available() -> bool:
     try:
@@ -32,6 +39,15 @@ def _is_oc_client_available() -> bool:
     except sh.ShellCommandFailed:
         pass
     return False
+
+
+def _get_group(services):
+    for compute_dp_service in COMPUTE_DP_SERVICE_NAMES:
+        if compute_dp_service in services:
+            return EDPM_COMPUTE_GROUP
+    if OVN_DP_SERVICE_NAME in services:
+        return EDPM_NETWORKER_GROUP
+    return EDPM_OTHER_GROUP
 
 
 def has_podified_cp() -> bool:
@@ -61,12 +77,15 @@ def list_edpm_nodes():
     nodes = []
     nodeset_sel = oc.selector(OSP_DP_NODESET)
     for nodeset in nodeset_sel.objects():
-        node_template = nodeset.as_dict()['spec']['nodeTemplate']
-        nodeset_nodes = nodeset.as_dict()['spec']['nodes']
+        nodeset_spec = nodeset.as_dict()['spec']
+        node_template = nodeset_spec['nodeTemplate']
+        nodeset_nodes = nodeset_spec['nodes']
+        group_name = _get_group(nodeset_spec['services'])
         for node in nodeset_nodes.values():
             node_dict = {
                 'hostname': node.get('hostName'),
                 'host': node['ansible']['ansibleHost'],
+                'group': group_name,
                 'port': (
                     node.get('ansible', {}).get('ansiblePort') or
                     node_template.get('ansible', {}).get('ansiblePort')),

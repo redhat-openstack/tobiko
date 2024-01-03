@@ -13,14 +13,17 @@
 #    under the License.
 from __future__ import absolute_import
 
+import typing
+
 from oslo_log import log
 
 import tobiko
 from tobiko.openstack import neutron
 from tobiko.openstack import topology
-from tobiko import rhosp
 from tobiko.podified import _edpm
 from tobiko.podified import _openshift
+from tobiko import rhosp
+from tobiko.shell import ssh
 
 LOG = log.getLogger(__name__)
 
@@ -28,6 +31,16 @@ LOG = log.getLogger(__name__)
 skip_if_not_podified = tobiko.skip_unless(
     "Podified deployment not configured", _openshift.has_podified_cp
 )
+
+# In Podified topology there are groups like 'edpm-compute', 'edpm-networker'
+# and 'edpm-other' but we need to provide also "virtual" group which will
+# contain all of those "sub groups"
+COMPUTE_GROUPS = [
+    _openshift.EDPM_COMPUTE_GROUP,
+    _openshift.EDPM_NETWORKER_GROUP,
+    _openshift.EDPM_OTHER_GROUP
+]
+ALL_COMPUTES_GROUP_NAME = 'compute'
 
 
 class PodifiedTopology(rhosp.RhospTopology):
@@ -52,6 +65,29 @@ class PodifiedTopology(rhosp.RhospTopology):
         neutron.FRR: 'frr'
     }
 
+    def add_node(self,
+                 hostname: typing.Optional[str] = None,
+                 address: typing.Optional[str] = None,
+                 group: typing.Optional[str] = None,
+                 ssh_client: typing.Optional[ssh.SSHClientFixture] = None,
+                 **create_params) \
+            -> topology.OpenStackTopologyNode:
+        node = super(PodifiedTopology, self).add_node(
+            hostname=hostname,
+            address=address,
+            group=group,
+            ssh_client=ssh_client,
+            **create_params
+        )
+        # NOTE(slaweq): additionally lets add every edpm node to the "legacy"
+        # group named "compute"
+        if group and group in COMPUTE_GROUPS:
+            group_nodes = self.add_group(group=ALL_COMPUTES_GROUP_NAME)
+            if node and node not in group_nodes:
+                group_nodes.append(node)
+                node.add_group(group=ALL_COMPUTES_GROUP_NAME)
+        return node
+
     def create_node(self, name, ssh_client, **kwargs):
         return EdpmNode(topology=self,
                         name=name,
@@ -74,10 +110,11 @@ class PodifiedTopology(rhosp.RhospTopology):
         for node in _openshift.list_edpm_nodes():
             LOG.debug(f"Found EDPM node {node['hostname']} "
                       f"(IP: {node['host']})")
+            group = node.pop('group')
             host_config = _edpm.edpm_host_config(node)
             ssh_client = _edpm.edpm_ssh_client(host_config=host_config)
             node = self.add_node(address=host_config.host,
-                                 group='compute',
+                                 group=group,
                                  ssh_client=ssh_client)
             assert isinstance(node, EdpmNode)
 
