@@ -166,7 +166,7 @@ class DisruptTripleoNodesTest(testtools.TestCase):
     def tearDown(self):
         super(DisruptTripleoNodesTest, self).tearDown()
 
-        # this loop is run after test_z99_reboot_controller_galera_main_vip
+        # this loop is run after test_z999_reboot_controller_galera_main_vip
         for i, vm in enumerate(self.vms_detailed_info or []):
             if vm is None or vm.get('id') is None:
                 # server_name pattern comes from multi_ip_test_stack.yaml
@@ -236,7 +236,7 @@ class DisruptTripleoNodesTest(testtools.TestCase):
 
     @nova.skip_background_vm_ping_checks_when_nondvr
     @testtools.skipIf(has_external_lb, SKIP_MESSAGE_EXTLB)
-    def test_z99_reboot_controller_galera_main_vip(self):
+    def test_z999_reboot_controller_galera_main_vip(self):
         # This test case may fail at times if RHBZ#2124877 is not resolved
         # but that bug is due to a race condition,
         # so it is not reproducible 100% times
