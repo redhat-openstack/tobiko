@@ -41,6 +41,8 @@ COMPUTE_GROUPS = [
     _openshift.EDPM_OTHER_GROUP
 ]
 ALL_COMPUTES_GROUP_NAME = 'compute'
+OCP_WORKER = 'ocp_worker'
+EDPM_NODE = 'edpm_node'
 
 
 class PodifiedTopology(rhosp.RhospTopology):
@@ -64,6 +66,10 @@ class PodifiedTopology(rhosp.RhospTopology):
         neutron.OVN_BGP_AGENT: 'ovn_bgp_agent',
         neutron.FRR: 'frr'
     }
+
+    def __init__(self):
+        super(PodifiedTopology, self).__init__()
+        self.ocp_workers = {}
 
     def add_node(self,
                  hostname: typing.Optional[str] = None,
@@ -89,10 +95,13 @@ class PodifiedTopology(rhosp.RhospTopology):
         return node
 
     def create_node(self, name, ssh_client, **kwargs):
-        return EdpmNode(topology=self,
-                        name=name,
-                        ssh_client=ssh_client,
-                        **kwargs)
+        node_type = kwargs.pop('node_type')
+        if node_type == OCP_WORKER:
+            return OcpWorkerNode(topology=self, name=name, ssh_client=None,
+                                 **kwargs)
+        else:
+            return EdpmNode(topology=self, name=name, ssh_client=ssh_client,
+                            **kwargs)
 
     def discover_nodes(self):
         self.discover_ssh_proxy_jump_node()
@@ -103,8 +112,23 @@ class PodifiedTopology(rhosp.RhospTopology):
         pass
 
     def discover_ocp_worker_nodes(self):
-        # TODO(slaweq): discover OCP nodes where OpenStack CP is running
-        pass
+        # NOTE(slaweq): For now this will only discover nodes but there will be
+        # no ssh_client created to ssh to those nodes. Getting
+        # ssh_client to those nodes may be implemented in the future if that
+        # will be needed, but this may be hard e.g. for the CRC environments as
+        # in that case internal OCP worker's IP address is not accessible from
+        # outside at all
+        for worker_data in _openshift.list_ocp_workers():
+            node = self._add_node(
+                addresses=worker_data['addresses'],
+                hostname=worker_data['hostname'],
+                ssh_client=None,
+                create_ssh_client=False,
+                node_type=OCP_WORKER)
+            group_nodes = self.add_group(group='controller')
+            if node not in group_nodes:
+                group_nodes.append(node)
+                node.add_group(group='controller')
 
     def discover_edpm_nodes(self):
         for node in _openshift.list_edpm_nodes():
@@ -115,7 +139,8 @@ class PodifiedTopology(rhosp.RhospTopology):
             ssh_client = _edpm.edpm_ssh_client(host_config=host_config)
             node = self.add_node(address=host_config.host,
                                  group=group,
-                                 ssh_client=ssh_client)
+                                 ssh_client=ssh_client,
+                                 node_type=EDPM_NODE)
             assert isinstance(node, EdpmNode)
 
 
@@ -126,6 +151,10 @@ class EdpmNode(rhosp.RhospNode):
 
     def power_off_node(self):
         LOG.debug(f"Ensuring EDPM node {self.name} power is off...")
+
+
+class OcpWorkerNode(rhosp.RhospNode):
+    pass
 
 
 def setup_podified_topology():

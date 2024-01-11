@@ -16,6 +16,8 @@
 from __future__ import absolute_import
 
 import tobiko
+from tobiko.shell import ping
+from tobiko.shell import sh
 from tobiko.tests.functional.openstack import test_topology
 from tobiko import podified
 
@@ -27,6 +29,17 @@ class PodifiedTopologyTest(test_topology.OpenStackTopologyTest):
     def topology(self) -> podified.PodifiedTopology:
         return tobiko.setup_fixture(podified.PodifiedTopology)
 
-    def test_controller_group(self):
-        self.skipTest("Discovery of the OCP workers is "
-                      "not implemented yet.")
+    def test_ping_node(self):
+        # NOTE(slaweq): in podified topology we expect connectivity only to the
+        # edpm nodes, not to the OCP workers
+        for node in self.topology.get_group("compute"):
+            ping.ping(node.public_ip, count=1, timeout=5.).assert_replied()
+
+    def test_ssh_client(self):
+        # NOTE(slaweq): in podified topology we expect connectivity only to the
+        # edpm nodes, not to the OCP workers
+        for node in self.topology.get_group("compute"):
+            self.assertIsNotNone(node.ssh_client)
+            hostname = sh.ssh_hostname(
+                ssh_client=node.ssh_client).split('.')[0]
+            self.assertEqual(node.name, hostname)

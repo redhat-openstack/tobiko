@@ -13,6 +13,7 @@
 #    under the License.
 from __future__ import absolute_import
 
+import netaddr
 import openshift as oc
 from oslo_log import log
 
@@ -23,6 +24,7 @@ LOG = log.getLogger(__name__)
 OSP_CONTROLPLANE = 'openstackcontrolplane'
 OSP_DP_NODESET = 'openstackdataplanenodeset'
 DP_SSH_SECRET_NAME = 'secret/dataplane-ansible-ssh-private-key-secret'
+OCP_WORKERS = 'nodes'
 
 OVN_DP_SERVICE_NAME = 'ovn'
 COMPUTE_DP_SERVICE_NAMES = ['nova', 'nova-custom']
@@ -48,6 +50,19 @@ def _get_group(services):
     if OVN_DP_SERVICE_NAME in services:
         return EDPM_NETWORKER_GROUP
     return EDPM_OTHER_GROUP
+
+
+def _get_ocp_worker_hostname(worker):
+    for address in worker.get('status', {}).get('addresses', []):
+        if address.get('type') == 'Hostname':
+            return address['address']
+
+
+def _get_ocp_worker_addresses(worker):
+    return [
+        netaddr.IPAddress(address['address']) for
+        address in worker.get('status', {}).get('addresses', [])
+        if address.get('type') != 'Hostname']
 
 
 def has_podified_cp() -> bool:
@@ -98,4 +113,12 @@ def list_edpm_nodes():
 
 
 def list_ocp_workers():
-    pass
+    nodes_sel = oc.selector(OCP_WORKERS)
+    ocp_workers = []
+    for node in nodes_sel.objects():
+        node_dict = node.as_dict()
+        ocp_workers.append({
+            'hostname': _get_ocp_worker_hostname(node_dict),
+            'addresses': _get_ocp_worker_addresses(node_dict)
+        })
+    return ocp_workers

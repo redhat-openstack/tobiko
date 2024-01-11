@@ -656,7 +656,14 @@ class OvnControllerTest(BaseAgentTest):
             self.skipTest(f"Missing container(s): '{self.container_name}'")
 
         for host in hosts:
-            ssh_client = topology.get_openstack_node(hostname=host).ssh_client
+            node = topology.get_openstack_node(hostname=host)
+            if not node.ssh_client:
+                LOG.debug(f'Host {host} is probably an OCP worker in '
+                          f'the Podified environment. SSH to that kind of '
+                          f'nodes is currently not supported.')
+                continue
+
+            ssh_client = node.ssh_client
             pid = self._get_ovn_controller_pid(ssh_client)
             self.assertIsNotNone(pid)
             LOG.debug(f'Killing process {pid} from container '

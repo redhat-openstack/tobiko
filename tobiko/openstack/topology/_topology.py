@@ -217,7 +217,7 @@ class OpenStackTopologyNode:
     def __init__(self,
                  topology: 'OpenStackTopology',
                  name: str,
-                 ssh_client: ssh.SSHClientFixture,
+                 ssh_client: typing.Optional[ssh.SSHClientFixture],
                  addresses: typing.Iterable[netaddr.IPAddress],
                  hostname: str):
         self._topology = weakref.ref(topology)
@@ -474,8 +474,9 @@ class OpenStackTopology(tobiko.SharedFixture):
                   addresses: typing.List[netaddr.IPAddress],
                   hostname: str = None,
                   ssh_client: ssh.SSHClientFixture = None,
+                  create_ssh_client: bool = True,
                   **create_params):
-        if ssh_client is None:
+        if ssh_client is None and create_ssh_client:
             ssh_client = self._ssh_connect(hostname=hostname,
                                            addresses=addresses)
         addresses.extend(self._list_addresses_from_host(ssh_client=ssh_client))
@@ -485,10 +486,12 @@ class OpenStackTopology(tobiko.SharedFixture):
         try:
             node = self._names[name]
         except KeyError:
+            ssh_login = (
+                ssh_client.login if ssh_client else "No SSH Client configured")
             LOG.debug("Add topology node:\n"
                       f" - name: {name}\n"
                       f" - hostname: {hostname}\n"
-                      f" - login: {ssh_client.login}\n"
+                      f" - login: {ssh_login}\n"
                       f" - addresses: {addresses}\n")
             self._names[name] = node = self.create_node(name=name,
                                                         hostname=hostname,
@@ -622,7 +625,11 @@ class OpenStackTopology(tobiko.SharedFixture):
         ip_version = self.config.conf.ip_version
         return ip_version and int(ip_version) or None
 
-    def _list_addresses_from_host(self, ssh_client: ssh.SSHClientFixture):
+    def _list_addresses_from_host(
+            self,
+            ssh_client: typing.Optional[ssh.SSHClientFixture]):
+        if not ssh_client:
+            return tobiko.Selection()
         return ip.list_ip_addresses(ssh_client=ssh_client,
                                     ip_version=self.ip_version,
                                     scope='global')
