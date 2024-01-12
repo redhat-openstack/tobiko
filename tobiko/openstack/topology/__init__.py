@@ -63,3 +63,5 @@ set_default_openstack_topology_class = (
     _topology.set_default_openstack_topology_class)
 verify_osp_version = _topology.verify_osp_version
 get_config_setting = _topology.get_config_setting
+node_name_from_hostname = _topology.node_name_from_hostname
+remove_duplications = _topology.remove_duplications

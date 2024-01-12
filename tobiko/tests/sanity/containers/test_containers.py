@@ -26,6 +26,7 @@ import pandas
 import tobiko
 from tobiko.openstack import neutron
 from tobiko.openstack import topology
+from tobiko.rhosp import containers as rhosp_containers
 from tobiko.shell import sh
 from tobiko import tripleo
 from tobiko.tripleo import containers
@@ -34,8 +35,15 @@ from tobiko.tripleo import containers
 LOG = log.getLogger(__name__)
 
 
+class BaseContainersHealtTest(testtools.TestCase):
+
+    def _assert_containers_running(self, group, expected_containers):
+        topology.get_openstack_topology().assert_containers_running(
+            group=group, expected_containers=expected_containers)
+
+
 @tripleo.skip_if_missing_overcloud
-class ContainersHealthTest(testtools.TestCase):
+class ContainersHealthTest(BaseContainersHealtTest):
     # TODO(eolivare): refactor this class, because it replicates some code from
     # tobiko/tripleo/containers.py and its tests may be duplicating what
     # test_0vercloud_health_check already covers when it calls
@@ -49,158 +57,150 @@ class ContainersHealthTest(testtools.TestCase):
 
     def test_cinder_api(self):
         """check that all common tripleo containers are running"""
-        containers.assert_containers_running('controller', ['cinder_api'])
+        self._assert_containers_running('controller', ['cinder_api'])
 
     @tripleo.skip_if_ceph_rgw()
     def test_swift_rsync(self):
-        containers.assert_containers_running('controller', ['swift_rsync'])
+        self._assert_containers_running('controller', ['swift_rsync'])
 
     @tripleo.skip_if_ceph_rgw()
     def test_swift_proxy(self):
-        containers.assert_containers_running('controller', ['swift_proxy'])
+        self._assert_containers_running('controller', ['swift_proxy'])
 
     @tripleo.skip_if_ceph_rgw()
     def test_swift_object_updater(self):
-        containers.assert_containers_running('controller',
-                                             ['swift_object_updater'])
+        self._assert_containers_running('controller', ['swift_object_updater'])
 
     @tripleo.skip_if_ceph_rgw()
     def test_swift_object_server(self):
-        containers.assert_containers_running('controller',
-                                             ['swift_object_server'])
+        self._assert_containers_running('controller', ['swift_object_server'])
 
     @tripleo.skip_if_ceph_rgw()
     def test_swift_object_replicator(self):
-        containers.assert_containers_running('controller',
-                                             ['swift_object_replicator'])
+        self._assert_containers_running('controller',
+                                        ['swift_object_replicator'])
 
     @tripleo.skip_if_ceph_rgw()
     def test_swift_object_expirer(self):
-        containers.assert_containers_running('controller',
-                                             ['swift_object_expirer'])
+        self._assert_containers_running('controller', ['swift_object_expirer'])
 
     @tripleo.skip_if_ceph_rgw()
     def test_swift_object_auditor(self):
-        containers.assert_containers_running('controller',
-                                             ['swift_object_auditor'])
+        self._assert_containers_running('controller', ['swift_object_auditor'])
 
     @tripleo.skip_if_ceph_rgw()
     def test_swift_container_updater(self):
-        containers.assert_containers_running('controller',
-                                             ['swift_container_updater'])
+        self._assert_containers_running('controller',
+                                        ['swift_container_updater'])
 
     @tripleo.skip_if_ceph_rgw()
     def test_swift_container_server(self):
-        containers.assert_containers_running('controller',
-                                             ['swift_container_server'])
+        self._assert_containers_running('controller',
+                                        ['swift_container_server'])
 
     @tripleo.skip_if_ceph_rgw()
     def test_swift_container_replicator(self):
-        containers.assert_containers_running('controller',
-                                             ['swift_container_replicator'])
+        self._assert_containers_running('controller',
+                                        ['swift_container_replicator'])
 
     @tripleo.skip_if_ceph_rgw()
     def test_swift_container_auditor(self):
-        containers.assert_containers_running('controller',
-                                             ['swift_container_auditor'])
+        self._assert_containers_running('controller',
+                                        ['swift_container_auditor'])
 
     @tripleo.skip_if_ceph_rgw()
     def test_swift_account_server(self):
-        containers.assert_containers_running('controller',
-                                             ['swift_account_server'])
+        self._assert_containers_running('controller', ['swift_account_server'])
 
     @tripleo.skip_if_ceph_rgw()
     def test_swift_account_replicator(self):
-        containers.assert_containers_running('controller',
-                                             ['swift_account_replicator'])
+        self._assert_containers_running('controller',
+                                        ['swift_account_replicator'])
 
     @tripleo.skip_if_ceph_rgw()
     def test_swift_account_reaper(self):
-        containers.assert_containers_running('controller',
-                                             ['swift_account_reaper'])
+        self._assert_containers_running('controller', ['swift_account_reaper'])
 
     @tripleo.skip_if_ceph_rgw()
     def test_swift_account_auditor(self):
-        containers.assert_containers_running('controller',
-                                             ['swift_account_auditor'])
+        self._assert_containers_running('controller',
+                                        ['swift_account_auditor'])
 
     def test_nova_vnc_proxy(self):
-        containers.assert_containers_running('controller', ['nova_vnc_proxy'])
+        self._assert_containers_running('controller', ['nova_vnc_proxy'])
 
     def test_nova_scheduler(self):
-        containers.assert_containers_running('controller', ['nova_scheduler'])
+        self._assert_containers_running('controller', ['nova_scheduler'])
 
     def test_nova_metadata(self):
-        containers.assert_containers_running('controller', ['nova_metadata'])
+        self._assert_containers_running('controller', ['nova_metadata'])
 
     def test_nova_conductor(self):
-        containers.assert_containers_running('controller', ['nova_conductor'])
+        self._assert_containers_running('controller', ['nova_conductor'])
 
     def test_nova_api_cron(self):
-        containers.assert_containers_running('controller', ['nova_api_cron'])
+        self._assert_containers_running('controller', ['nova_api_cron'])
 
     def test_nova_api(self):
-        containers.assert_containers_running('controller', ['nova_api'])
+        self._assert_containers_running('controller', ['nova_api'])
 
     def test_neutron_api(self):
-        containers.assert_containers_running('controller', ['neutron_api'])
+        self._assert_containers_running('controller', ['neutron_api'])
 
     def test_memcached(self):
-        containers.assert_containers_running('controller', ['memcached'])
+        self._assert_containers_running('controller', ['memcached'])
 
     def test_controller_logrotate_crond(self):
-        containers.assert_containers_running('controller', ['logrotate_crond'])
+        self._assert_containers_running('controller', ['logrotate_crond'])
 
     def test_keystone(self):
-        containers.assert_containers_running('controller', ['keystone'])
+        self._assert_containers_running('controller', ['keystone'])
 
     def test_controller_iscsid(self):
-        containers.assert_containers_running('controller', ['iscsid'])
+        self._assert_containers_running('controller', ['iscsid'])
 
     def test_horizon(self):
-        containers.assert_containers_running('controller', ['horizon'])
+        self._assert_containers_running('controller', ['horizon'])
 
     def test_heat_engine(self):
-        containers.assert_containers_running('controller', ['heat_engine'])
+        self._assert_containers_running('controller', ['heat_engine'])
 
     def test_heat_api_cron(self):
-        containers.assert_containers_running('controller', ['heat_api_cron'])
+        self._assert_containers_running('controller', ['heat_api_cron'])
 
     def test_heat_api_cfn(self):
-        containers.assert_containers_running('controller', ['heat_api_cfn'])
+        self._assert_containers_running('controller', ['heat_api_cfn'])
 
     def test_heat_api(self):
-        containers.assert_containers_running('controller', ['heat_api'])
+        self._assert_containers_running('controller', ['heat_api'])
 
     def test_glance_api(self):
-        containers.assert_containers_running('controller', ['glance_api'])
+        self._assert_containers_running('controller', ['glance_api'])
 
     def test_cinder_scheduler(self):
-        containers.assert_containers_running('controller',
-                                             ['cinder_scheduler'])
+        self._assert_containers_running('controller', ['cinder_scheduler'])
 
     def test_cinder_api_cron(self):
-        containers.assert_containers_running('controller', ['cinder_api_cron'])
+        self._assert_containers_running('controller', ['cinder_api_cron'])
 
     def test_compute_iscsid(self):
-        containers.assert_containers_running('compute', ['iscsid'])
+        self._assert_containers_running('compute', ['iscsid'])
 
     def test_compute_logrotate_crond(self):
-        containers.assert_containers_running('compute', ['logrotate_crond'])
+        self._assert_containers_running('compute', ['logrotate_crond'])
 
     def test_nova_compute(self):
-        containers.assert_containers_running('compute', ['nova_compute'])
+        self._assert_containers_running('compute', ['nova_compute'])
 
     def test_nova_libvirt(self):
         nova_libvirt = containers.get_libvirt_container_name()
-        containers.assert_containers_running('compute', [nova_libvirt])
+        self._assert_containers_running('compute', [nova_libvirt])
 
     def test_nova_migration_target(self):
-        containers.assert_containers_running('compute',
-                                             ['nova_migration_target'])
+        self._assert_containers_running('compute', ['nova_migration_target'])
 
     def test_nova_virtlogd(self):
-        containers.assert_containers_running('compute', ['nova_virtlogd'])
+        self._assert_containers_running('compute', ['nova_virtlogd'])
 
     def test_ovn_containers_running(self):
         containers.assert_ovn_containers_running()
@@ -244,8 +244,8 @@ class ContainersHealthTest(testtools.TestCase):
             # execute a `dataframe` diff between the expected
             # and actual containers
             expected_containers_state_changed = \
-                containers.dataframe_difference(expected_containers_list_df,
-                                                actual_containers_list_df)
+                rhosp_containers.dataframe_difference(
+                    expected_containers_list_df, actual_containers_list_df)
             # check for changed state containerstopology
             if not expected_containers_state_changed.empty:
                 failures.append('expected containers changed state ! : '

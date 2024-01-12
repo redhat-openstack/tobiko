@@ -15,6 +15,7 @@ from __future__ import absolute_import
 
 import testtools
 
+from tobiko.rhosp import containers as rhosp_containers
 from tobiko.tripleo import containers
 
 
@@ -23,7 +24,7 @@ class RuntimeRuntimeTest(testtools.TestCase):
 
     def test_get_container_runtime(self):
         runtime = containers.get_container_runtime()
-        self.assertIsInstance(runtime, containers.ContainerRuntime)
+        self.assertIsInstance(runtime, rhosp_containers.ContainerRuntime)
 
     def test_list_containers(self):
         containers_list = containers.list_containers()

@@ -21,3 +21,5 @@ RhospNode = _topology.RhospNode
 
 get_rhosp_release = _version_utils.get_rhosp_release
 get_rhosp_version = _version_utils.get_rhosp_version
+
+ip_to_hostname = _topology.ip_to_hostname

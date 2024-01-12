@@ -31,6 +31,7 @@ from tobiko.shell import sh
 from tobiko.shell import ssh
 from tobiko.tripleo import _overcloud
 from tobiko.tripleo import _undercloud
+from tobiko.tripleo import containers
 
 CONF = config.CONF
 LOG = log.getLogger(__name__)
@@ -84,11 +85,46 @@ class TripleoTopology(rhosp.RhospTopology):
         neutron.SERVER: '/var/log/containers/neutron/server.log*',
     }
 
+    _container_runtime_cmd = None
+
+    pcs_resource_list = ['haproxy', 'galera', 'redis', 'ovn-dbs', 'cinder',
+                         'rabbitmq', 'manila', 'ceph', 'pacemaker']
+
+    sidecar_container_list = [
+        'neutron-haproxy-ovnmeta', 'neutron-haproxy-qrouter',
+        'neutron-dnsmasq-qdhcp', 'neutron-keepalived-qrouter', 'neutron-radvd']
+
+    @property
+    def container_runtime_cmd(self):
+        if self._container_runtime_cmd is None:
+            self._container_runtime_cmd = \
+                    containers.get_container_runtime_name()
+        return self._container_runtime_cmd
+
+    @property
+    def ignore_containers_list(self):
+        return self.pcs_resource_list + self.sidecar_container_list
+
     def create_node(self, name, ssh_client, **kwargs):
         return TripleoTopologyNode(topology=self,
                                    name=name,
                                    ssh_client=ssh_client,
                                    **kwargs)
+
+    def assert_containers_running(self, expected_containers,
+                                  group=None,
+                                  full_name=True, bool_check=False,
+                                  nodenames=None):
+        group = group or 'overcloud'
+        return containers.assert_containers_running(
+            group=group,
+            expected_containers=expected_containers,
+            full_name=full_name,
+            bool_check=bool_check,
+            nodenames=nodenames)
+
+    def list_containers_df(self, group=None):
+        return containers.list_containers_df(group)
 
     def discover_nodes(self):
         self.discover_ssh_proxy_jump_node()
@@ -237,30 +273,9 @@ def setup_tripleo_topology():
         topology.set_default_openstack_topology_class(TripleoTopology)
 
 
-def get_ip_to_nodes_dict(openstack_nodes=None):
-    if not openstack_nodes:
-        openstack_nodes = topology.list_openstack_nodes(group='overcloud')
-    ip_to_nodes_dict = {str(node.public_ip): node.name for node in
-                        openstack_nodes}
-    return ip_to_nodes_dict
-
-
 def str_is_not_ip(check_str):
     letters = re.compile('[A-Za-z]')
     return bool(letters.match(check_str))
-
-
-def ip_to_hostname(oc_ip):
-    ip_to_nodes_dict = get_ip_to_nodes_dict()
-    oc_ipv6 = oc_ip.replace(".", ":")
-    if netaddr.valid_ipv4(oc_ip) or netaddr.valid_ipv6(oc_ip):
-        return ip_to_nodes_dict[oc_ip]
-    elif netaddr.valid_ipv6(oc_ipv6):
-        LOG.debug("The provided string was a modified IPv6 address: %s",
-                  oc_ip)
-        return ip_to_nodes_dict[oc_ipv6]
-    else:
-        tobiko.fail("wrong IP value provided %s" % oc_ip)
 
 
 def actual_node_groups(groups):

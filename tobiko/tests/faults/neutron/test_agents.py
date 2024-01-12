@@ -31,8 +31,6 @@ from tobiko.openstack import tests
 from tobiko.openstack import topology
 from tobiko.shell import ping
 from tobiko.shell import sh
-from tobiko.tripleo import containers
-from tobiko.tripleo import overcloud
 
 
 LOG = log.getLogger(__name__)
@@ -69,10 +67,7 @@ class BaseAgentTest(testtools.TestCase):
 
     @property
     def container_runtime_name(self):
-        if overcloud.has_overcloud():
-            return containers.get_container_runtime_name()
-        else:
-            return 'docker'
+        return topology.get_openstack_topology().container_runtime_cmd
 
     def get_agent_container_name(self, agent_name):
         try:
@@ -88,8 +83,9 @@ class BaseAgentTest(testtools.TestCase):
                 self.agent_name)
             if not self.container_name:
                 return
-            oc_containers_df = containers.list_containers_df().query(
-                f'container_name == "{self.container_name}"')
+            oc_containers_df = \
+                topology.get_openstack_topology().list_containers_df().query(
+                    f'container_name == "{self.container_name}"')
             LOG.debug(
                 f"{self.container_name} container found:\n{oc_containers_df}")
 
@@ -166,8 +162,7 @@ class BaseAgentTest(testtools.TestCase):
         '''
         self._do_agent_action(START, hosts)
         if self.container_name:
-            containers.assert_containers_running(
-                group='overcloud',
+            topology.get_openstack_topology().assert_containers_running(
                 expected_containers=[self.container_name],
                 nodenames=hosts or self.hosts)
 
@@ -181,8 +176,7 @@ class BaseAgentTest(testtools.TestCase):
         '''
         self._do_agent_action(RESTART, hosts)
         if self.container_name:
-            containers.assert_containers_running(
-                group='overcloud',
+            topology.get_openstack_topology().assert_containers_running(
                 expected_containers=[self.container_name],
                 nodenames=hosts or self.hosts)
 
@@ -213,8 +207,7 @@ class BaseAgentTest(testtools.TestCase):
                        sudo=True)
 
         if self.container_name:
-            containers.assert_containers_running(
-                group='overcloud',
+            topology.get_openstack_topology().assert_containers_running(
                 expected_containers=[self.container_name],
                 nodenames=hosts or self.hosts)
 

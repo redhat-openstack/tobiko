@@ -22,6 +22,7 @@ from tobiko.openstack import neutron
 from tobiko.openstack import topology
 from tobiko.podified import _edpm
 from tobiko.podified import _openshift
+from tobiko.podified import containers
 from tobiko import rhosp
 from tobiko.shell import ssh
 
@@ -67,9 +68,29 @@ class PodifiedTopology(rhosp.RhospTopology):
         neutron.FRR: 'frr'
     }
 
-    def __init__(self):
-        super(PodifiedTopology, self).__init__()
-        self.ocp_workers = {}
+    sidecar_container_list = [
+        'neutron-haproxy-ovnmeta',
+        'neutron-dnsmasq-qdhcp'
+    ]
+
+    @property
+    def ignore_containers_list(self):
+        return self.sidecar_container_list
+
+    def assert_containers_running(self, expected_containers,
+                                  group=None,
+                                  full_name=True, bool_check=False,
+                                  nodenames=None):
+        group = group or ALL_COMPUTES_GROUP_NAME
+        return containers.assert_containers_running(
+            group=group,
+            expected_containers=expected_containers,
+            full_name=full_name,
+            bool_check=bool_check,
+            nodenames=nodenames)
+
+    def list_containers_df(self, group=None):
+        return containers.list_containers_df(group)
 
     def add_node(self,
                  hostname: typing.Optional[str] = None,

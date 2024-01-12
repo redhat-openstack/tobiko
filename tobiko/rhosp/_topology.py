@@ -27,6 +27,27 @@ from tobiko.shell import ssh
 LOG = log.getLogger(__name__)
 
 
+def get_ip_to_nodes_dict(group, openstack_nodes=None):
+    if not openstack_nodes:
+        openstack_nodes = topology.list_openstack_nodes(group=group)
+    ip_to_nodes_dict = {str(node.public_ip): node.name for node in
+                        openstack_nodes}
+    return ip_to_nodes_dict
+
+
+def ip_to_hostname(oc_ip, group=None):
+    ip_to_nodes_dict = get_ip_to_nodes_dict(group)
+    oc_ipv6 = oc_ip.replace(".", ":")
+    if netaddr.valid_ipv4(oc_ip) or netaddr.valid_ipv6(oc_ip):
+        return ip_to_nodes_dict[oc_ip]
+    elif netaddr.valid_ipv6(oc_ipv6):
+        LOG.debug("The provided string was a modified IPv6 address: %s",
+                  oc_ip)
+        return ip_to_nodes_dict[oc_ipv6]
+    else:
+        tobiko.fail("wrong IP value provided %s" % oc_ip)
+
+
 class RhospTopology(topology.OpenStackTopology):
 
     """Base topology for Red Hat OpenStack deployments.
@@ -36,6 +57,11 @@ class RhospTopology(topology.OpenStackTopology):
     """
 
     has_containers = True
+    container_runtime_cmd = 'podman'
+
+    @property
+    def ignore_containers_list(self):
+        return None
 
 
 class RhospNode(topology.OpenStackTopologyNode):

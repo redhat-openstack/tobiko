@@ -311,6 +311,8 @@ class OpenStackTopology(tobiko.SharedFixture):
 
     has_containers = False
 
+    container_runtime_cmd = 'docker'
+
     config_file_mappings = {
         'ml2_conf.ini': '/etc/neutron/plugins/ml2/ml2_conf.ini',
         'bgp-agent.conf': '/etc/ovn-bgp-agent/bgp-agent.conf'
@@ -395,6 +397,15 @@ class OpenStackTopology(tobiko.SharedFixture):
             digger.add_host(hostname=node.name,
                             ssh_client=node.ssh_client)
         return digger
+
+    def assert_containers_running(self, expected_containers,
+                                  group=None,
+                                  full_name=True, bool_check=False,
+                                  nodenames=None):
+        pass
+
+    def list_containers_df(self, group=None):
+        pass
 
     def discover_nodes(self):
         self.discover_ssh_proxy_jump_node()
