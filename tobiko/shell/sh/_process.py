@@ -197,6 +197,8 @@ class ShellProcessFixture(tobiko.SharedFixture):
                 LOG.exception("Error closing STDERR stream: %r", self.stderr)
 
     def close(self, timeout: tobiko.Seconds = None):
+        if timeout is None:
+            timeout = self.parameters.timeout
         self.close_stdin()
         try:
             # Drain all incoming data from STDOUT and STDERR

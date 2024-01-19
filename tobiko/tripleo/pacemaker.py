@@ -413,6 +413,7 @@ def run_pcs_resource_operation(resource: str,
             output = execute_pcs(command_args,
                                  ssh_client=ssh_client,
                                  add_stderr=add_stderr,
+                                 timeout=operation_wait + 10.,
                                  sudo=True)
         except sh.ShellCommandFailed as exc:
             if attempt.is_last:
