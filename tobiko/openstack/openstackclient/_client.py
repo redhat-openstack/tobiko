@@ -19,12 +19,14 @@ import json
 
 from oslo_log import log
 
+from tobiko import config
 from tobiko.openstack import keystone
 from tobiko.openstack.openstackclient import _exception
 from tobiko.shell import sh
 import tobiko.tripleo
 
 
+CONF = config.CONF
 LOG = log.getLogger(__name__)
 
 
@@ -66,6 +68,9 @@ def _param_list(*args, **kwargs):
         tmp_auth['os-project-domain-id'] = credentials.project_domain_id
         if credentials.api_version == 3:
             tmp_auth['os-identity-api-version'] = credentials.api_version
+        if 'https://' in credentials.auth_url and not credentials.cacert:
+            tmp_auth['os-cacert'] = \
+                CONF.tobiko.tripleo.undercloud_cacert_file
         for key, val in tmp_auth.items():
             if val:
                 kwargs[key] = val
