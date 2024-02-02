@@ -25,9 +25,9 @@ import tobiko
 from tobiko.openstack import neutron
 from tobiko.openstack import stacks
 from tobiko.openstack import topology
+from tobiko import podified
 from tobiko.shell import sh
-from tobiko.tripleo import containers
-from tobiko.tripleo import overcloud
+from tobiko import tripleo
 
 LOG = log.getLogger(__name__)
 
@@ -56,28 +56,42 @@ class BaseSecurityGroupTest(testtools.TestCase):
                 "sed -e 's/\"//g' | sed 's/6642/6641/g'",
                 ssh_client=self.host_ssh_client,
                 sudo=True)
+            if 'ovsdbserver-sb' in command_result.stdout:
+                nb_db = command_result.stdout.replace('ovsdbserver-sb',
+                                                      'ovsdbserver-nb')
+            else:
+                nb_db = command_result.stdout
             ssl_params = ''
             if 'ssl' in command_result.stdout:
                 ssl_params = ' -p {} -c {} -C {} '.format(
                     '/etc/pki/tls/private/ovn_controller.key',
                     '/etc/pki/tls/certs/ovn_controller.crt',
                     '/etc/ipa/ca.crt')
-            self._ovn_nb_db = command_result.stdout + ssl_params
+            self._ovn_nb_db = nb_db + ssl_params
         return self._ovn_nb_db
 
     @property
     def host_ssh_client(self):
         if not self._host_ssh_client:
-            self._host_ssh_client = topology.get_openstack_node(
-                hostname=self.ovn_controller_agents[0]['host']).ssh_client
+            for ovn_controller_agent in self.ovn_controller_agents:
+                candidate_ssh_client = topology.get_openstack_node(
+                        hostname=ovn_controller_agent['host']).ssh_client
+                # some of the ovn-controller hosts may be not ssh'able
+                # (specifically, this happens with Podified Controlplane hosts)
+                if candidate_ssh_client is not None:
+                    self._host_ssh_client = candidate_ssh_client
+                    break
         return self._host_ssh_client
 
     @property
     def container_runtime_name(self):
         if not self._container_runtime_name:
-            if overcloud.has_overcloud():
+            if tripleo.has_overcloud():
                 self._container_runtime_name = (
-                    containers.get_container_runtime_name())
+                    tripleo.get_container_runtime_name())
+            elif podified.has_podified_cp():
+                self._container_runtime_name = (
+                    podified.get_container_runtime_name())
             else:
                 self._container_runtime_name = 'docker'
         return self._container_runtime_name

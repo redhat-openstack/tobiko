@@ -15,6 +15,7 @@ from __future__ import absolute_import
 
 from tobiko.podified import _topology
 from tobiko.podified import _openshift
+from tobiko.podified import containers
 
 
 EDPM_NODE = _topology.EDPM_NODE
@@ -28,3 +29,6 @@ PodifiedTopology = _topology.PodifiedTopology
 skip_if_not_podified = _topology.skip_if_not_podified
 
 get_dataplane_ssh_keypair = _openshift.get_dataplane_ssh_keypair
+has_podified_cp = _openshift.has_podified_cp
+
+get_container_runtime_name = containers.get_container_runtime_name
