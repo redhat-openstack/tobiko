@@ -325,6 +325,8 @@ class FileGlanceImageFixture(UploadGlanceImageFixture):
 
     @property
     def real_image_file(self):
+        if '/' in self.image_file:
+            return os.path.expanduser(self.image_file)
         return os.path.join(self.real_image_dir, self.image_file)
 
     def get_image_data(self):
