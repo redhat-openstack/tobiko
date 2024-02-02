@@ -14,9 +14,9 @@
 from __future__ import absolute_import
 
 from tobiko.openstack.topology import _assert
+from tobiko.openstack.topology import _config
 from tobiko.openstack.topology import _exception
 from tobiko.openstack.topology import _namespace
-from tobiko.openstack.topology import _neutron
 from tobiko.openstack.topology import _topology
 from tobiko.openstack.topology import _sh
 
@@ -25,12 +25,6 @@ assert_unreachable_nodes = _assert.assert_unreachable_nodes
 
 NoSuchOpenStackTopologyNodeGroup = _exception.NoSuchOpenStackTopologyNodeGroup
 NoSuchOpenStackTopologyNode = _exception.NoSuchOpenStackTopologyNode
-
-NeutronNovaResponse = _neutron.NeutronNovaResponse
-NeutronNovaResponseReader = _neutron.NeutronNovaResponseReader
-read_neutron_nova_responses = _neutron.read_neutron_nova_responses
-assert_ovn_unsupported_dhcp_option_messages = (
-    _neutron.assert_ovn_unsupported_dhcp_option_messages)
 
 get_hosts_namespaces = _namespace.get_hosts_namespaces
 assert_namespace_in_hosts = _namespace.assert_namespace_in_hosts
@@ -65,5 +59,6 @@ verify_osp_version = _topology.verify_osp_version
 get_config_setting = _topology.get_config_setting
 node_name_from_hostname = _topology.node_name_from_hostname
 remove_duplications = _topology.remove_duplications
-
 OpenstackGroupNamesType = _topology.OpenstackGroupNamesType
+
+OpenStackTopologyConfig = _config.OpenStackTopologyConfig

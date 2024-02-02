@@ -33,6 +33,9 @@ LOG = log.getLogger(__name__)
 skip_if_not_podified = tobiko.skip_unless(
     "Podified deployment not configured", _openshift.has_podified_cp
 )
+skip_if_podified = tobiko.skip_if(
+    "This test cannot run on a Podified deployment", _openshift.has_podified_cp
+)
 
 # In Podified topology there are groups like 'edpm-compute', 'edpm-networker'
 # and 'edpm-other' but we need to provide also "virtual" group which will

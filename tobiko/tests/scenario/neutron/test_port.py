@@ -29,6 +29,7 @@ from tobiko.shell import ping
 from tobiko.shell import ip
 from tobiko.shell import sh
 from tobiko.openstack import neutron
+from tobiko.openstack.neutron import neutron_log_reader
 from tobiko.openstack import stacks
 from tobiko.openstack import topology
 from tobiko.tripleo import overcloud
@@ -185,7 +186,7 @@ class ExtraDhcpOptsPortLoggingTest(testtools.TestCase):
 
     def test_extra_dhcp_opts_logs_unsupported_options(self):
         # initialize logs that match the pattern
-        topology.assert_ovn_unsupported_dhcp_option_messages()
+        neutron_log_reader.assert_ovn_unsupported_dhcp_option_messages()
 
         wrong_ipv4_option = 'wrong-ipv4-option'
         wrong_ipv6_option = 'bananas'
@@ -211,7 +212,7 @@ class ExtraDhcpOptsPortLoggingTest(testtools.TestCase):
         invalid_options = [wrong_ipv4_option,
                            a_valid_ipv4_option_used_for_ipv6]
         # assert every invalid dhcp option is logged
-        topology.assert_ovn_unsupported_dhcp_option_messages(
+        neutron_log_reader.assert_ovn_unsupported_dhcp_option_messages(
             unsupported_options=invalid_options,
             port_uuid=port['id'])
 
@@ -223,6 +224,6 @@ class ExtraDhcpOptsPortLoggingTest(testtools.TestCase):
                                    **{'extra_dhcp_opts': extra_dhcp_opts})
         invalid_options.append(wrong_ipv6_option)
         # assert every invalid dhcp option is logged
-        topology.assert_ovn_unsupported_dhcp_option_messages(
+        neutron_log_reader.assert_ovn_unsupported_dhcp_option_messages(
             unsupported_options=invalid_options,
             port_uuid=port['id'])

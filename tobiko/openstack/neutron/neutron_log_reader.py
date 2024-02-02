@@ -22,8 +22,9 @@ from oslo_log import log
 
 import tobiko
 from tobiko.openstack import neutron
-from tobiko.openstack.topology import _config
-from tobiko.openstack.topology import _topology
+from tobiko.openstack.neutron import _agent
+from tobiko.openstack import topology
+from tobiko import podified
 from tobiko.shell import files
 
 
@@ -49,14 +50,14 @@ class NeutronNovaCommonReader(tobiko.SharedFixture):
     groups: typing.List[str]
     message_pattern: str
     datetime_pattern: typing.Pattern
-    config = tobiko.required_fixture(_config.OpenStackTopologyConfig)
+    config = tobiko.required_fixture(topology.OpenStackTopologyConfig)
     service_name = neutron.SERVER
 
     def setup_fixture(self):
         self.datetime_pattern = re.compile(
             self.config.conf.log_datetime_pattern)
         self.log_digger = self.useFixture(
-            _topology.get_log_file_digger(
+            topology.get_log_file_digger(
                 service_name=self.service_name,
                 groups=self.groups,
                 pattern=self.message_pattern))
@@ -129,7 +130,8 @@ class UnsupportedDhcpOptionMessage(typing.NamedTuple):
         return self.timestamp < other.timestamp
 
 
-@neutron.skip_unless_is_ovn()
+@podified.skip_if_podified
+@_agent.skip_unless_is_ovn()
 class OvnUnsupportedDhcpOptionReader(NeutronNovaCommonReader):
     groups = ['controller']
     message_pattern = (

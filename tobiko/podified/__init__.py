@@ -27,6 +27,7 @@ EDPM_OTHER_GROUP = _openshift.EDPM_OTHER_GROUP
 PodifiedTopology = _topology.PodifiedTopology
 
 skip_if_not_podified = _topology.skip_if_not_podified
+skip_if_podified = _topology.skip_if_podified
 
 get_dataplane_ssh_keypair = _openshift.get_dataplane_ssh_keypair
 has_podified_cp = _openshift.has_podified_cp
