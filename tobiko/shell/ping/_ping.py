@@ -328,7 +328,7 @@ def execute_ping(parameters, ssh_client=None, check=True):
     try:
         result = sh.execute(command=command,
                             ssh_client=ssh_client,
-                            timeout=parameters.deadline + 2.,
+                            timeout=parameters.deadline + 3.,
                             expect_exit_status=None,
                             network_namespace=parameters.network_namespace)
     except sh.ShellError as ex:
