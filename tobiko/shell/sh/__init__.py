@@ -127,6 +127,7 @@ wait_for_active_systemd_units = _systemctl.wait_for_active_systemd_units
 wait_for_systemd_units_state = _systemctl.wait_for_systemd_units_state
 
 get_uptime = _uptime.get_uptime
+UptimeError = _uptime.UptimeError
 
 assert_file_size = _wc.assert_file_size
 get_file_size = _wc.get_file_size
