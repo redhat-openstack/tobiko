@@ -14,7 +14,7 @@
 from __future__ import absolute_import
 
 import netaddr
-import openshift as oc
+import openshift_client as oc
 from oslo_log import log
 
 from tobiko.shell import sh
