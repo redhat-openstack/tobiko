@@ -130,9 +130,8 @@ def check_overcloud_node_uptime(ssh_client, start_time):
     for attempt in tobiko.retry(timeout=600., interval=10.):
         try:
             uptime = sh.get_uptime(ssh_client=ssh_client, timeout=15.)
-        except (sh.ShellCommandFailed,
-                sh.ShellTimeoutExpired,
-                sh.ShellProcessTerminated):
+        except sh.UptimeError:
+            LOG.exception('uptime command failed')
             uptime = None
 
         if uptime and uptime < (tobiko.time() - start_time):
