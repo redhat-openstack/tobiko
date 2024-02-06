@@ -45,8 +45,8 @@ LOG = log.getLogger(__name__)
 
 PatternType = type(re.compile(r'.*'))
 OpenstackGroupNameType = typing.Union[str, typing.Pattern]
-OpenstackGroupNamesType = typing.Union[OpenstackGroupNameType, typing.Iterable[
-    OpenstackGroupNameType]]
+OpenstackGroupNamesType = typing.Optional[typing.Union[
+    OpenstackGroupNameType, typing.Iterable[OpenstackGroupNameType]]]
 
 
 HostAddressType = typing.Union[str, netaddr.IPAddress]

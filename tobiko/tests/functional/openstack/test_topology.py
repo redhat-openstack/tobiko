@@ -37,6 +37,8 @@ PatternType = type(re.compile(r''))
 @keystone.skip_unless_has_keystone_credentials()
 class OpenStackTopologyTest(testtools.TestCase):
 
+    expected_group: topology.OpenstackGroupNamesType = None
+
     @property
     def topology(self) -> topology.OpenStackTopology:
         return topology.get_openstack_topology()
@@ -134,7 +136,8 @@ class OpenStackTopologyTest(testtools.TestCase):
         self.assertEqual(expected_nodes, actual_nodes)
 
     def test_list_nodes_processes(self):
-        node = random.choice(topology.list_openstack_nodes())
+        node = random.choice(topology.list_openstack_nodes(
+            group=self.expected_group))
         filename = sh.execute(
             'mktemp', ssh_client=node.ssh_client).stdout.strip()
         self.addCleanup(sh.execute, f"rm -f '{filename}'",
