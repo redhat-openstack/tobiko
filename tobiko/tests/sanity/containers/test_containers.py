@@ -26,10 +26,12 @@ import pandas
 import tobiko
 from tobiko.openstack import neutron
 from tobiko.openstack import topology
+from tobiko import podified
+from tobiko.podified import containers as podified_containers
 from tobiko.rhosp import containers as rhosp_containers
 from tobiko.shell import sh
 from tobiko import tripleo
-from tobiko.tripleo import containers
+from tobiko.tripleo import containers as tripleo_containers
 
 
 LOG = log.getLogger(__name__)
@@ -43,7 +45,7 @@ class BaseContainersHealtTest(testtools.TestCase):
 
 
 @tripleo.skip_if_missing_overcloud
-class ContainersHealthTest(BaseContainersHealtTest):
+class TripleoContainersHealthTest(BaseContainersHealtTest):
     # TODO(eolivare): refactor this class, because it replicates some code from
     # tobiko/tripleo/containers.py and its tests may be duplicating what
     # test_0vercloud_health_check already covers when it calls
@@ -52,7 +54,7 @@ class ContainersHealthTest(BaseContainersHealtTest):
     @functools.lru_cache()
     def list_node_containers(self, ssh_client):
         """returns a list of containers and their run state"""
-        return containers.get_container_runtime().\
+        return tripleo_containers.get_container_runtime().\
             list_containers(ssh_client=ssh_client)
 
     def test_cinder_api(self):
@@ -193,7 +195,7 @@ class ContainersHealthTest(BaseContainersHealtTest):
         self._assert_containers_running('compute', ['nova_compute'])
 
     def test_nova_libvirt(self):
-        nova_libvirt = containers.get_libvirt_container_name()
+        nova_libvirt = tripleo_containers.get_libvirt_container_name()
         self._assert_containers_running('compute', [nova_libvirt])
 
     def test_nova_migration_target(self):
@@ -203,7 +205,7 @@ class ContainersHealthTest(BaseContainersHealtTest):
         self._assert_containers_running('compute', ['nova_virtlogd'])
 
     def test_ovn_containers_running(self):
-        containers.assert_ovn_containers_running()
+        tripleo_containers.assert_ovn_containers_running()
 
     def test_equal_containers_state(self, expected_containers_list=None,
                                     timeout=120, interval=5,
@@ -218,25 +220,26 @@ class ContainersHealthTest(BaseContainersHealtTest):
         # otherwise  create and return
         if recreate_expected or (not (expected_containers_list or
                                       os.path.exists(
-                                          containers.
+                                          rhosp_containers.
                                           expected_containers_file))):
-            containers.save_containers_state_to_file(containers.
-                                                     list_containers())
+            tripleo_containers.save_containers_state_to_file(
+                tripleo_containers.list_containers())
             return
         elif expected_containers_list:
             expected_containers_list_df = pandas.DataFrame(
-                containers.get_container_states_list(expected_containers_list),
+                tripleo_containers.get_container_states_list(
+                    expected_containers_list),
                 columns=['container_host', 'container_name',
                          'container_state'])
-        elif os.path.exists(containers.expected_containers_file):
+        elif os.path.exists(rhosp_containers.expected_containers_file):
             expected_containers_list_df = pandas.read_csv(
-                containers.expected_containers_file)
+                rhosp_containers.expected_containers_file)
         failures = []
         error_info = 'Output explanation: left_only is the original state, ' \
                      'right_only is the new state'
         for _ in tobiko.retry(timeout=timeout):
             failures = []
-            actual_containers_list_df = containers.list_containers_df()
+            actual_containers_list_df = tripleo_containers.list_containers_df()
             LOG.info('expected_containers_list_df: {} '.format(
                 expected_containers_list_df.to_string(index=False)))
             LOG.info('actual_containers_list_df: {} '.format(
@@ -255,7 +258,7 @@ class ContainersHealthTest(BaseContainersHealtTest):
                 LOG.info('container states mismatched:\n{}\n'.format(failures))
                 time.sleep(interval)
                 # clear cache to obtain new data
-                containers.list_node_containers.cache_clear()
+                tripleo_containers.list_node_containers.cache_clear()
             else:
                 LOG.info("assert_equal_containers_state :"
                          " OK, all containers are on the same state")
@@ -265,7 +268,8 @@ class ContainersHealthTest(BaseContainersHealtTest):
                 failures))
 
     def config_validation(self, config_checkings):
-        container_runtime_name = containers.get_container_runtime_name()
+        container_runtime_name = tripleo_containers.\
+                                 get_container_runtime_name()
         for node in topology.list_openstack_nodes(
                 group=config_checkings['node_group']):
             for param_check in config_checkings['param_validations']:
@@ -317,3 +321,89 @@ class ContainersHealthTest(BaseContainersHealtTest):
                                     'param': 'mechanism_drivers',
                                     'expected_value': 'openvswitch'}]}
         self.config_validation(ovs_config_checkings)
+
+
+@podified.skip_if_not_podified
+class PodifiedContainersHealthTest(BaseContainersHealtTest):
+
+    @functools.lru_cache()
+    def list_node_containers(self, ssh_client):
+        """returns a list of containers and their run state"""
+        return podified_containers.get_container_runtime().\
+            list_containers(ssh_client=ssh_client)
+
+    def test_compute_iscsid(self):
+        self._assert_containers_running(podified.EDPM_COMPUTE_GROUP,
+                                        ['iscsid'])
+
+    def test_compute_logrotate_crond(self):
+        self._assert_containers_running(podified.EDPM_COMPUTE_GROUP,
+                                        ['logrotate_crond'])
+
+    def test_nova_compute(self):
+        self._assert_containers_running(podified.EDPM_COMPUTE_GROUP,
+                                        ['nova_compute'])
+
+    def test_ovn_containers_running(self):
+        podified_containers.assert_ovn_containers_running()
+
+    def test_equal_containers_state(self, expected_containers_list=None,
+                                    timeout=120, interval=5,
+                                    recreate_expected=False):
+        """compare all overcloud container states with using two lists:
+        one is current , the other some past list
+        first time this method runs it creates a file holding overcloud
+        containers' states: ~/expected_containers_list_df.csv'
+        second time it creates a current containers states list and
+        compares them, they must be identical"""
+        # if we have a file or an explicit variable use that ,
+        # otherwise  create and return
+        if recreate_expected or (not (expected_containers_list or
+                                      os.path.exists(
+                                          rhosp_containers.
+                                          expected_containers_file))):
+            podified_containers.save_containers_state_to_file(
+                podified_containers.list_containers())
+            return
+        elif expected_containers_list:
+            expected_containers_list_df = pandas.DataFrame(
+                podified_containers.get_container_states_list(
+                    expected_containers_list),
+                columns=['container_host', 'container_name',
+                         'container_state'])
+        elif os.path.exists(rhosp_containers.expected_containers_file):
+            expected_containers_list_df = pandas.read_csv(
+                rhosp_containers.expected_containers_file)
+        failures = []
+        error_info = 'Output explanation: left_only is the original state, ' \
+                     'right_only is the new state'
+        for _ in tobiko.retry(timeout=timeout):
+            failures = []
+            actual_containers_list_df = \
+                podified_containers.list_containers_df()
+            LOG.info('expected_containers_list_df: {} '.format(
+                expected_containers_list_df.to_string(index=False)))
+            LOG.info('actual_containers_list_df: {} '.format(
+                actual_containers_list_df.to_string(index=False)))
+            # execute a `dataframe` diff between the expected
+            # and actual containers
+            expected_containers_state_changed = \
+                rhosp_containers.dataframe_difference(
+                    expected_containers_list_df, actual_containers_list_df)
+            # check for changed state containerstopology
+            if not expected_containers_state_changed.empty:
+                failures.append('expected containers changed state ! : '
+                                '\n\n{}\n{}'.format(
+                                 expected_containers_state_changed.
+                                 to_string(index=False), error_info))
+                LOG.info('container states mismatched:\n{}\n'.format(failures))
+                time.sleep(interval)
+                # clear cache to obtain new data
+                podified_containers.list_node_containers.cache_clear()
+            else:
+                LOG.info("assert_equal_containers_state :"
+                         " OK, all containers are on the same state")
+                return
+        if failures:
+            tobiko.fail('container states mismatched:\n{!s}', '\n'.join(
+                failures))

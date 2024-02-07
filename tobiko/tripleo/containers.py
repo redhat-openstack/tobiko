@@ -121,17 +121,13 @@ def list_containers(group=None):
     return containers_list
 
 
-expected_containers_file = os.path.expanduser(
-    '~/expected_containers_list_df.csv')
-
-
 def save_containers_state_to_file(expected_containers_list,):
     expected_containers_list_df = pandas.DataFrame(
         get_container_states_list(expected_containers_list),
         columns=['container_host', 'container_name', 'container_state'])
     expected_containers_list_df.to_csv(
-        expected_containers_file)
-    return expected_containers_file
+        rhosp_containers.expected_containers_file)
+    return rhosp_containers.expected_containers_file
 
 
 def assert_containers_running(group, expected_containers, full_name=True,
@@ -527,8 +523,9 @@ def assert_equal_containers_state(expected_containers_list=None,
 
     # if we have a file or an explicit variable use that , otherwise  create
     # and return
-    if recreate_expected or (not expected_containers_list and
-                             not os.path.exists(expected_containers_file)):
+    if recreate_expected or (
+            not expected_containers_list and
+            not os.path.exists(rhosp_containers.expected_containers_file)):
         save_containers_state_to_file(list_containers())
         return
 
@@ -537,9 +534,9 @@ def assert_equal_containers_state(expected_containers_list=None,
             get_container_states_list(expected_containers_list),
             columns=['container_host', 'container_name', 'container_state'])
 
-    elif os.path.exists(expected_containers_file):
+    elif os.path.exists(rhosp_containers.expected_containers_file):
         expected_containers_list_df = pandas.read_csv(
-            expected_containers_file)
+            rhosp_containers.expected_containers_file)
 
     failures = []
     start = time.time()

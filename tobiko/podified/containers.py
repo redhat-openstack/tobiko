@@ -97,19 +97,6 @@ def list_containers(group=None):
     return containers_list
 
 
-expected_containers_file = os.path.expanduser(
-    '~/expected_containers_list_df.csv')
-
-
-def save_containers_state_to_file(expected_containers_list,):
-    expected_containers_list_df = pandas.DataFrame(
-        get_container_states_list(expected_containers_list),
-        columns=['container_host', 'container_name', 'container_state'])
-    expected_containers_list_df.to_csv(
-        expected_containers_file)
-    return expected_containers_file
-
-
 def assert_containers_running(group, expected_containers, full_name=True,
                               bool_check=False, nodenames=None):
 
@@ -185,7 +172,9 @@ def assert_ovn_containers_running():
         return
     ovn_containers = ['ovn_metadata_agent',
                       'ovn_controller']
-    groups = ['edpm-compute', 'edpm-networker']
+    potential_groups = ['edpm-compute', 'edpm-networker']
+    groups = [group for group in potential_groups if
+              group in topology.get_openstack_topology().groups]
     for group in groups:
         assert_containers_running(group, ovn_containers, full_name=False)
     LOG.info("Networking OVN containers verified in running state")
@@ -198,6 +187,15 @@ def get_container_states_list(containers_list,
         container, include_container_objects=include_container_objects) for
                                   container in containers_list])
     return container_states_list
+
+
+def save_containers_state_to_file(expected_containers_list,):
+    expected_containers_list_df = pandas.DataFrame(
+        get_container_states_list(expected_containers_list),
+        columns=['container_host', 'container_name', 'container_state'])
+    expected_containers_list_df.to_csv(
+        rhosp_containers.expected_containers_file)
+    return rhosp_containers.expected_containers_file
 
 
 def comparable_container_keys(container, include_container_objects=False):
@@ -298,8 +296,9 @@ def assert_equal_containers_state(expected_containers_list=None,
 
     # if we have a file or an explicit variable use that , otherwise  create
     # and return
-    if recreate_expected or (not expected_containers_list and
-                             not os.path.exists(expected_containers_file)):
+    if recreate_expected or (
+            not expected_containers_list and
+            not os.path.exists(rhosp_containers.expected_containers_file)):
         save_containers_state_to_file(list_containers())
         return
 
@@ -308,9 +307,9 @@ def assert_equal_containers_state(expected_containers_list=None,
             get_container_states_list(expected_containers_list),
             columns=['container_host', 'container_name', 'container_state'])
 
-    elif os.path.exists(expected_containers_file):
+    elif os.path.exists(rhosp_containers.expected_containers_file):
         expected_containers_list_df = pandas.read_csv(
-            expected_containers_file)
+            rhosp_containers.expected_containers_file)
 
     failures = []
     start = time.time()

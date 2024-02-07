@@ -17,6 +17,12 @@ from tobiko.podified import _topology
 from tobiko.podified import _openshift
 
 
+EDPM_NODE = _topology.EDPM_NODE
+OCP_WORKER = _topology.OCP_WORKER
+EDPM_COMPUTE_GROUP = _openshift.EDPM_COMPUTE_GROUP
+EDPM_NETWORKER_GROUP = _openshift.EDPM_NETWORKER_GROUP
+EDPM_OTHER_GROUP = _openshift.EDPM_OTHER_GROUP
+
 PodifiedTopology = _topology.PodifiedTopology
 
 skip_if_not_podified = _topology.skip_if_not_podified

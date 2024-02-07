@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import abc
+import os
 import re
 import typing
 
@@ -14,6 +15,10 @@ from tobiko.shell import ssh
 
 
 LOG = log.getLogger(__name__)
+
+
+expected_containers_file = os.path.expanduser(
+    '~/expected_containers_list_df.csv')
 
 
 class ContainerRuntime(abc.ABC):
