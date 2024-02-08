@@ -17,6 +17,7 @@ import netaddr
 import openshift_client as oc
 from oslo_log import log
 
+import tobiko
 from tobiko.shell import sh
 
 LOG = log.getLogger(__name__)
@@ -24,6 +25,8 @@ LOG = log.getLogger(__name__)
 OSP_CONTROLPLANE = 'openstackcontrolplane'
 OSP_DP_NODESET = 'openstackdataplanenodeset'
 DP_SSH_SECRET_NAME = 'secret/dataplane-ansible-ssh-private-key-secret'
+OSP_BM_HOST = 'baremetalhost.metal3.io'
+OSP_BM_CRD = 'baremetalhosts.metal3.io'
 OCP_WORKERS = 'nodes'
 
 OVN_DP_SERVICE_NAME = 'ovn'
@@ -34,13 +37,35 @@ EDPM_NETWORKER_GROUP = 'edpm-networker'
 EDPM_OTHER_GROUP = 'edpm-other'
 
 
+_IS_OC_CLIENT_AVAILABLE = None
+_IS_BM_CRD_AVAILABLE = None
+
+
 def _is_oc_client_available() -> bool:
-    try:
-        if sh.execute('which oc').exit_status == 0:
-            return True
-    except sh.ShellCommandFailed:
-        pass
-    return False
+    # pylint: disable=global-statement
+    global _IS_OC_CLIENT_AVAILABLE
+    if _IS_OC_CLIENT_AVAILABLE is None:
+        _IS_OC_CLIENT_AVAILABLE = False
+        try:
+            if sh.execute('which oc').exit_status == 0:
+                _IS_OC_CLIENT_AVAILABLE = True
+        except sh.ShellCommandFailed:
+            pass
+    return _IS_OC_CLIENT_AVAILABLE
+
+
+def _is_baremetal_crd_available() -> bool:
+    # pylint: disable=global-statement
+    global _IS_BM_CRD_AVAILABLE
+    if not _is_oc_client_available():
+        return False
+    if _IS_BM_CRD_AVAILABLE is None:
+        try:
+            _IS_BM_CRD_AVAILABLE = any(
+                [OSP_BM_CRD in n for n in oc.selector("crd").qnames()])
+        except oc.OpenShiftPythonException:
+            _IS_BM_CRD_AVAILABLE = False
+    return _IS_BM_CRD_AVAILABLE
 
 
 def _get_group(services):
@@ -140,3 +165,62 @@ def list_ocp_workers():
             'addresses': _get_ocp_worker_addresses(node_dict)
         })
     return ocp_workers
+
+
+def power_on_edpm_node(nodename):
+    _set_edpm_node_online_status(nodename, online=True)
+
+
+def power_off_edpm_node(nodename):
+    _set_edpm_node_online_status(nodename, online=False)
+
+
+def _set_edpm_node_online_status(nodename, online):
+    if _is_baremetal_crd_available() is False:
+        LOG.info("BareMetal operator is not available in the deployment. "
+                 "Starting and stopping EDPM nodes is not supported.")
+        return
+    try:
+        bm_node = oc.selector(f"{OSP_BM_HOST}/{nodename}").objects()[0]
+    except oc.OpenShiftPythonException as err:
+        LOG.info(f"Error while trying to get BareMetal Node '{nodename}' "
+                 f"from Openshift. Error: {err}")
+        return
+    except IndexError:
+        LOG.error(f"Node {nodename} not found in the {OSP_BM_HOST} CRs.")
+        return
+    bm_node.model.spec['online'] = online
+    try:
+        # NOTE(slaweq): returned status is 0 when all operations where
+        # finished successfully. Otherwise status will be different than
+        # 0, like in the shell scripts
+        if not bool(bm_node.apply().status()):
+            _wait_for_poweredOn_status(nodename, online)
+    except oc.OpenShiftPythonException as err:
+        LOG.error(f"Error while applying new online state: {online} for "
+                  f"the node: {nodename}. Error: {err}")
+
+
+def _wait_for_poweredOn_status(nodename, expected_status,
+                               timeout: tobiko.Seconds = None):
+    for attempt in tobiko.retry(
+            timeout=timeout,
+            count=10,
+            interval=5.,
+            default_timeout=30):
+        LOG.debug(f"Checking power status of the '{nodename}'.")
+        try:
+            poweredOn = oc.selector(
+                f"{OSP_BM_HOST}/{nodename}"
+            ).objects()[0].model.status['poweredOn']
+        except oc.OpenShiftPythonException as err:
+            LOG.error("Error while trying to get 'poweredOn' state of "
+                      f"the node {nodename}. Error: {err}")
+        else:
+            if poweredOn == expected_status:
+                LOG.debug(f"Actual poweredOn state of the node {nodename} "
+                          f"is: '{poweredOn}' which is as expected.")
+                return True
+            LOG.debug(f"Actual poweredOn state is: '{poweredOn}' != "
+                      f" '{expected_status}'")
+        attempt.check_limits()

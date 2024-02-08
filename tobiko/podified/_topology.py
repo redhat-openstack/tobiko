@@ -24,6 +24,7 @@ from tobiko.podified import _edpm
 from tobiko.podified import _openshift
 from tobiko.podified import containers
 from tobiko import rhosp
+from tobiko.shell import sh
 from tobiko.shell import ssh
 
 LOG = log.getLogger(__name__)
@@ -169,9 +170,17 @@ class EdpmNode(rhosp.RhospNode):
 
     def power_on_node(self):
         LOG.debug(f"Ensuring EDPM node {self.name} power is on...")
+        self.ssh_client.close()
+        _openshift.power_on_edpm_node(self.name)
+        hostname = sh.get_hostname(ssh_client=self.ssh_client)
+        LOG.debug(f"Overcloud node {self.name} power is on ("
+                  f"hostname={hostname})")
 
     def power_off_node(self):
         LOG.debug(f"Ensuring EDPM node {self.name} power is off...")
+        self.ssh_client.close()
+        _openshift.power_off_edpm_node(self.name)
+        LOG.debug(f"EDPM node {self.name} power is off.")
 
 
 class OcpWorkerNode(rhosp.RhospNode):
