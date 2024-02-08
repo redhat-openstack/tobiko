@@ -65,6 +65,20 @@ def _get_ocp_worker_addresses(worker):
         if address.get('type') != 'Hostname']
 
 
+def _get_edpm_node_ctlplane_ip_from_status(hostname, node_status):
+    all_ips = node_status.get('AllIPs')
+    if not all_ips:
+        LOG.warning("No IPs found in the Nodeset status: %s",
+                    node_status)
+        return
+    host_ips = all_ips.get(hostname)
+    if not host_ips:
+        LOG.warning("Host %s not found in AllIPs: %s",
+                    hostname, all_ips)
+        return
+    return host_ips.get('ctlplane')
+
+
 def has_podified_cp() -> bool:
     if not _is_oc_client_available():
         LOG.debug("Openshift CLI client isn't installed.")
@@ -93,13 +107,17 @@ def list_edpm_nodes():
     nodeset_sel = oc.selector(OSP_DP_NODESET)
     for nodeset in nodeset_sel.objects():
         nodeset_spec = nodeset.as_dict()['spec']
+        nodeset_status = nodeset.as_dict()['status']
         node_template = nodeset_spec['nodeTemplate']
         nodeset_nodes = nodeset_spec['nodes']
         group_name = _get_group(nodeset_spec['services'])
         for node in nodeset_nodes.values():
+            node_hostname = node.get('hostName')
             node_dict = {
-                'hostname': node.get('hostName'),
-                'host': node['ansible']['ansibleHost'],
+                'hostname': node_hostname,
+                'host': (node['ansible'].get('ansibleHost') or
+                         _get_edpm_node_ctlplane_ip_from_status(
+                             node_hostname, nodeset_status)),
                 'group': group_name,
                 'port': (
                     node.get('ansible', {}).get('ansiblePort') or
