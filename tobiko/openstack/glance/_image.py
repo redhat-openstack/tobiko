@@ -459,7 +459,10 @@ class CustomizedGlanceImageFixture(FileGlanceImageFixture):
 
             options = self.get_virt_customize_options()
             if options:
-                command = sh.shell_command(['virt-customize', '-a', work_file])
+                command = sh.shell_command(['LIBGUESTFS_BACKEND=direct',
+                                            'virt-customize',
+                                            '-a',
+                                            work_file])
                 sh.execute(command + options)
 
             sh.get_file(work_file, customized_file)
