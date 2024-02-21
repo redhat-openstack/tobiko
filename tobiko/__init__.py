@@ -19,7 +19,6 @@ import sys
 from tobiko.common import _cached
 from tobiko.common import _case
 from tobiko.common import _config
-from tobiko.common import _deprecation
 from tobiko.common import _detail
 from tobiko.common import _exception
 from tobiko.common import _fixture
@@ -66,8 +65,6 @@ push_test_case = _case.push_test_case
 retry_test_case = _case.retry_test_case
 run_test = _case.run_test
 sub_test = _case.sub_test
-
-deprecated = _deprecation.deprecated
 
 details_content = _detail.details_content
 
