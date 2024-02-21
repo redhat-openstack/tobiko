@@ -3,7 +3,6 @@ from __future__ import absolute_import
 import enum
 import io
 import time
-import typing
 
 from oslo_log import log
 import pandas
@@ -41,12 +40,9 @@ def get_pcs_resources_table(timeout=720, interval=2) -> pandas.DataFrame:
 
     :return: dataframe of pcs resources stats table
     """
-    failures: typing.List[str] = []
-    start = time.time()
-
     # prevent pcs table read failure while pacemaker is starting
-    while time.time() - start < timeout:
-        failures = []
+    for attempt in tobiko.retry(timeout=timeout,
+                                interval=interval):
         try:
             output = run_pcs_status(options=['resources'], grep_str='ocf')
             # remove the first column when it only includes '*' characters
@@ -56,18 +52,12 @@ def get_pcs_resources_table(timeout=720, interval=2) -> pandas.DataFrame:
                 stream, delim_whitespace=True, header=None)
             table.columns = ['resource', 'resource_type', 'resource_state',
                              'overcloud_node']
-        except ValueError:
-            pcs_status_raw = run_pcs_status()
-            failures.append(f'pcs status table import failed : '
-                            f'pcs status stdout:\n {pcs_status_raw}')
-            LOG.info('Retrying , timeout at: {}'
-                     .format(timeout-(time.time() - start)))
-            time.sleep(interval)
+        except (ValueError, sh.ShellCommandFailed, sh.ShellTimeoutExpired):
+            if attempt.is_last:
+                raise
+            LOG.exception('Failed to obtain pcs status table - Retrying...')
         else:
             break
-    # exhausted all retries
-    if failures:
-        tobiko.fail('pcs status table import error\n' + '\n'.join(failures))
 
     LOG.debug("Got pcs status :\n%s", table)
     return table
