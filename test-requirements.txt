@@ -1,6 +1,6 @@
 # Test cases requirements
 
 mock>=3.0.5                    # BSD
-pytest>=6.2.5                  # MIT
-pytest-html>=3.1.1             # MPL-2.0
-pytest-xdist[psutil]>=2.2.0    # MIT
+pytest>=7.2.0                  # MIT
+pytest-html>=4.1.1             # MIT
+pytest-xdist[psutil]>=3.5.0    # MIT

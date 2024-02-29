@@ -1,5 +1,5 @@
 ---
 
 tox_command: tox
-tox_min_version: 3.8
-tox_max_version: 4.0
+tox_min_version: 4.13
+tox_max_version: null

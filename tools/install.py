@@ -29,7 +29,7 @@ from tools import get_version  # noqa
 
 LOG = common.get_logger(__name__)
 
-TOX_VERSION = os.environ.get('TOX_VERSION') or '>=3.8.0'
+TOX_VERSION = os.environ.get('TOX_VERSION') or '>=4.13'
 
 TOX_CONSTRAINTS = (os.environ.get('TOX_CONSTRAINTS') or
                    f"-c{TOP_DIR}/upper-constraints.txt")

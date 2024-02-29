@@ -16,9 +16,9 @@ packaging==20.4
 paramiko==2.9.2
 pbr==5.5.1
 psutil==5.8.0
-pytest===6.2.5
-pytest-html==3.1.1
-pytest-xdist==2.2.0
+pytest===7.2.0
+pytest-html==4.1.1
+pytest-xdist==3.5.0
 python-dateutil==2.8.0
 python-designateclient==4.4.0
 python-glanceclient==3.2.2

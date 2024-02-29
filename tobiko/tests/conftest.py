@@ -20,8 +20,8 @@ import re
 import subprocess
 
 from oslo_log import log
-from py.xml import html  # pylint: disable=no-name-in-module,import-error
 import pytest
+from pytest_metadata.plugin import metadata_key
 
 import tobiko
 
@@ -42,17 +42,18 @@ def pytest_configure(config):
 
 
 def configure_metadata(config):
+    metadata = config.stash[metadata_key]
     # pylint: disable=protected-access
     from tobiko import version
-    config._metadata["Tobiko Version"] = version.release
+    metadata["Tobiko Version"] = version.release
     git_commit = subprocess.check_output(
         ['git', 'log', '-n', '1'],
         universal_newlines=True).replace('\n', '<br>')
-    config._metadata["Tobiko Git Commit"] = git_commit
+    metadata["Tobiko Git Commit"] = git_commit
     git_release = subprocess.check_output(
         ['git', 'describe', '--tags'],
         universal_newlines=True).replace('\n', '<br>')
-    config._metadata["Tobiko Git Release"] = git_release
+    metadata["Tobiko Git Release"] = git_release
 
 
 def configure_caplog(config):
@@ -140,14 +141,15 @@ def configure_timeout(config):
 
 
 def pytest_html_results_table_header(cells):
-    cells.insert(2, html.th("Description"))
-    cells.insert(1, html.th("Time", class_="sortable time", col="time"))
+    cells.insert(2, '<th>Description</th>')
+    cells.insert(
+        1, '<th class="sortable time" data-column-type="time">Time</th>')
     cells.pop()
 
 
 def pytest_html_results_table_row(report, cells):
-    cells.insert(2, html.td(getattr(report, 'description', '')))
-    cells.insert(1, html.td(datetime.utcnow(), class_="col-time"))
+    cells.insert(2, f'<td>{getattr(report, "description", "")}</td>')
+    cells.insert(1, f'<td class="col-time">{datetime.utcnow()}</td>')
     cells.pop()
 
 
