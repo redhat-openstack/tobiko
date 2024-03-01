@@ -19,6 +19,7 @@ from heatclient.v1 import client as v1_client
 
 import tobiko
 from tobiko.openstack import _client
+from tobiko.openstack import keystone
 
 
 HeatClient = typing.Union[v1_client.Client]
@@ -46,6 +47,7 @@ HeatClientType = typing.Union[None,
                               HeatClientFixture]
 
 
+@keystone.skip_if_missing_service(name='heat')
 def heat_client(obj: HeatClientType = None) -> HeatClient:
     if obj is None:
         return default_heat_client()
