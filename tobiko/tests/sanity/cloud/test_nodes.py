@@ -14,6 +14,7 @@
 #    under the License.
 from __future__ import absolute_import
 
+from oslo_log import log
 import pytest
 import testtools
 
@@ -22,6 +23,9 @@ from tobiko.shell import ip
 from tobiko.shell import ping
 from tobiko.shell import sh
 from tobiko.openstack import topology
+
+
+LOG = log.getLogger(__name__)
 
 
 @pytest.mark.minimal
@@ -42,6 +46,9 @@ class OpenstackNodesTest(testtools.TestCase):
     def test_hostnames(self):
         hostnames = dict()
         for node in self.topology.nodes:
+            if node.ssh_client is None:
+                LOG.debug(f'Node {node.hostname} has no ssh_client')
+                continue
             hostname = sh.get_hostname(ssh_client=node.ssh_client)
             self.assertTrue(hostname.startswith(node.name))
             other = hostnames.setdefault(hostname, node)
