@@ -30,7 +30,7 @@ OSP_BM_CRD = 'baremetalhosts.metal3.io'
 OCP_WORKERS = 'nodes'
 
 OVN_DP_SERVICE_NAME = 'ovn'
-COMPUTE_DP_SERVICE_NAMES = ['nova', 'nova-custom']
+COMPUTE_DP_SERVICE_NAMES = ['nova', 'nova-custom', 'nova-custom-ceph']
 
 EDPM_COMPUTE_GROUP = 'edpm-compute'
 EDPM_NETWORKER_GROUP = 'edpm-networker'
