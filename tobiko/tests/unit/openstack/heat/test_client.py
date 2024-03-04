@@ -19,16 +19,9 @@ import mock
 from tobiko.openstack import keystone
 from tobiko.openstack import heat
 from tobiko.tests.unit import openstack
-from tobiko.tests.unit.openstack import test_client
 
 
 MockClient = mock.create_autospec(heatclient.Client)
-
-
-class HeatClientFixtureTest(test_client.OpenstackClientFixtureTest):
-
-    def create_client(self, session=None):
-        return heat.HeatClientFixture(session=session)
 
 
 class GetHeatClientTest(openstack.OpenstackTest):

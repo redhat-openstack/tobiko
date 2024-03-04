@@ -13,6 +13,8 @@
 #    under the License.
 from __future__ import absolute_import
 
+import inspect
+
 import tobiko
 from tobiko.openstack.keystone import _client
 
@@ -38,7 +40,10 @@ def has_service(**attributes):
 
 
 def is_service_missing(**params):
-    return not has_service(**params)
+    # return False if it is called from a unit test
+    test_module_name = inspect.getmodule(tobiko.get_test_case()).__name__
+    return (not test_module_name.startswith('tobiko.tests.unit.') and
+            not has_service(**params))
 
 
 def skip_if_missing_service(**params):
