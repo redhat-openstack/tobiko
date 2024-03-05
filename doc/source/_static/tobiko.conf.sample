@@ -41,6 +41,9 @@
 # Default cirros password (string value)
 #password = <None>
 
+# Default cirros interface name (string value)
+#interface_name = <None>
+
 # Default cirros SSH connection timeout (seconds) (floating point value)
 #connection_timeout = <None>
 
@@ -55,8 +58,11 @@
 # From tobiko
 #
 
-# Default directory where to look for shelves. (string value)
+# Directory where to look for shelves. (string value)
 #shelves_dir = ~/.tobiko/cache/shelves
+
+# Directory where lock persistent files will be saved (string value)
+#lock_dir = ~/.tobiko/cache/lock
 
 
 [glance]
@@ -158,6 +164,28 @@
 # Clouds file names (list value)
 #clouds_file_names = clouds.yaml,clouds.yml,clouds.json
 
+# default value in case keystone interface is needed (string value)
+#interface = <None>
+
+
+[manila]
+
+#
+# From tobiko
+#
+
+# Share protocol (string value)
+#share_protocol = nfs
+
+# Default size in GB for shares created by share tests. (integer value)
+#size = 1
+
+# Default share type's name (string value)
+#default_share_type_name = default
+
+# Specifies whether the driver handles the share servers or not (boolean value)
+#spec_driver_handles_share_servers = false
+
 
 [neutron]
 
@@ -178,10 +206,10 @@
 #ipv4_prefixlen = 24
 
 # List of nameservers IPv4 addresses (list value)
-#ipv4_dns_nameservers = <None>
+#ipv4_dns_nameservers = 8.8.8.8
 
 # The CIDR block to allocate IPv6 subnets from (string value)
-#ipv6_cidr = 2001:db8::/48
+#ipv6_cidr = fc00::/48
 
 # The mask bits for IPv6 subnets (integer value)
 #ipv6_prefixlen = 64
@@ -231,6 +259,15 @@
 # Default SSH key type to login to server instances (string value)
 #key_type = ecdsa
 
+# Timeout (in seconds) for establishing connection to ubuntu (floating point value)
+#ubuntu_connection_timeout = 1500.0
+
+# Timeout (in seconds) till ubuntu server is reachable (floating point value)
+#ubuntu_is_reachable_timeout = 900.0
+
+# Timeout (in seconds) till cloud-init based server is reachable (floating point value)
+#cloudinit_is_reachable_timeout = 600.0
+
 
 [octavia]
 
@@ -273,6 +310,43 @@
 # Maximum time in seconds a sequence of ICMP messages is sent to a destination host
 # before reporting as a failure (integer value)
 #timeout = 300.0
+
+
+[rhosp]
+
+#
+# From tobiko
+#
+
+# TCP port of SSH server on overcloud or EDPM compute hosts (integer value)
+# Deprecated group/name - [tripleo]/overcloud_ssh_port
+#ssh_port = <None>
+
+# Default username used to connect to overcloud or EDPM compute nodes (string value)
+# Deprecated group/name - [tripleo]/overcloud_ssh_username
+#ssh_username = <None>
+
+# SSH key filename used to login to Overcloud or EDPM compute nodes (string value)
+# Deprecated group/name - [tripleo]/overcloud_ssh_key_filename
+#ssh_key_filename = ~/.ssh/osp_ssh_key
+
+# cloud name to be used for loading credentials  (string value)
+# Deprecated group/name - [tripleo]/overcloud_cloud_name
+#cloud_name = overcloud
+
+# Default IP address version to be used to connect to overcloud or EDPM compute nodes
+# (integer value)
+# Deprecated group/name - [tripleo]/overcloud_ip_version
+#ip_version = <None>
+
+# path to where to export tripleo inventory file (string value)
+#inventory_file = .ansible/inventory/tripleo.yaml
+
+# OSP env was done with an external load balancer (boolean value)
+#has_external_load_balancer = false
+
+# whether Ceph RGW is deployed (boolean value)
+#ceph_rgw = false
 
 
 [shell]
@@ -427,24 +501,12 @@
 # files (string value)
 #undercloud_cloud_name = undercloud
 
-# TCP port of SSH server on overcloud hosts (integer value)
-#overcloud_ssh_port = <None>
-
-# Default username used to connect to overcloud nodes (string value)
-#overcloud_ssh_username = <None>
-
-# SSH key filename used to login to Overcloud nodes (string value)
-#overcloud_ssh_key_filename = ~/.ssh/id_overcloud
+# Path to cacert file that can be used to send https request from the undercloud (string
+# value)
+#undercloud_cacert_file = /etc/pki/tls/certs/ca-bundle.trust.crt
 
 # Overcloud RC filenames (list value)
 #overcloud_rcfile = ~/overcloudrc,~/qe-Cloud-0rc
-
-# overcloud cloud name to be used for loading credentials from the overcloud clouds
-# files (string value)
-#overcloud_cloud_name = overcloud
-
-# Default IP address version to be used to connect to overcloud nodes  (integer value)
-#overcloud_ip_version = <None>
 
 # Name of network used to connect to overcloud nodes (string value)
 #overcloud_network_name = <None>
@@ -452,15 +514,6 @@
 # Dictionary with the node groups corresponding to different hostname prefixes (dict
 # value)
 #overcloud_groups_dict = cmp:compute,ctrl:controller
-
-# path to where to export tripleo inventory file (string value)
-#inventory_file = .ansible/inventory/tripleo.yaml
-
-# OSP env was done with an external load balancer (boolean value)
-#has_external_load_balancer = false
-
-# whether Ceph RGW is deployed (boolean value)
-#ceph_rgw = false
 
 
 [ubuntu]
@@ -489,6 +542,9 @@
 
 # Default ubuntu password (string value)
 #password = <None>
+
+# Default ubuntu interface name (string value)
+#interface_name = <None>
 
 # Default ubuntu SSH connection timeout (seconds) (floating point value)
 #connection_timeout = <None>
