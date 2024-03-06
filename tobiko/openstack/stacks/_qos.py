@@ -15,8 +15,6 @@
 #    under the License.
 from __future__ import absolute_import
 
-from oslo_concurrency import lockutils
-
 import tobiko
 from tobiko import config
 from tobiko.openstack import heat
@@ -58,8 +56,7 @@ class QosNetworkStackFixture(_neutron.NetworkBaseStackFixture):
         value_specs = super().network_value_specs
         return dict(value_specs, qos_policy_id=self.qos_stack.qos_policy_id)
 
-    @lockutils.synchronized(
-        'create_qos_network_stack', external=True, lock_path=tobiko.LOCK_DIR)
+    @tobiko.interworker_synched('create_qos_network_stack')
     def setup_stack(self):
         super().setup_stack()
 

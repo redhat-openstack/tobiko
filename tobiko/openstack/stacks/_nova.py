@@ -424,6 +424,10 @@ class CloudInitServerStackFixture(ServerStackFixture, ABC):
     #: nax SWAP file size in bytes
     swap_maxsize: typing.Optional[int] = None
 
+    @tobiko.interworker_synched('cloudinit_server_setup_fixture')
+    def setup_fixture(self):
+        super(CloudInitServerStackFixture, self).setup_fixture()
+
     @property
     def is_reachable_timeout(self) -> tobiko.Seconds:
         # I expect cloud-init based servers to be slow to boot

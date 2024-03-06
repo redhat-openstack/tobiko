@@ -16,9 +16,9 @@ from __future__ import absolute_import
 import io
 import typing
 
-from oslo_concurrency import lockutils
 from paramiko import sftp_file
 
+import tobiko
 from tobiko import config
 from tobiko.openstack import glance
 from tobiko.openstack import neutron
@@ -55,11 +55,6 @@ class CirrosImageFixture(glance.URLGlanceImageFixture):
         # when using recent Paramiko versions (>= 2.9.2)
         'pubkeys': ['rsa-sha2-256', 'rsa-sha2-512']}
 
-    @lockutils.synchronized(
-        'cirros_image_setup_fixture', external=True, lock_path=tobiko.LOCK_DIR)
-    def setup_fixture(self):
-        super(CirrosImageFixture, self).setup_fixture()
-
 
 class CirrosFlavorStackFixture(_nova.FlavorStackFixture):
     ram = 128
@@ -78,6 +73,10 @@ class CirrosServerStackFixture(_nova.ServerStackFixture):
 
     #: We expect CirrOS based servers to be fast to boot
     is_reachable_timeout: tobiko.Seconds = 300.
+
+    @tobiko.interworker_synched('cirros_server_setup_fixture')
+    def setup_fixture(self):
+        super(CirrosServerStackFixture, self).setup_fixture()
 
     @property
     def ssh_client(self) -> ssh.SSHClientFixture:

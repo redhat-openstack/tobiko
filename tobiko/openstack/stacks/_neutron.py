@@ -19,7 +19,6 @@ import json
 import typing
 
 import netaddr
-from oslo_concurrency import lockutils
 from oslo_log import log
 
 import tobiko
@@ -331,8 +330,7 @@ class SubnetPoolFixture(tobiko.SharedFixture):
         if self.subnet_pool:
             tobiko.addme_to_shared_resource(__name__, self.name)
 
-    @lockutils.synchronized(
-        'create_subnet_pool', external=True, lock_path=tobiko.LOCK_DIR)
+    @tobiko.interworker_synched('create_subnet_pool')
     def try_create_subnet_pool(self):
         if not self.subnet_pool:
             self._subnet_pool = neutron.create_subnet_pool(
@@ -575,8 +573,7 @@ class NetworkBaseStackFixture(heat.HeatStackFixture):
 
 
 class NetworkStackFixture(NetworkBaseStackFixture):
-    @lockutils.synchronized(
-        'create_network_stack', external=True, lock_path=tobiko.LOCK_DIR)
+    @tobiko.interworker_synched('create_network_stack')
     def setup_stack(self):
         super().setup_stack()
 
@@ -585,8 +582,7 @@ class NetworkNoFipStackFixture(NetworkBaseStackFixture):
     """Extra Network Stack where VMs will not have FIPs"""
     gateway_stack = tobiko.required_fixture(RouterNoSnatStackFixture)
 
-    @lockutils.synchronized(
-        'create_network_nofip_stack', external=True, lock_path=tobiko.LOCK_DIR)
+    @tobiko.interworker_synched('create_network_nofip_stack')
     def setup_stack(self):
         super().setup_stack()
 
@@ -594,9 +590,7 @@ class NetworkNoFipStackFixture(NetworkBaseStackFixture):
 @neutron.skip_if_missing_networking_extensions('net-mtu-writable')
 class NetworkWithNetMtuWriteStackFixture(NetworkBaseStackFixture):
 
-    @lockutils.synchronized(
-        'create_network_withnetmtuwrite_stack',
-        external=True, lock_path=tobiko.LOCK_DIR)
+    @tobiko.interworker_synched('create_network_withnetmtuwrite_stack')
     def setup_stack(self):
         super().setup_stack()
 
@@ -676,8 +670,7 @@ class StatelessSecurityGroupFixture(tobiko.SharedFixture):
         if self.security_group:
             tobiko.addme_to_shared_resource(__name__, self.name)
 
-    @lockutils.synchronized(
-        'create_security_group', external=True, lock_path=tobiko.LOCK_DIR)
+    @tobiko.interworker_synched('create_security_group')
     def try_create_security_group(self):
         if not self.security_group:
             self._security_group = neutron.create_security_group(
