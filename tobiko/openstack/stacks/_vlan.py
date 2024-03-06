@@ -19,7 +19,6 @@ import abc
 import typing
 
 import netaddr
-from oslo_concurrency import lockutils
 
 import tobiko
 from tobiko import config
@@ -35,8 +34,7 @@ CONF = config.CONF
 
 
 class VlanNetworkStackFixture(_neutron.NetworkBaseStackFixture):
-    @lockutils.synchronized(
-        'create_vlan_network_stack', external=True, lock_path=tobiko.LOCK_DIR)
+    @tobiko.interworker_synched('create_vlan_network_stack')
     def setup_stack(self):
         super().setup_stack()
 

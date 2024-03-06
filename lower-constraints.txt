@@ -12,6 +12,7 @@ openstacksdk==0.31.2
 oslo.concurrency==3.26.0
 oslo.config==8.4.0
 oslo.log==4.4.0
+oslo.utils==4.12.3
 packaging==20.4
 paramiko==2.9.2
 pbr==5.5.1

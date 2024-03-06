@@ -20,7 +20,6 @@ import typing
 from abc import ABC
 
 import netaddr
-from oslo_concurrency import lockutils
 from oslo_log import log
 
 import tobiko
@@ -433,9 +432,7 @@ class CloudInitServerStackFixture(ServerStackFixture, ABC):
     #: nax SWAP file size in bytes
     swap_maxsize: typing.Optional[int] = None
 
-    @lockutils.synchronized(
-        'cloudinit_server_setup_fixture',
-        external=True, lock_path=tobiko.LOCK_DIR)
+    @tobiko.interworker_synched('cloudinit_server_setup_fixture')
     def setup_fixture(self):
         super(CloudInitServerStackFixture, self).setup_fixture()
 

@@ -24,6 +24,7 @@ from tobiko.common import _exception
 from tobiko.common import _fixture
 from tobiko.common import _ini
 from tobiko.common import _loader
+from tobiko.common import _lockutils
 from tobiko.common import _logging
 from tobiko.common import _operation
 from tobiko.common import _os
@@ -104,6 +105,8 @@ CaptureLogFixture = _logging.CaptureLogFixture
 load_object = _loader.load_object
 load_module = _loader.load_module
 
+interworker_synched = _lockutils.interworker_synched
+
 makedirs = _os.makedirs
 open_output_file = _os.open_output_file
 
@@ -171,4 +174,3 @@ load_yaml = _yaml.load_yaml
 
 from tobiko import config  # noqa
 config.init_config()
-LOCK_DIR = os.path.expanduser(config.CONF.tobiko.common.lock_dir)

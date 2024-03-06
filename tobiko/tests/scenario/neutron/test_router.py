@@ -20,7 +20,6 @@ import re
 import typing
 
 import pytest
-from oslo_concurrency import lockutils
 from oslo_log import log
 import testtools
 
@@ -211,8 +210,7 @@ class DvrNetworkStackFixture(stacks.NetworkBaseStackFixture):
     gateway_stack = tobiko.required_fixture(DvrRouterStackFixture,
                                             setup=False)
 
-    @lockutils.synchronized(
-        'create_dvr_network_stack', external=True, lock_path=tobiko.LOCK_DIR)
+    @tobiko.interworker_synched('create_dvr_network_stack')
     def setup_stack(self):
         super().setup_stack()
 
