@@ -693,5 +693,6 @@ def assert_equal_containers_state(expected_containers_list=None,
                      " OK, all containers are on the same state")
             return
     if failures:
-        tobiko.fail('container states mismatched:\n{!s}', '\n'.join(
-            failures))
+        tobiko.fail(
+            'container states mismatched:\n{!s}'.format('\n'.join(failures)),
+            ContainerMismatchException)
