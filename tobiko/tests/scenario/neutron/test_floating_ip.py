@@ -117,6 +117,7 @@ class FloatingIPTest(testtools.TestCase):
 
     # --- test l3_ha extension ------------------------------------------------
 
+    @neutron.skip_unless_is_ovs()
     @neutron.skip_if_missing_networking_extensions('l3-ha')
     def test_l3_ha(self):
         """Test 'mtu' network attribute"""

@@ -191,8 +191,8 @@ mpmath===1.2.1
 msgpack===1.0.3
 munch===2.5.0
 murano-pkg-check===0.3.0
-mypy===0.931
-mypy-extensions===0.4.3
+mypy===0.981
+mypy-extensions===1.0.0
 ndg-httpsclient===0.5.1
 netaddr===0.8.0
 netifaces===0.11.0
