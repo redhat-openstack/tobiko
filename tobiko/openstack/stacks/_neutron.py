@@ -124,7 +124,7 @@ class ExternalNetworkStackFixture(heat.HeatStackFixture):
     @property
     def router_value_specs(self) -> typing.Dict[str, typing.Any]:
         value_specs: typing.Dict[str, typing.Any] = {}
-        if self.has_l3_ha:
+        if self.has_l3_ha and not neutron.has_ovn():
             value_specs.update(ha=bool(self.ha))
         if self.distributed is not None and self.has_dvr:
             value_specs.update(distributed=bool(self.distributed))
