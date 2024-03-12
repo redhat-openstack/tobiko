@@ -22,7 +22,9 @@ import pytest
 import testtools
 
 import tobiko
+from tobiko.openstack import keystone
 from tobiko.openstack import neutron
+from tobiko.openstack import octavia
 from tobiko.openstack import stacks
 from tobiko.openstack import topology
 from tobiko import podified
@@ -309,6 +311,9 @@ class StatelessSecurityGroupInstanceTest(BaseSecurityGroupTest):
     vm = tobiko.required_fixture(
         CirrosServerWithStatelessSecurityGroupFixture)
 
+    lb_member_server = tobiko.required_fixture(
+        stacks.OctaviaServerStackFixture)
+
     def test_no_conntrack_entries_related_to_stateless_sg(self):
         """ Test that there is no conntrack entry related to stateless SG.
 
@@ -336,3 +341,26 @@ class StatelessSecurityGroupInstanceTest(BaseSecurityGroupTest):
         self.assertEqual("", conntrack_list_result.stdout)
         self.assertTrue(
             "0 flow entries have been shown" in conntrack_list_result.stderr)
+
+    @neutron.skip_unless_is_ovn()
+    @keystone.skip_if_missing_service(name='octavia')
+    def test_sg_and_loadbalancer_together(self):
+        """Test that stateless SG will work fine together with Octavia LB.
+
+        This test ensures that stateless SG works fine even when Octavia
+        Loadbalancer is connected to the same network as VM using stateless SG.
+        This test is coverage for the issue found in the past and reported in
+        https://bugs.launchpad.net/neutron/+bug/2024502
+
+        Steps:
+        1. Create LB, listener, pool and member connected to that pool,
+        2. Create VM connected to the same network as pool's member. This VM
+           uses Stateless SG,
+        3. Check SSH connectivity to the VM created in step 2.
+        """
+
+        octavia.deploy_ipv4_ovn_lb(
+            servers_stacks=[self.lb_member_server]
+        )
+        # Ensure that ssh connection to the vm works as expected
+        sh.execute('hostname', ssh_client=self.vm.ssh_client)
