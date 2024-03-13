@@ -1,8 +1,16 @@
 ---
 
+- name: "check if upper-constraints file exists"
+  stat:
+    path: "{{ openstack_requirements_dir }}/upper-constraints.txt"
+  register: upper_constraints_file
+
+
 - name: "ensure Bindep is installed"
   command: >
-    '{{ python_executable }}' -m pip install --user 'bindep>={{ bindep_min_version }}'
+    '{{ python_executable }}' -m pip install \
+    {% if upper_constraints_file.stat.exists == true %}-c'{{ upper_constraints_file.stat.path }}'{% endif %} \
+    --user bindep>='{{ bindep_min_version }}'
   register: install_bindep
   changed_when: "'Successfully installed' in install_bindep.stdout"
 
