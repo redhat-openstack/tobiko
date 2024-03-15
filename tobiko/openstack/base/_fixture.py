@@ -14,18 +14,94 @@
 from __future__ import absolute_import
 
 import abc
+import collections
 import typing
 
 from oslo_log import log
 
 import tobiko
 from tobiko import config
+from tobiko.openstack import keystone
+from tobiko.openstack.neutron import _quota_set as neutron_quota
+from tobiko.openstack.nova import _quota_set as nova_quota
 
 
 LOG = log.getLogger(__name__)
 
 
-class ResourceFixture(tobiko.SharedFixture, abc.ABC):
+class InvalidFixtureError(tobiko.TobikoException):
+    message = "invalid fixture {name!r}"
+
+
+class BaseResourceFixture(tobiko.SharedFixture):
+    """Base class for fixtures both types: those which uses heat stacks and
+    those which are not.
+    """
+    client: keystone.KeystoneClient = None
+    project: typing.Optional[str] = None
+    user: typing.Optional[str] = None
+
+    def setup_fixture(self):
+        self.setup_client()
+        self.setup_project()
+        self.setup_user()
+
+    def setup_project(self):
+        if self.project is None:
+            self.project = keystone.get_project_id(session=self.session)
+
+    def setup_user(self):
+        if self.user is None:
+            self.user = keystone.get_user_id(session=self.session)
+
+    @property
+    def session(self):
+        return self.setup_client().session
+
+    def setup_client(self) -> keystone.KeystoneClient:
+        client = self.client
+        # NOTE(slaweq): it seems that due to bug
+        # https://github.com/python/mypy/issues/11673
+        # in mypy this line is causing arg-type error so lets
+        # ignore it for now
+        if not isinstance(
+                client, keystone.KeystoneClient):  # type: ignore[arg-type]
+            self.client = client = keystone.keystone_client(self.client)
+        return client
+
+    def ensure_quota_limits(self):
+        """Ensures quota limits before creating a new stack
+        """
+        try:
+            self.ensure_neutron_quota_limits()
+            self.ensure_nova_quota_limits()
+        except (nova_quota.EnsureNovaQuotaLimitsError,
+                neutron_quota.EnsureNeutronQuotaLimitsError) as ex:
+            raise InvalidFixtureError(name=self.fixture_name) from ex
+
+    def ensure_neutron_quota_limits(self):
+        required_quota_set = self.neutron_required_quota_set
+        if required_quota_set:
+            neutron_quota.ensure_neutron_quota_limits(project=self.project,
+                                                      **required_quota_set)
+
+    def ensure_nova_quota_limits(self):
+        required_quota_set = self.nova_required_quota_set
+        if required_quota_set:
+            nova_quota.ensure_nova_quota_limits(project=self.project,
+                                                user=self.user,
+                                                **required_quota_set)
+
+    @property
+    def neutron_required_quota_set(self) -> typing.Dict[str, int]:
+        return collections.defaultdict(int)
+
+    @property
+    def nova_required_quota_set(self) -> typing.Dict[str, int]:
+        return collections.defaultdict(int)
+
+
+class ResourceFixture(BaseResourceFixture, abc.ABC):
     """Base class for fixtures intended to manage Openstack resources not
     created using Heat, but with openstacksdk or other component clients (such
     as neutronclient, novaclient, manilaclient, etc).
@@ -41,11 +117,11 @@ class ResourceFixture(tobiko.SharedFixture, abc.ABC):
     Child classes must define any other attributes required by the
     resource_create, resource_delete and resource_find methods. Examples:
     prefixes and default_prefixlen are needed for subnet_pools; description and
-    rules are needed for secutiry_groups; etc.
+    rules are needed for security_groups; etc.
 
     Child classes must define the resource_create, resource_delete and
     resource_find methods. In case of resource_create and resource_find, they
-    should return an object with the type defined for self._resouce.
+    should return an object with the type defined for self._resource.
 
     Child classes may optionally implement simple properties to access to
     resource_id and resource using a more representative name (these properties
@@ -84,6 +160,7 @@ class ResourceFixture(tobiko.SharedFixture, abc.ABC):
         pass
 
     def setup_fixture(self):
+        super().setup_fixture()
         self.name = self.fixture_name
         if config.get_bool_env('TOBIKO_PREVENT_CREATE'):
             LOG.debug("%r should have been already created: %r",
@@ -98,6 +175,9 @@ class ResourceFixture(tobiko.SharedFixture, abc.ABC):
             tobiko.addme_to_shared_resource(__name__, self.name)
 
     def try_create_resource(self):
+        # Ensure quota limits are OK just in time before start creating
+        # a new stack
+        self.ensure_quota_limits()
         if not self.resource:
             self._resource = self.resource_create()
 
