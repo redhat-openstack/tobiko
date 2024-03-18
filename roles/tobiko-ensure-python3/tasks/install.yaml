@@ -57,10 +57,17 @@
   failed_when: (python_info | length) == 0
 
 
+- name: "check if upper-constraints file exists"
+  stat:
+    path: "{{ openstack_requirements_dir }}/upper-constraints.txt"
+  register: upper_constraints_file
+
+
 - name: "upgrade '{{ python_command }}' packages to the latest versions"
   command: >
-    '{{ python_info[python_command].executable }}' -m pip install '{{ item }}' \
-      --upgrade --user
+    '{{ python_info[python_command].executable }}' -m pip install \
+    {% if upper_constraints_file.stat.exists == true %}-c'{{ upper_constraints_file.stat.path }}'{% endif %}
+    '{{ item }}' --upgrade --user
   register: upgrade_python_packages
   changed_when:
     "'Successfully installed' in upgrade_python_packages.stdout"

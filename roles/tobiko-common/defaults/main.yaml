@@ -18,6 +18,8 @@ test_project:
 test_git_repo: '{{ git_base }}/x/tobiko.git'
 test_src_dir: ''
 
+openstack_requirements_dir: "/opt/stack/requirements"
+
 
 # NOTE: if test_dir and tobiko_dir variables endup being the same actual
 # directory then test_src and test_git_* variables will be overriden
