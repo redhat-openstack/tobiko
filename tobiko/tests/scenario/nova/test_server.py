@@ -22,10 +22,10 @@ import pytest
 import testtools
 
 import tobiko
-from tobiko.openstack import heat
 from tobiko.openstack import keystone
 from tobiko.openstack import nova
 from tobiko.openstack import stacks
+from tobiko.openstack.base import _fixture as base_fixture
 from tobiko.shell import ping
 
 
@@ -177,7 +177,7 @@ class CirrosServerStackFixture(stacks.CirrosServerStackFixture):
                 try:
                     nova.activate_server(server)
                 except nova.WaitForServerStatusTimeout as ex:
-                    raise heat.InvalidStackError(
+                    raise base_fixture.InvalidFixtureError(
                         name=self.stack_name) from ex
         return stack
 

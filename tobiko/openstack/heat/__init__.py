@@ -41,7 +41,6 @@ HeatStackNotFound = _stack.HeatStackNotFound
 heat_stack_parameters = _stack.heat_stack_parameters
 find_stack = _stack.find_stack
 list_stacks = _stack.list_stacks
-InvalidStackError = _stack.InvalidStackError
 INIT_IN_PROGRESS = _stack.INIT_IN_PROGRESS
 INIT_COMPLETE = _stack.INIT_COMPLETE
 CREATE_IN_PROGRESS = _stack.CREATE_IN_PROGRESS

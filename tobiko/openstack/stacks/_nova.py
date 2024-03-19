@@ -28,6 +28,7 @@ from tobiko.openstack import glance
 from tobiko.openstack import heat
 from tobiko.openstack import neutron
 from tobiko.openstack import nova
+from tobiko.openstack.base import _fixture as base_fixture
 from tobiko.openstack.stacks import _hot
 from tobiko.openstack.stacks import _neutron
 from tobiko.shell import curl
@@ -271,7 +272,8 @@ class ServerStackFixture(heat.HeatStackFixture, abc.ABC):
                 self.validate_different_host_scheduler_hints(
                     hypervisor=hypervisor)
             except nova.MigrateServerError as ex:
-                raise heat.InvalidStackError(name=self.stack_name) from ex
+                raise base_fixture.InvalidFixtureError(
+                    name=self.stack_name) from ex
 
     def validate_same_host_scheduler_hints(self, hypervisor):
         if self.same_host:

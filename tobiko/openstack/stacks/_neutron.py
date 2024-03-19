@@ -26,8 +26,8 @@ import tobiko
 from tobiko import config
 from tobiko.openstack import heat
 from tobiko.openstack import neutron
+from tobiko.openstack.base import _fixture as base_fixture
 from tobiko.openstack.stacks import _hot
-from tobiko.openstack.stacks import _fixture
 from tobiko.shell import ip
 from tobiko.shell import sh
 from tobiko.shell import ssh
@@ -284,7 +284,7 @@ class RouterNoSnatStackFixture(RouterStackFixture):
 
 
 @neutron.skip_if_missing_networking_extensions('subnet_allocation')
-class SubnetPoolFixture(_fixture.ResourceFixture):
+class SubnetPoolFixture(base_fixture.ResourceFixture):
     """Neutron Subnet Pool Fixture.
 
     A subnet pool is a dependency of network fixtures with either IPv4 or
@@ -583,7 +583,7 @@ class SecurityGroupsFixture(heat.HeatStackFixture):
 
 
 @neutron.skip_if_missing_networking_extensions('stateful-security-group')
-class StatelessSecurityGroupFixture(_fixture.ResourceFixture):
+class StatelessSecurityGroupFixture(base_fixture.ResourceFixture):
     """Neutron Stateless Security Group Fixture.
 
     This SG will by default allow SSH and ICMP to the instance and also
@@ -614,6 +614,12 @@ class StatelessSecurityGroupFixture(_fixture.ResourceFixture):
         super().__init__()
         self.description = description or self.description
         self.rules = rules or self.rules
+
+    @property
+    def neutron_required_quota_set(self) -> typing.Dict[str, int]:
+        requirements = super().neutron_required_quota_set
+        requirements['security_group'] += 1
+        return requirements
 
     @property
     def security_group_id(self):

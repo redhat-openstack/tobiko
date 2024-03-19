@@ -13,7 +13,6 @@
 #    under the License.
 from __future__ import absolute_import
 
-import collections
 from collections import abc
 import random
 import time
@@ -28,8 +27,7 @@ from tobiko import config
 from tobiko.openstack.heat import _client
 from tobiko.openstack.heat import _template
 from tobiko.openstack import keystone
-from tobiko.openstack import neutron
-from tobiko.openstack import nova
+from tobiko.openstack.base import _fixture as base_fixture
 
 
 LOG = log.getLogger(__name__)
@@ -110,7 +108,7 @@ def find_stack(client: _client.HeatClientType = None,
 
 
 @keystone.skip_unless_has_keystone_credentials()
-class HeatStackFixture(tobiko.SharedFixture):
+class HeatStackFixture(base_fixture.BaseResourceFixture):
     """Manages Heat stacks."""
 
     client: _client.HeatClientType = None
@@ -124,8 +122,6 @@ class HeatStackFixture(tobiko.SharedFixture):
     stack: typing.Optional[StackType] = None
     stack_name: typing.Optional[str] = None
     parameters: typing.Optional['HeatStackParametersFixture'] = None
-    project: typing.Optional[str] = None
-    user: typing.Optional[str] = None
     output_needs_stack_complete: bool = True
 
     def __init__(
@@ -150,12 +146,10 @@ class HeatStackFixture(tobiko.SharedFixture):
             self.wait_interval = wait_interval
 
     def setup_fixture(self):
+        super().setup_fixture()
         self.setup_stack_name()
         self.setup_template()
         self.setup_parameters()
-        self.setup_client()
-        self.setup_project()
-        self.setup_user()
         self.setup_stack()
 
     def setup_template(self):
@@ -180,14 +174,6 @@ class HeatStackFixture(tobiko.SharedFixture):
     def session(self):
         return self.setup_client().http_client.session
 
-    def setup_project(self):
-        if self.project is None:
-            self.project = keystone.get_project_id(session=self.session)
-
-    def setup_user(self):
-        if self.user is None:
-            self.user = keystone.get_user_id(session=self.session)
-
     def setup_stack(self) -> stacks.Stack:
         stack = self.create_stack()
         tobiko.addme_to_shared_resource(__name__, stack.stack_name)
@@ -207,7 +193,7 @@ class HeatStackFixture(tobiko.SharedFixture):
                 try:
                     stack = self.try_create_stack()
                     break
-                except InvalidStackError:
+                except base_fixture.InvalidFixtureError:
                     LOG.exception(f"Error creating stack '{self.stack_name}'",
                                   exc_info=1)
                     if attempt.is_last:
@@ -290,7 +276,7 @@ class HeatStackFixture(tobiko.SharedFixture):
                   f"id='{stack_id}'.")
         try:
             stack = self.validate_created_stack()
-        except InvalidStackError as ex:
+        except base_fixture.InvalidFixtureError as ex:
             LOG.debug(f'Deleting invalid stack (name={self.stack_name}, "'
                       f'"id={stack_id}): {ex}')
             # the stack shelf counter does not need to be decreased here,
@@ -517,37 +503,6 @@ class HeatStackFixture(tobiko.SharedFixture):
         message = "Object {!r} has no attribute {!r}".format(self, name)
         raise AttributeError(message)
 
-    def ensure_quota_limits(self):
-        """Ensures quota limits before creating a new stack
-        """
-        try:
-            self.ensure_neutron_quota_limits()
-            self.ensure_nova_quota_limits()
-        except (nova.EnsureNovaQuotaLimitsError,
-                neutron.EnsureNeutronQuotaLimitsError) as ex:
-            raise InvalidStackError(name=self.stack_name) from ex
-
-    def ensure_neutron_quota_limits(self):
-        required_quota_set = self.neutron_required_quota_set
-        if required_quota_set:
-            neutron.ensure_neutron_quota_limits(project=self.project,
-                                                **required_quota_set)
-
-    def ensure_nova_quota_limits(self):
-        required_quota_set = self.nova_required_quota_set
-        if required_quota_set:
-            nova.ensure_nova_quota_limits(project=self.project,
-                                          user=self.user,
-                                          **required_quota_set)
-
-    @property
-    def neutron_required_quota_set(self) -> typing.Dict[str, int]:
-        return collections.defaultdict(int)
-
-    @property
-    def nova_required_quota_set(self) -> typing.Dict[str, int]:
-        return collections.defaultdict(int)
-
 
 class HeatStackKeyError(tobiko.TobikoException):
     message = "key {key!r} not found in stack {name!r}"
@@ -717,11 +672,7 @@ class HeatStackNotFound(HeatStackError):
     message = "stack {name!r} not found"
 
 
-class InvalidStackError(HeatStackError):
-    message = "invalid stack {name!r}"
-
-
-class InvalidHeatStackStatus(InvalidStackError):
+class InvalidHeatStackStatus(base_fixture.InvalidFixtureError):
     message = ("stack {name!r} status {observed!r} not in {expected!r}\n"
                "{status_reason!s}")
 
