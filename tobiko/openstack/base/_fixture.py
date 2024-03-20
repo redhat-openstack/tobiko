@@ -59,15 +59,10 @@ class BaseResourceFixture(tobiko.SharedFixture):
         return self.setup_client().session
 
     def setup_client(self) -> keystone.KeystoneClient:
-        client = self.client
-        # NOTE(slaweq): it seems that due to bug
-        # https://github.com/python/mypy/issues/11673
-        # in mypy this line is causing arg-type error so lets
-        # ignore it for now
-        if not isinstance(
-                client, keystone.KeystoneClient):  # type: ignore[arg-type]
-            self.client = client = keystone.keystone_client(self.client)
-        return client
+        # returns self.client itself, if the keystone client was already
+        # created; else, creates a new keystone client and returns it.
+        self.client = keystone.keystone_client(self.client)
+        return self.client
 
     def ensure_quota_limits(self):
         """Ensures quota limits before creating a new stack
