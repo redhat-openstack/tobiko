@@ -41,6 +41,10 @@ class ExternalNetworkStackFixture(heat.HeatStackFixture):
 
     template = _hot.heat_template_file('neutron/external_network.yaml')
 
+    @tobiko.interworker_synched('create_external_network_stack')
+    def setup_stack(self):
+        super().setup_stack()
+
     @property
     def external_name(self) -> typing.Optional[str]:
         return tobiko.tobiko_config().neutron.external_network
