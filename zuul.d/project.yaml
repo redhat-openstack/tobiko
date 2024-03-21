@@ -15,8 +15,8 @@
         - devstack-tobiko-functional:
             # NOTE(slaweq): OSP-16.2 is based on the stable/train but some
             # projects, like e.g. Nova already EOL'ed stable/train so lets use
-            # stable/wallaby here instead
-            override-checkout: stable/wallaby
+            # stable/zed here instead
+            override-checkout: stable/zed
             nodeset: openstack-single-node-focal
             vars:
               devstack_localrc:
@@ -24,8 +24,8 @@
         - devstack-tobiko-sanity:
             # NOTE(slaweq): OSP-16.2 is based on the stable/train but some
             # projects, like e.g. Nova already EOL'ed stable/train so lets use
-            # stable/wallaby here instead
-            override-checkout: stable/wallaby
+            # stable/zed here instead
+            override-checkout: stable/zed
             nodeset: openstack-single-node-focal
             vars:
               devstack_localrc:
