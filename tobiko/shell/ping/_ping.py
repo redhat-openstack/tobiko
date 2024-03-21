@@ -331,10 +331,10 @@ def execute_ping(parameters, ssh_client=None, check=True):
                             timeout=parameters.deadline + 3.,
                             expect_exit_status=None,
                             network_namespace=parameters.network_namespace)
-    except sh.ShellError as ex:
+    except (sh.ShellError, tobiko.RetryLimitError) as ex:
         LOG.exception("Error executing ping command")
-        stdout = ex.stdout
-        stderr = ex.stderr
+        stdout = ex.stdout if hasattr(ex, "stdout") else None
+        stderr = ex.stderr if hasattr(ex, "stderr") else None
     else:
         stdout = result.stdout
         stderr = result.stderr

@@ -352,11 +352,12 @@ class ShellProcessFixture(tobiko.SharedFixture):
             attempt.check_limits()
         except tobiko.RetryTimeLimitError:
             LOG.exception("retry timeout expired")
+            # Eventually raises either ShellCommandTimeout exception or
+            # RetryTimeLimitError
+            self.get_exit_status(timeout=timeout)
+            raise
         else:
             return
-        # Eventually raises ShellCommandTimeout exception
-        self.get_exit_status(timeout=timeout)
-        raise StopIteration
 
     def _is_communicating(self, streams, send, receive):
         if send and self.stdin in streams:
