@@ -14,7 +14,6 @@
 from __future__ import absolute_import
 
 import netaddr
-import openshift_client as oc
 from oslo_log import log
 
 import tobiko
@@ -39,6 +38,11 @@ EDPM_OTHER_GROUP = 'edpm-other'
 
 _IS_OC_CLIENT_AVAILABLE = None
 _IS_BM_CRD_AVAILABLE = None
+
+try:
+    import openshift_client as oc
+except ModuleNotFoundError:
+    _IS_OC_CLIENT_AVAILABLE = False
 
 
 def _is_oc_client_available() -> bool:
