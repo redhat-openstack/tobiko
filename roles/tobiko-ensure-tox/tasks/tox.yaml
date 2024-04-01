@@ -15,10 +15,15 @@
         chdir: "{{ openstack_requirements_dir }}"
       register: requirements_branch
 
-    - name: "Set min tox version for Ubuntu 20.04"
+    - name: "Set min tox version for OpenStack stable/zed and stable/2023.1"
       set_fact:
         tox_min_version: "3.28"
       when: requirements_branch.stdout == "stable/2023.1" or "stable/zed"
+
+    - name: "Set min tox version for OpenStack stable/2023.2"
+      set_fact:
+        tox_min_version: "4.5.1"
+      when: requirements_branch.stdout == "stable/2023.2"
 
 
 - name: "ensure Tox is installed"
