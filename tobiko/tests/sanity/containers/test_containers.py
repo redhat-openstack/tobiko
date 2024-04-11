@@ -22,6 +22,7 @@ import time
 import testtools
 from oslo_log import log
 import pandas
+import pytest
 
 import tobiko
 from tobiko.openstack import neutron
@@ -207,6 +208,7 @@ class TripleoContainersHealthTest(BaseContainersHealtTest):
     def test_ovn_containers_running(self):
         tripleo_containers.assert_ovn_containers_running()
 
+    @pytest.mark.skip_during_ovn_migration
     def test_equal_containers_state(self, expected_containers_list=None,
                                     timeout=120, interval=5,
                                     recreate_expected=False):
