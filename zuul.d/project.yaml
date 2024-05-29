@@ -20,7 +20,6 @@
       - openstack-python3-zed-jobs
       - openstack-python3-zed-jobs-arm64
       - publish-to-pypi
-      - tobiko-docker
       - tobiko-infrared
     vars:
         rtd_webhook_id: '84947'
