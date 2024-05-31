@@ -251,6 +251,7 @@ def read_pid_file(pid_file: str) -> typing.Tuple[int, ...]:
         with fd:
             for line_number, line in enumerate(fd.readlines(), start=1):
                 line = line.strip()
+                pid = None
                 if line:
                     try:
                         pid = int(line.rstrip())
@@ -258,6 +259,8 @@ def read_pid_file(pid_file: str) -> typing.Tuple[int, ...]:
                         LOG.exception(f"{pid_file}:{line_number}: value is "
                                       f"not an integer ({line}).")
                         continue
+                if not pid:
+                    continue
                 pids.append(pid)
     return tuple(pids)
 

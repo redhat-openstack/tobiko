@@ -361,6 +361,7 @@ class URLGlanceImageFixture(FileGlanceImageFixture):
         tobiko.check_valid_type(image_url, str)
 
     def get_image_file(self, image_file: str):
+        # pylint: disable=missing-timeout
         http_request = requests.get(self.image_url, stream=True)
         expected_size = int(http_request.headers.get('content-length', 0))
         chunks = http_request.iter_content(chunk_size=io.DEFAULT_BUFFER_SIZE)

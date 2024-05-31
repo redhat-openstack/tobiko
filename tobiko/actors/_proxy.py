@@ -76,6 +76,7 @@ class CallHandler(abc.ABC):
         raise NotImplementedError
 
 
+# pylint: disable=inherit-non-class
 class CallProxyBase(CallHandler, Generic[P], abc.ABC):
 
     def __class_getitem__(cls, item: typing.Type[P]):
@@ -92,6 +93,7 @@ class CallProxyBase(CallHandler, Generic[P], abc.ABC):
         return is_public_abstract_method(obj)
 
 
+# pylint: disable=inherit-non-class
 class CallProxy(CallProxyBase, Generic[P]):
 
     def __init__(self, handle_call: typing.Callable):

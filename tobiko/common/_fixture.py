@@ -500,8 +500,7 @@ class FixtureManager:
             self.fixtures[name] = fixture
             return fixture
 
-    @staticmethod
-    def init_fixture(obj: typing.Union[typing.Type[F], F],
+    def init_fixture(self, obj: typing.Union[typing.Type[F], F],
                      name: str,
                      fixture_id: typing.Any,
                      **kwargs) -> F:

@@ -93,6 +93,7 @@ def find_ip_address(ip_version: int = None,
 
 
 def parse_ip_address(text: str) -> typing.Tuple[netaddr.IPAddress, int]:
+    address = text
     if '/' in text:
         # Remove netmask prefix length
         address, prefix_len_text = text.split('/', 1)

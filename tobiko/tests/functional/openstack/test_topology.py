@@ -26,7 +26,7 @@ import tobiko
 from tobiko.openstack import keystone
 from tobiko.openstack import neutron
 from tobiko.openstack import nova
-from tobiko.openstack import topology
+from tobiko.openstack import topology as osp_topology
 from tobiko.shell import ping
 from tobiko.shell import sh
 
@@ -37,17 +37,18 @@ PatternType = type(re.compile(r''))
 @keystone.skip_unless_has_keystone_credentials()
 class OpenStackTopologyTest(testtools.TestCase):
 
-    expected_group: topology.OpenstackGroupNamesType = None
+    expected_group: osp_topology.OpenstackGroupNamesType = None
 
     @property
-    def topology(self) -> topology.OpenStackTopology:
-        return topology.get_openstack_topology()
+    def topology(self) -> osp_topology.OpenStackTopology:
+        return osp_topology.get_openstack_topology()
 
     def test_get_openstack_topology(self):
         topology_class = type(self.topology)
-        topo = topology.get_openstack_topology(topology_class=topology_class)
+        topo = osp_topology.get_openstack_topology(
+            topology_class=topology_class)
         self.assertIs(topo, self.topology)
-        self.assertIsInstance(topo, topology.OpenStackTopology)
+        self.assertIsInstance(topo, osp_topology.OpenStackTopology)
 
     def test_ping_node(self):
         for node in self.topology.nodes:
@@ -80,7 +81,7 @@ class OpenStackTopologyTest(testtools.TestCase):
             self.assertIn(node, nodes)
 
     def test_list_openstack_topology(self, group=None, hostnames=None):
-        nodes = topology.list_openstack_nodes(
+        nodes = osp_topology.list_openstack_nodes(
             topology=self.topology, group=group, hostnames=hostnames)
         self.assertTrue(set(nodes).issubset(set(self.topology.nodes)))
         self.assertEqual(len(set(nodes)), len(nodes),
@@ -136,7 +137,7 @@ class OpenStackTopologyTest(testtools.TestCase):
         self.assertEqual(expected_nodes, actual_nodes)
 
     def test_list_nodes_processes(self):
-        node = random.choice(topology.list_openstack_nodes(
+        node = random.choice(osp_topology.list_openstack_nodes(
             group=self.expected_group))
         filename = sh.execute(
             'mktemp', ssh_client=node.ssh_client).stdout.strip()
@@ -147,7 +148,7 @@ class OpenStackTopologyTest(testtools.TestCase):
                              ssh_client=node.ssh_client)
 
         # Process isn't listed before creation
-        processes = topology.list_nodes_processes(
+        processes = osp_topology.list_nodes_processes(
             command_line=command_line,
             hostnames=[node.hostname])
         self.assertEqual([], processes,
@@ -156,7 +157,7 @@ class OpenStackTopologyTest(testtools.TestCase):
         # Process is listed after creation
         process.execute()
         self.addCleanup(process.kill)
-        processes = topology.list_nodes_processes(
+        processes = osp_topology.list_nodes_processes(
             command_line=command_line,
             hostnames=[node.hostname])
         self.assertEqual(command_line, processes.unique.command_line)
@@ -165,7 +166,7 @@ class OpenStackTopologyTest(testtools.TestCase):
         # Process isn't listed after kill
         processes.unique.kill()
         for attempt in tobiko.retry(timeout=30., interval=5.):
-            processes = topology.list_nodes_processes(
+            processes = osp_topology.list_nodes_processes(
                 command_line=command_line,
                 hostnames=[node.hostname])
             if not processes:
@@ -175,9 +176,9 @@ class OpenStackTopologyTest(testtools.TestCase):
 
     @neutron.skip_unless_is_ovs()
     def test_l3_agent_mode(self):
-        for node in topology.list_openstack_nodes(
+        for node in osp_topology.list_openstack_nodes(
                 group=['controller', 'compute', 'overcloud']):
-            assert isinstance(node, topology.OpenStackTopologyNode)
+            assert isinstance(node, osp_topology.OpenStackTopologyNode)
             self.assertEqual(
                 neutron.get_l3_agent_mode(
                     l3_agent_conf_path=node.l3_agent_conf_path,
@@ -195,7 +196,7 @@ class HostsNamespaceTest(testtools.TestCase):
 
     @property
     def all_hostnames(self) -> typing.List[str]:
-        nodes = topology.list_openstack_nodes()
+        nodes = osp_topology.list_openstack_nodes()
         return sorted(node.hostname for node in nodes)
 
     def selected_hostames(self, hostnames: typing.Iterable[str] = None) -> \
@@ -207,7 +208,7 @@ class HostsNamespaceTest(testtools.TestCase):
 
     def test_get_hosts_namespaces(self,
                                   hostnames: typing.Iterable[str] = None):
-        namespaces = topology.get_hosts_namespaces(hostnames=hostnames)
+        namespaces = osp_topology.get_hosts_namespaces(hostnames=hostnames)
         self.assertIsInstance(namespaces, dict)
         for namespace, _hostnames in namespaces.items():
             self.assertIsInstance(namespace, str)
@@ -221,31 +222,31 @@ class HostsNamespaceTest(testtools.TestCase):
 
     def test_assert_namespace_in_hosts(self,
                                        hostnames: typing.Iterable[str] = None):
-        namespaces = topology.get_hosts_namespaces(hostnames=hostnames)
+        namespaces = osp_topology.get_hosts_namespaces(hostnames=hostnames)
         for namespace, hostnames in namespaces.items():
-            topology.assert_namespace_in_hosts(namespace,
-                                               hostnames=hostnames)
+            osp_topology.assert_namespace_in_hosts(namespace,
+                                                   hostnames=hostnames)
 
     def test_assert_namespace_in_hosts_with_hostnames(self):
         self.test_assert_namespace_in_hosts(hostnames=self.all_hostnames[:1])
 
     def test_assert_namespaces_in_host_failure(self):
         self.assertRaises(self.failureException,
-                          topology.assert_namespace_in_hosts,
+                          osp_topology.assert_namespace_in_hosts,
                           '<invalid>')
 
     def test_assert_namespace_not_in_hosts(
             self, hostnames: typing.Iterable[str] = None):
-        topology.assert_namespace_not_in_hosts('<invalid>',
-                                               hostnames=hostnames)
+        osp_topology.assert_namespace_not_in_hosts('<invalid>',
+                                                   hostnames=hostnames)
 
     def test_assert_namespace_not_in_hosts_with_hostnames(self):
         self.test_assert_namespace_not_in_hosts(
             hostnames=self.all_hostnames[:1])
 
     def test_assert_namespace_not_in_hosts_failure(self):
-        namespaces = topology.get_hosts_namespaces()
+        namespaces = osp_topology.get_hosts_namespaces()
         for namespace in namespaces:
             self.assertRaises(self.failureException,
-                              topology.assert_namespace_not_in_hosts,
+                              osp_topology.assert_namespace_not_in_hosts,
                               namespace)

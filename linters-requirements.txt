@@ -1,4 +1,4 @@
 # pep8 and flake8 requirements
 
 pre-commit >= 2.16.0  # MIT
-pylint===2.12.2  # GPL2
+pylint>=2.5.3  # GPL2

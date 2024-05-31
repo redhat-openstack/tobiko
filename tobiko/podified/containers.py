@@ -298,6 +298,7 @@ def assert_equal_containers_state(expected_containers_list=None,
     second time it creates a current containers states list and
     compares them, they must be identical"""
 
+    expected_containers_list_df = []
     # if we have a file or an explicit variable use that , otherwise  create
     # and return
     if recreate_expected or (

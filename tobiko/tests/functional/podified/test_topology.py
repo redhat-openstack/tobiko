@@ -16,7 +16,7 @@
 from __future__ import absolute_import
 
 import tobiko
-from tobiko.openstack import topology
+from tobiko.openstack import topology as osp_topology
 from tobiko.shell import ping
 from tobiko.shell import sh
 from tobiko.tests.functional.openstack import test_topology
@@ -26,7 +26,7 @@ from tobiko import podified
 @podified.skip_if_not_podified
 class PodifiedTopologyTest(test_topology.OpenStackTopologyTest):
 
-    expected_group: topology.OpenstackGroupNamesType = 'compute'
+    expected_group: osp_topology.OpenstackGroupNamesType = 'compute'
 
     @property
     def topology(self) -> podified.PodifiedTopology:

@@ -111,6 +111,8 @@ class TestCheckValidType(unit.TobikoUnitTest):
 class TestExcInfo(unit.TobikoUnitTest):
 
     def test_exc_info(self):
+        exc_type, exc_value, traceback = None, None, None
+        exc_info = None
         try:
             raise RuntimeError('some error')
         except RuntimeError:

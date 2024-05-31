@@ -77,8 +77,7 @@ class SockHeader():
         return len(self.header)
 
     def __iter__(self):
-        for elem in self.header:
-            yield elem
+        yield from self.header
 
 
 class SockLine(str):
@@ -118,6 +117,7 @@ def _ss(params: str = '',
         **execute_params) -> typing.List[SockData]:
     execute_params.update({'sudo': True})
     sockets = []
+    headers = None
     if table_header:
         # Predefined header might be necessary if the command is expected to
         # be executed in any kind of environments. Old versrions of `ss`
@@ -143,7 +143,7 @@ def _ss(params: str = '',
             parsed_header = True
             continue
         sock_info = SockLine(line.strip())
-        if parser:
+        if parser and headers:
             try:
                 sockets.append(parser(headers, sock_info))
             except ValueError as ex:

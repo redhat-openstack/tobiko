@@ -32,6 +32,7 @@ from tobiko.actors import _request
 A = typing.TypeVar('A', bound='ActorBase')
 
 
+# pylint: disable=inherit-non-class
 class ActorRef(_proxy.CallProxyBase, _proxy.Generic[A]):
 
     _actor_class: typing.Type[A]

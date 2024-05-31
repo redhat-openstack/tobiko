@@ -248,7 +248,7 @@ def parse_ips_from_db_connections(con_str):
         try:
             addr = netaddr.IPAddress(tmp_addr.strip(']['))
         except ValueError as ex:
-            msg = 'Invalid IP address "{}" in "{}"'.format(addr, con_str)
+            msg = 'Invalid IP address "{}" in "{}"'.format(tmp_addr, con_str)
             LOG.error(msg)
             raise InvalidDBConnString(message=msg) from ex
         addrs.append(addr)

@@ -218,6 +218,8 @@ class TripleoContainersHealthTest(BaseContainersHealtTest):
         containers' states: ~/expected_containers_list_df.csv'
         second time it creates a current containers states list and
         compares them, they must be identical"""
+
+        expected_containers_list_df = []
         # if we have a file or an explicit variable use that ,
         # otherwise  create and return
         if recreate_expected or (not (expected_containers_list or
@@ -358,6 +360,8 @@ class PodifiedContainersHealthTest(BaseContainersHealtTest):
         containers' states: ~/expected_containers_list_df.csv'
         second time it creates a current containers states list and
         compares them, they must be identical"""
+
+        expected_containers_list_df = []
         # if we have a file or an explicit variable use that ,
         # otherwise  create and return
         if recreate_expected or (not (expected_containers_list or

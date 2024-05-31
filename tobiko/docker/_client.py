@@ -233,6 +233,7 @@ class UnixHTTPConnection(unixconn.UnixHTTPConnection):
                  sudo=False):
         self.ssh_client = ssh_client
         self.sudo = sudo
+        self.sock = None
         super(UnixHTTPConnection, self).__init__(base_url=base_url,
                                                  unix_socket=unix_socket,
                                                  timeout=timeout)

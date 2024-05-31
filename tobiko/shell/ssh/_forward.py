@@ -297,7 +297,7 @@ def binding_address(url):
 def binding_url(address):
     if isinstance(address, tuple):
         try:
-            hostname, = address
+            hostname, port = address
         except ValueError:
             hostname, port = address
         return 'tcp://{hostname}:{port}'.format(hostname=hostname,
