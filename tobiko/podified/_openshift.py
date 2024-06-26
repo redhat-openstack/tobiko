@@ -95,7 +95,7 @@ def _get_ocp_worker_addresses(worker):
 
 
 def _get_edpm_node_ctlplane_ip_from_status(hostname, node_status):
-    all_ips = node_status.get('AllIPs')
+    all_ips = node_status.get('AllIPs') or node_status.get('allIPs')
     if not all_ips:
         LOG.warning("No IPs found in the Nodeset status: %s",
                     node_status)
