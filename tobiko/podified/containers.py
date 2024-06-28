@@ -202,15 +202,19 @@ def comparable_container_keys(container, include_container_objects=False):
     """returns the tuple : 'container_host','container_name',
     'container_state, container object if specified'
      """
+    host_or_ip = container.client.base_url.netloc.rsplit('_')[1]
+    nodes_matching = topology.list_openstack_nodes(hostnames=[host_or_ip])
+    nodename = (nodes_matching[0].name
+                if nodes_matching
+                else rhosp_topology.ip_to_hostname(host_or_ip))
+
     # Differenciate between podman_ver3 with podman-py from earlier api
     if include_container_objects:
-        return (rhosp_topology.ip_to_hostname(
-                    container.client.base_url.netloc.rsplit('_')[1]),
+        return (nodename,
                 container.attrs['Names'][0], container.attrs['State'],
                 container)
     else:
-        return (rhosp_topology.ip_to_hostname(
-                    container.client.base_url.netloc.rsplit('_')[1]),
+        return (nodename,
                 container.attrs['Names'][0],
                 container.attrs['State'])
 
