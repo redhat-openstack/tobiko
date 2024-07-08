@@ -40,6 +40,8 @@ LOG = log.getLogger(__name__)
 
 @podified.skip_if_not_podified
 def kill_all_galera_services():
+    """kill all galera processes,
+    check in pacemaker it is down"""
     galera_pods_num = sum(
         1 for node_name in oc.selector('nodes').qnames()
         for pod_obj in oc.get_pods_by_node(node_name)
@@ -51,6 +53,58 @@ def kill_all_galera_services():
                      container_name='galera')
         LOG.info('kill galera cell-{}'.format(i))
 
+    retry = tobiko.retry(timeout=30, interval=5)
+    for _ in retry:
+        try:
+            # checks wsrep cluster size is now unavailable
+            result = oc.selector('pod/openstack-cell1-galera-0').object(
+            ).execute(['sh', '-c', """mysql -u root --password=12345678
+            -e 'SHOW STATUS LIKE "wsrep_cluster_size"'"""])
+            # Capture and filter the error output
+            error_output = result.err()
+            non_error_message = """
+            Defaulted container "galera" out of: galera,
+            mysql-bootstrap (init)\n"""
+            filtered_err_output = error_output.replace(non_error_message, '')
+            if not filtered_err_output.strip():
+                continue
+        except oc.OpenShiftPythonException:
+            LOG.info('all galera cells down')
+            break
+    time.sleep(60)
+    for _ in retry:
+        try:
+            if int(re.search(r'wsrep_cluster_size\s+(\d+)', oc.selector(
+                    'pod/openstack-cell1-galera-0').object().execute(
+                ['sh', '-c', """mysql -u root --password=12345678 -e 'SHOW
+                STATUS LIKE "wsrep_cluster_size"'"""], container_name='galera'
+            ).out()).group(1)) == galera_pods_num:
+                LOG.info('all galera cells are restored')
+                return
+        except oc.OpenShiftPythonException:
+            continue
+        return False
+
+
+@podified.skip_if_not_podified
+def remove_all_grastate_galera():
+    """shut down galera properly,
+    remove all grastate"""
+    galera_pods_num = sum(
+        1 for node_name in oc.selector('nodes').qnames()
+        for pod_obj in oc.get_pods_by_node(node_name)
+        if 'cell1-galera' in pod_obj.fqname()
+    )
+    for i in range(galera_pods_num):
+        oc.selector('pod/openstack-cell1-galera-{}'.format(i)).object()\
+            .execute(['sh', '-c', 'rm -rf /var/lib/mysql/grastate.dat '],
+                     container_name='galera')
+        LOG.info('delete grastate.dat cell-{}'.format(i))
+    for i in range(galera_pods_num):
+        oc.selector('pod/openstack-cell1-galera-{}'.format(i)).object()\
+            .execute(['sh', '-c', 'kill -9 $(pidof mysqld)'],
+                     container_name='galera')
+        LOG.info('kill galera cell-{}'.format(i))
     retry = tobiko.retry(timeout=30, interval=5)
     for _ in retry:
         try:
