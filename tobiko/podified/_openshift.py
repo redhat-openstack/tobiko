@@ -27,6 +27,7 @@ LOG = log.getLogger(__name__)
 OSP_CONTROLPLANE = 'openstackcontrolplane'
 OSP_DP_NODESET = 'openstackdataplanenodeset'
 DP_SSH_SECRET_NAME = 'secret/dataplane-ansible-ssh-private-key-secret'
+OSP_CONFIG_SECRET_NAME = 'secret/openstack-config-secret'
 OSP_BM_HOST = 'baremetalhost.metal3.io'
 OSP_BM_CRD = 'baremetalhosts.metal3.io'
 OCP_WORKERS = 'nodes'
@@ -147,6 +148,17 @@ def get_dataplane_ssh_keypair():
         LOG.error("Error while trying to get Dataplane secret SSH Key: %s",
                   err)
     return private_key, public_key
+
+
+def get_openstack_config_secret():
+    with oc.project(CONF.tobiko.podified.osp_project):
+        try:
+            secret_object = oc.selector(OSP_CONFIG_SECRET_NAME).object()
+        except oc.OpenShiftPythonException as err:
+            LOG.info("Error while trying to get openstack config secret "
+                     f"{OSP_CONFIG_SECRET_NAME} from Openshift. Error: {err}")
+            return
+    return secret_object.as_dict()
 
 
 def list_edpm_nodes():
@@ -398,3 +410,9 @@ def _check_ping_results(pod):
     else:
         tobiko.fail("Failed to copy ping log files from the POD "
                     f"{pod.name()}. Error: {cp.err}")
+
+
+def execute_in_pod(pod_name, command, container_name=None):
+    with oc.project(CONF.tobiko.podified.osp_project):
+        return oc.selector(f'pod/{pod_name}').object().execute(
+            ['sh', '-c', command], container_name=container_name)
