@@ -31,5 +31,6 @@ skip_if_podified = _topology.skip_if_podified
 
 get_dataplane_ssh_keypair = _openshift.get_dataplane_ssh_keypair
 has_podified_cp = _openshift.has_podified_cp
+get_ovndbcluter = _openshift.get_ovndbcluter
 
 get_container_runtime_name = containers.get_container_runtime_name

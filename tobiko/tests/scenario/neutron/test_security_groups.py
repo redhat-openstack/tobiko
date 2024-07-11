@@ -15,6 +15,7 @@
 from __future__ import absolute_import
 
 import json
+import re
 import typing
 
 from oslo_log import log
@@ -52,7 +53,28 @@ class BaseSecurityGroupTest(testtools.TestCase):
 
     @property
     def ovn_nb_db(self):
-        if not self._ovn_nb_db:
+
+        def get_podified_ovn_nb_db():
+            nb_db = podified.get_ovndbcluter(
+                'ovndbcluster-nb')['status']['dbAddress']
+            ssl_params = ''
+            if 'ssl' in nb_db:
+                # SSL options obtained from the container under test
+                command = ""
+                if topology.get_openstack_topology().has_containers:
+                    command += (f"{self.container_runtime_name} exec "
+                                f"{self.container_name} ")
+                command += "ps -o command -C ovn-controller --no-headers -ww"
+                command_result = sh.execute(command,
+                                            ssh_client=self.host_ssh_client,
+                                            sudo=True).stdout.strip()
+                for param in ('p', 'c', 'C'):
+                    # the matched strings start with a space
+                    ssl_params += re.search(r' -{} [^\s]+'.format(param),
+                                            command_result).group()
+            return nb_db + ssl_params
+
+        def get_ovn_nb_db():
             command_result = sh.execute(
                 "ovs-vsctl get open . external_ids:ovn-remote | "
                 "sed -e 's/\"//g' | sed 's/6642/6641/g'",
@@ -69,7 +91,13 @@ class BaseSecurityGroupTest(testtools.TestCase):
                     '/etc/pki/tls/private/ovn_controller.key',
                     '/etc/pki/tls/certs/ovn_controller.crt',
                     '/etc/ipa/ca.crt')
-            self._ovn_nb_db = nb_db + ssl_params
+            return nb_db + ssl_params
+
+        if not self._ovn_nb_db:
+            if podified.has_podified_cp():
+                self._ovn_nb_db = get_podified_ovn_nb_db()
+            else:
+                self._ovn_nb_db = get_ovn_nb_db()
         return self._ovn_nb_db
 
     @property

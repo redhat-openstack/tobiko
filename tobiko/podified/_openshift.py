@@ -27,6 +27,7 @@ DP_SSH_SECRET_NAME = 'secret/dataplane-ansible-ssh-private-key-secret'
 OSP_BM_HOST = 'baremetalhost.metal3.io'
 OSP_BM_CRD = 'baremetalhosts.metal3.io'
 OCP_WORKERS = 'nodes'
+OVNDBCLUSTER = 'ovndbcluster'
 
 OVN_DP_SERVICE_NAME = 'ovn'
 COMPUTE_DP_SERVICE_NAMES = ['nova', 'nova-custom', 'nova-custom-ceph']
@@ -228,3 +229,11 @@ def _wait_for_poweredOn_status(nodename, expected_status,
             LOG.debug(f"Actual poweredOn state is: '{poweredOn}' != "
                       f" '{expected_status}'")
         attempt.check_limits()
+
+
+def get_ovndbcluter(ovndbcluster_name):
+    ovndbcluter = oc.selector(f"{OVNDBCLUSTER}/{ovndbcluster_name}").objects()
+    if len(ovndbcluter) != 1:
+        tobiko.fail(f"Unexpected number of {OVNDBCLUSTER}/{ovndbcluster_name} "
+                    f"objects obtained: {len(ovndbcluter)}")
+    return ovndbcluter[0].as_dict()
