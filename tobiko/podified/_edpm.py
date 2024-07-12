@@ -17,7 +17,6 @@ from __future__ import absolute_import
 import base64
 import io
 import os
-import socket
 
 import tobiko
 from tobiko import config
@@ -33,7 +32,6 @@ def edpm_host_config(node=None,
     node = node or {}
     host_config = EdpmHostConfig(
         host=node.get('host'),
-        hostname=node.get('hostname'),
         ip_version=ip_version,
         key_filename=key_filename,
         port=node.get('port'),
@@ -85,7 +83,6 @@ class EdpmHostConfig(tobiko.SharedFixture):
 
     def __init__(self,
                  host: str,
-                 hostname: str = None,
                  ip_version: int = None,
                  key_filename: str = None,
                  port: int = None,
@@ -93,7 +90,6 @@ class EdpmHostConfig(tobiko.SharedFixture):
                  **kwargs):
         super(EdpmHostConfig, self).__init__()
         self.host = host
-        self.hostname = self._get_hostname(hostname)
         self.ip_version = ip_version
         self.key_filename = key_filename
         self.port = port
@@ -108,17 +104,10 @@ class EdpmHostConfig(tobiko.SharedFixture):
         if self.key_filename is None:
             self.key_filename = self.key_file.key_filename
 
-    def _get_hostname(self, hostname):
-        try:
-            socket.gethostbyname(hostname)
-            return hostname
-        except socket.gaierror:
-            return self.host
-
     @property
     def connect_parameters(self):
         parameters = ssh.ssh_host_config(
-            host=str(self.hostname)).connect_parameters
+            host=str(self.host)).connect_parameters
         parameters.update(ssh.gather_ssh_connect_parameters(self))
         parameters.update(self._connect_parameters)
         return parameters
