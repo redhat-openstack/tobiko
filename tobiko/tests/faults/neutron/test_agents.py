@@ -29,6 +29,7 @@ from tobiko.openstack import nova
 from tobiko.openstack import stacks
 from tobiko.openstack import tests
 from tobiko.openstack import topology
+from tobiko import podified
 from tobiko.shell import ping
 from tobiko.shell import sh
 
@@ -113,6 +114,9 @@ class BaseAgentTest(testtools.TestCase):
 
         for host in hosts:
             ssh_client = topology.get_openstack_node(hostname=host).ssh_client
+            if ssh_client is None and podified.has_podified_cp():
+                LOG.warning("SSH access to OCP nodes not implemented yet")
+                continue
             is_systemd = topology.check_systemd_monitors_agent(host,
                                                                self.agent_name)
             if is_systemd:
@@ -201,6 +205,9 @@ class BaseAgentTest(testtools.TestCase):
 
         for host in hosts:
             ssh_client = topology.get_openstack_node(hostname=host).ssh_client
+            if ssh_client is None and podified.has_podified_cp():
+                LOG.warning("SSH access to OCP nodes not implemented yet")
+                continue
             sh.execute(f'{self.container_runtime_name} restart '
                        f'{self.container_name}',
                        ssh_client=ssh_client,
