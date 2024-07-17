@@ -13,6 +13,10 @@
 #    under the License.
 from __future__ import absolute_import
 
+import itertools
+
+from oslo_config import cfg
+
 
 def setup_tobiko_config(conf):
     # pylint: disable=unused-argument
@@ -21,3 +25,19 @@ def setup_tobiko_config(conf):
 
     if _openshift.has_podified_cp():
         _topology.setup_podified_topology()
+
+
+GROUP_NAME = "podified"
+OPTIONS = [
+    cfg.StrOpt('osp_project',
+               default='openstack',
+               help="Openshift project that includes the Openstack resources"),
+]
+
+
+def register_tobiko_options(conf):
+    conf.register_opts(group=cfg.OptGroup(GROUP_NAME), opts=OPTIONS)
+
+
+def list_options():
+    return [(GROUP_NAME, itertools.chain(OPTIONS))]

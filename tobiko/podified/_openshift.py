@@ -17,8 +17,10 @@ import netaddr
 from oslo_log import log
 
 import tobiko
+from tobiko import config
 from tobiko.shell import sh
 
+CONF = config.CONF
 LOG = log.getLogger(__name__)
 
 OSP_CONTROLPLANE = 'openstackcontrolplane'
@@ -66,6 +68,7 @@ def _is_baremetal_crd_available() -> bool:
         return False
     if _IS_BM_CRD_AVAILABLE is None:
         try:
+            # oc.selector("crd") does not need to run on a specific OCP project
             _IS_BM_CRD_AVAILABLE = any(
                 [OSP_BM_CRD in n for n in oc.selector("crd").qnames()])
         except oc.OpenShiftPythonException:
@@ -114,7 +117,8 @@ def has_podified_cp() -> bool:
         LOG.debug("Openshift CLI client isn't installed.")
         return False
     try:
-        return bool(oc.selector(OSP_CONTROLPLANE).objects())
+        return bool(
+            oc.selector(OSP_CONTROLPLANE, all_namespaces=True).objects())
     except oc.OpenShiftPythonException:
         return False
 
@@ -123,7 +127,8 @@ def get_dataplane_ssh_keypair():
     private_key = ""
     public_key = ""
     try:
-        secret_object = oc.selector(DP_SSH_SECRET_NAME).object()
+        with oc.project(CONF.tobiko.podified.osp_project):
+            secret_object = oc.selector(DP_SSH_SECRET_NAME).object()
         private_key = secret_object.as_dict()['data']['ssh-privatekey']
         public_key = secret_object.as_dict()['data']['ssh-publickey']
     except oc.OpenShiftPythonException as err:
@@ -134,8 +139,9 @@ def get_dataplane_ssh_keypair():
 
 def list_edpm_nodes():
     nodes = []
-    nodeset_sel = oc.selector(OSP_DP_NODESET)
-    for nodeset in nodeset_sel.objects():
+    with oc.project(CONF.tobiko.podified.osp_project):
+        nodesets = oc.selector(OSP_DP_NODESET).objects()
+    for nodeset in nodesets:
         nodeset_spec = nodeset.as_dict()['spec']
         nodeset_status = nodeset.as_dict()['status']
         node_template = nodeset_spec['nodeTemplate']
@@ -161,6 +167,7 @@ def list_edpm_nodes():
 
 
 def list_ocp_workers():
+    # oc.selector("nodes") does not need to run on a specific OCP project
     nodes_sel = oc.selector(OCP_WORKERS)
     ocp_workers = []
     for node in nodes_sel.objects():
@@ -186,7 +193,8 @@ def _set_edpm_node_online_status(nodename, online):
                  "Starting and stopping EDPM nodes is not supported.")
         return
     try:
-        bm_node = oc.selector(f"{OSP_BM_HOST}/{nodename}").objects()[0]
+        with oc.project(CONF.tobiko.podified.osp_project):
+            bm_node = oc.selector(f"{OSP_BM_HOST}/{nodename}").objects()[0]
     except oc.OpenShiftPythonException as err:
         LOG.info(f"Error while trying to get BareMetal Node '{nodename}' "
                  f"from Openshift. Error: {err}")
@@ -215,9 +223,10 @@ def _wait_for_poweredOn_status(nodename, expected_status,
             default_timeout=30):
         LOG.debug(f"Checking power status of the '{nodename}'.")
         try:
-            poweredOn = oc.selector(
-                f"{OSP_BM_HOST}/{nodename}"
-            ).objects()[0].model.status['poweredOn']
+            with oc.project(CONF.tobiko.podified.osp_project):
+                poweredOn = oc.selector(
+                    f"{OSP_BM_HOST}/{nodename}"
+                ).objects()[0].model.status['poweredOn']
         except oc.OpenShiftPythonException as err:
             LOG.error("Error while trying to get 'poweredOn' state of "
                       f"the node {nodename}. Error: {err}")
@@ -232,7 +241,9 @@ def _wait_for_poweredOn_status(nodename, expected_status,
 
 
 def get_ovndbcluter(ovndbcluster_name):
-    ovndbcluter = oc.selector(f"{OVNDBCLUSTER}/{ovndbcluster_name}").objects()
+    with oc.project(CONF.tobiko.podified.osp_project):
+        ovndbcluter = oc.selector(
+            f"{OVNDBCLUSTER}/{ovndbcluster_name}").objects()
     if len(ovndbcluter) != 1:
         tobiko.fail(f"Unexpected number of {OVNDBCLUSTER}/{ovndbcluster_name} "
                     f"objects obtained: {len(ovndbcluter)}")
