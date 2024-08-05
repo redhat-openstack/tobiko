@@ -248,3 +248,23 @@ def get_ovndbcluter(ovndbcluster_name):
         tobiko.fail(f"Unexpected number of {OVNDBCLUSTER}/{ovndbcluster_name} "
                     f"objects obtained: {len(ovndbcluter)}")
     return ovndbcluter[0].as_dict()
+
+
+def get_pods(labels=None):
+    with oc.project(CONF.tobiko.podified.osp_project):
+        return oc.selector('pods', labels=labels).objects()
+
+
+def get_pod_names(labels=None):
+    with oc.project(CONF.tobiko.podified.osp_project):
+        return oc.selector('pods', labels=labels).qnames()
+
+
+def get_pod_count(labels=None):
+    with oc.project(CONF.tobiko.podified.osp_project):
+        return oc.selector('pods', labels=labels).count_existing()
+
+
+def delete_pods(labels=None):
+    with oc.project(CONF.tobiko.podified.osp_project):
+        return oc.selector('pods', labels=labels).delete()
