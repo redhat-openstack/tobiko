@@ -49,42 +49,26 @@ class ExternalNetworkStackFixture(heat.HeatStackFixture):
     def external_name(self) -> typing.Optional[str]:
         return tobiko.tobiko_config().neutron.external_network
 
-    subnet_enable_dhcp: typing.Optional[bool] = False
-
     _external_network: typing.Optional[neutron.NetworkType] = None
 
     @property
     def external_network(self) -> typing.Optional[neutron.NetworkType]:
         external_network = self._external_network
         if external_network is None:
-            subnet_parameters: typing.Dict[str, typing.Any] = {}
-            if self.subnet_enable_dhcp is not None:
-                subnet_parameters['enable_dhcp'] = self.subnet_enable_dhcp
             for network in list_external_networks(name=self.external_name):
                 if not network['subnets']:
-                    LOG.debug(f"Network '{network['id']}' has any subnet")
-                    continue
-                subnets = neutron.list_subnets(network_id=network['id'],
-                                               **subnet_parameters)
-                if not subnets:
-                    LOG.debug(f"Network '{network['id']}' has any valid "
-                              f"subnet: {subnet_parameters}")
+                    LOG.debug(f"Network '{network['id']}' has no subnet")
                     continue
 
                 network_dump = json.dumps(network, indent=4, sort_keys=True)
                 LOG.debug(f"Found external network for {self.fixture_name}:\n"
                           f"{network_dump}")
-
-                subnets_dump = json.dumps(subnets, indent=4, sort_keys=True)
-                LOG.debug(f"External subnets for {self.fixture_name}:\n"
-                          f"{subnets_dump}")
                 self._external_network = external_network = network
                 break
             else:
                 LOG.warning("No external network found for "
                             f"'{self.fixture_name}':\n"
-                            f" - name or ID: {self.external_name}\n"
-                            f" - subnet attributes: {subnet_parameters}\n")
+                            f" - name or ID: {self.external_name}\n")
         return external_network
 
     @property
@@ -154,8 +138,6 @@ class RouterStackFixture(ExternalNetworkStackFixture):
     @property
     def external_name(self) -> typing.Optional[str]:
         return tobiko.tobiko_config().neutron.floating_network
-
-    subnet_enable_dhcp = None
 
     distributed: typing.Optional[bool] = None
 
