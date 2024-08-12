@@ -29,6 +29,7 @@ from tobiko.openstack import nova
 from tobiko.openstack import stacks
 from tobiko.openstack import tests
 from tobiko.openstack import topology
+from tobiko.podified import _openshift
 from tobiko import podified
 from tobiko.shell import ping
 from tobiko.shell import sh
@@ -712,6 +713,100 @@ class OvnControllerTest(BaseAgentTest):
         ovn-controller process running into it was killed
         '''
         self.kill_ovn_controller()
+
+    @podified.skip_if_not_podified
+    def test_delete_ovn_controller_podified(self):
+        '''Test that OVN controller pods can be delete and create
+        successfully in controlplane
+        '''
+        # Initial names of pods
+        ovn_ctl_ovs_names = _openshift.get_pod_names(
+                labels={'service': 'ovn-controller-ovs'})
+        ovn_ctl_names = _openshift.get_pod_names(
+                labels={'service': 'ovn-controller'})
+        # Delete pods
+        _openshift.delete_pods(labels={'service': 'ovn-controller-ovs'})
+        _openshift.delete_pods(labels={'service': 'ovn-controller'})
+        # Check during creation
+        for attempt in tobiko.retry(timeout=20, interval=5):
+            ovn_ctl_ovs_end = _openshift.get_pod_names(
+                    labels={'service': 'ovn-controller-ovs'})
+            ovn_ctl_end = _openshift.get_pod_names(
+                    labels={'service': 'ovn-controller'})
+            try:
+                self.assertNotEqual(sorted(ovn_ctl_ovs_names),
+                                    sorted(ovn_ctl_ovs_end))
+                self.assertNotEqual(sorted(ovn_ctl_names),
+                                    sorted(ovn_ctl_end))
+                break
+            except (_openshift.oc.model.OpenShiftPythonException,
+                    AssertionError):
+                if attempt.is_last:
+                    LOG.error('Failure: pod was not deleted')
+                    raise
+                LOG.warning('Failed to delete pods.Try again...')
+
+        ping.ping_until_received(self.stack.ip_address).assert_replied()
+
+        # Note: TODO need to implement new ping
+        # validations (snat, ping between VMs, ...)
+
+    @podified.skip_if_not_podified
+    def test_kill_ovn_controller_podified(self):
+        '''Test that OVN controller container is restarted automatically after
+        ovn-controller process running into it was killed
+        '''
+        # controlplane
+        # number of pods:
+        ovn_ctl_ovs_num = _openshift.get_pod_count(
+                labels={'service': 'ovn-controller-ovs'})
+        ovn_ctl_num = _openshift.get_pod_count(
+                labels={'service': 'ovn-controller'})
+        # kill services:
+        for ovn_ctl_ovs_pod in _openshift.get_pods(
+                labels={'service': 'ovn-controller-ovs'}):
+            ovn_ctl_ovs_pod.execute(['sh', '-c', 'killall ovsdb-server'])
+            LOG.info('%s' 'was killed', ovn_ctl_ovs_pod)
+        for ovn_ctl_pod in _openshift.get_pods(
+                labels={'service': 'ovn-controller'}):
+            ovn_ctl_pod.execute(['sh', '-c', 'killall ovn-controller'])
+            LOG.info('%s' 'was killed', ovn_ctl_pod)
+        # After killing  ovn-controller pods, it may take from 1 sec to 60 sec
+        # to recover all ovn-controller pods.
+        # Check ovn-controller pods
+        for attempt in tobiko.retry(timeout=60, interval=5):
+            try:
+                ovn_ctl_ovs_end = _openshift.get_pod_count(
+                        labels={'service': 'ovn-controller-ovs'})
+                ovn_ctl_end = _openshift.get_pod_count(
+                        labels={'service': 'ovn-controller'})
+                self.assertEqual(ovn_ctl_ovs_num, ovn_ctl_ovs_end)
+                self.assertEqual(ovn_ctl_num, ovn_ctl_end)
+                for ovn_ctl_ovs_pod in _openshift.get_pods(
+                        labels={'service': 'ovn-controller-ovs'}):
+                    ovsdb_server_pid = ovn_ctl_ovs_pod.execute(
+                            ['sh', '-c', 'echo $(pidof ovsdb-server)']
+                            ).out().strip()
+                    self.assertTrue(ovsdb_server_pid.isnumeric())
+                for ovn_ctl_pod in _openshift.get_pods(
+                        labels={'service': 'ovn-controller'}):
+                    ovn_controller_pid = ovn_ctl_pod.execute(
+                            ['sh', '-c', 'echo $(pidof ovn-controller)']
+                            ).out().strip()
+                    self.assertTrue(ovn_controller_pid.isnumeric())
+                break
+            except (_openshift.oc.model.OpenShiftPythonException,
+                    AssertionError):
+                if attempt.is_last:
+                    LOG.error('Failed to verify ovn-controller pods')
+                    raise
+                LOG.warning('Failed to verify ovn-controller pods.Try again..')
+        # edpm nodes
+        self.kill_ovn_controller()
+
+        ping.ping_until_received(self.stack.ip_address).assert_replied()
+        # Note: TODO need to implement new ping
+        # validations (snat, ping between VMs, ...)
 
     def test_restart_ovn_controller_containers(self):
         '''Test that OVN controller containers can be restarted successfully
