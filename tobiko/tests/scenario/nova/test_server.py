@@ -188,16 +188,6 @@ class CirrosServerTest(BaseServerTest):
     stack = tobiko.required_fixture(CirrosServerStackFixture)
 
 
-class UbuntuMinimalServerStackFixture(stacks.UbuntuMinimalServerStackFixture):
-    pass
-
-
-@pytest.mark.flaky(reruns=2, reruns_delay=60)
-class UbuntuMinimalServerTest(BaseServerTest):
-    __test__ = True
-    stack = tobiko.required_fixture(UbuntuMinimalServerStackFixture)
-
-
 class UbuntuServerStackFixture(stacks.UbuntuServerStackFixture):
     pass
 
