@@ -766,11 +766,11 @@ class OvnControllerTest(BaseAgentTest):
         for ovn_ctl_ovs_pod in _openshift.get_pods(
                 labels={'service': 'ovn-controller-ovs'}):
             ovn_ctl_ovs_pod.execute(['sh', '-c', 'killall ovsdb-server'])
-            LOG.info('%s' 'was killed', ovn_ctl_ovs_pod)
+            LOG.info('%s was killed', ovn_ctl_ovs_pod)
         for ovn_ctl_pod in _openshift.get_pods(
                 labels={'service': 'ovn-controller'}):
             ovn_ctl_pod.execute(['sh', '-c', 'killall ovn-controller'])
-            LOG.info('%s' 'was killed', ovn_ctl_pod)
+            LOG.info('%s was killed', ovn_ctl_pod)
         # After killing  ovn-controller pods, it may take from 1 sec to 60 sec
         # to recover all ovn-controller pods.
         # Check ovn-controller pods
