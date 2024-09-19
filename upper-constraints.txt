@@ -434,6 +434,7 @@ sentinels===1.0.0
 seqdiag===3.0.0;python_version=='3.8'
 setproctitle===1.2.2
 setuptools===60.9.3;python_version=='3.8'
+setuptools===70.3.0;python_version>='3.9'
 simplegeneric===0.8.1
 simplejson===3.17.6
 six===1.16.0

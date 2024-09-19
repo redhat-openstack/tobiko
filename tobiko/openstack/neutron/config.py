@@ -46,7 +46,7 @@ OPTIONS = [
                 default=None,
                 help="List of nameservers IPv6 addresses"),
     cfg.IntOpt('custom_mtu_size',
-               default=1350,
+               default=1300,
                help=("Customized maximum transfer unit size\n"
                      "Notes:\n"
                      " - MTU values as small as 1000 has been seen "

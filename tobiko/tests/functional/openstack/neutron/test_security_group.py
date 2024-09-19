@@ -54,7 +54,17 @@ class StatelessSecurityGroupTest(testtools.TestCase):
                         f"{StatelessSecurityGroupFixture.__qualname__}-{i}")
             self.assertEqual(ssg_name, ssg_fixture.name)
             ssg = neutron.list_security_groups(name=ssg_name).unique
-            self.assertEqual(ssg, ssg_fixture.security_group)
+            self.assertCountEqual(ssg.keys(),
+                                  ssg_fixture.security_group.keys())
+            for k in ssg.keys():
+                if k != 'security_group_rules':
+                    self.assertEqual(ssg[k], ssg_fixture.security_group[k])
+                else:
+                    # the elements from the lists ssg['security_group_rules']
+                    # and ssg_fixture.security_group['security_group_rules']
+                    # are equal, but they could be ordered in a different way
+                    self.assertCountEqual(ssg[k],
+                                          ssg_fixture.security_group[k])
 
     def test_stateless_sec_group_list_parameters(self):
         for i, ssg_fixture in enumerate(self.ssg_fixture_list):
