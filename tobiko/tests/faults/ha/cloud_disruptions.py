@@ -584,6 +584,10 @@ def restart_service_on_all_nodes(service):
     is running and check the cloud is healthy after they are started again"""
     node_names = tripleo.get_overcloud_nodes_running_service(service)
     nodes = topology.list_openstack_nodes(hostnames=node_names)
+    restart_service_on_nodes(service, nodes)
+
+
+def restart_service_on_nodes(service, nodes):
     for node in nodes:
         sh.stop_systemd_units(service, ssh_client=node.ssh_client)
     for node in nodes:

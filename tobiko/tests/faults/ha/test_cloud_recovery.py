@@ -15,6 +15,7 @@
 #    under the License.
 from __future__ import absolute_import
 
+import random
 import typing
 
 import pytest
@@ -29,6 +30,7 @@ from tobiko.openstack import nova as nova_osp
 from tobiko.openstack import octavia
 from tobiko.openstack import topology
 from tobiko.openstack import tests
+from tobiko.shell import sh
 from tobiko.tests.faults.ha import cloud_disruptions
 from tobiko.tripleo import pacemaker
 from tobiko.tripleo import processes
@@ -359,8 +361,29 @@ class DisruptTripleoNodesTest(testtools.TestCase):
     @overcloud.skip_unless_ovn_bgp_agent
     def test_restart_frr(self):
         OvercloudHealthCheck.run_before()
-        cloud_disruptions.restart_service_on_all_nodes(
-            topology.get_agent_service_name(neutron.FRR))
+
+        frr_service = topology.get_agent_service_name(neutron.FRR)
+        # restart frr on all computes
+        computes = topology.list_openstack_nodes(group='compute')
+        cloud_disruptions.restart_service_on_nodes(frr_service, computes)
+        # restart frr on all networkers
+        if 'networker' in topology.list_openstack_node_groups():
+            networkers = topology.list_openstack_nodes(group='networker')
+            cloud_disruptions.restart_service_on_nodes(frr_service, networkers)
+        # restart frr on one controller (in order to avoid quorum issues)
+        controller = random.choice(topology.list_openstack_nodes(
+            group='controller'))
+        sh.stop_systemd_units(frr_service, ssh_client=controller.ssh_client)
+        start_time = tobiko.time()
+        if not pacemaker.fencing_deployed():
+            # when not fencing, the test just starts frr on the controller
+            sh.start_systemd_units(
+                frr_service, ssh_client=controller.ssh_client)
+        else:
+            # when fencing, the controller is rebooted automatically
+            cloud_disruptions.check_overcloud_node_uptime(
+                controller.ssh_client, start_time)
+
         OvercloudHealthCheck.run_after()
 
     def test_restart_neutron(self):
