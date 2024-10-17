@@ -17,17 +17,22 @@ from __future__ import absolute_import
 from oslo_log import log
 
 import tobiko
+from tobiko import config
 from tobiko.openstack import octavia
 from tobiko.openstack import neutron
 from tobiko.openstack.octavia import _constants
 
+CONF = config.CONF
 LOG = log.getLogger(__name__)
 
 
 def get_external_subnet(ip_version=4):
+    kw = {'router:external': True}
+    if len(neutron.list_networks(**{'router:external': True})) > 1:
+        kw['name'] = CONF.neutron.external_network
+
     try:
-        ext_subnet_list = neutron.find_network(
-            **{'router:external': True})['subnets']
+        ext_subnet_list = neutron.find_network(**kw)['subnets']
     except tobiko.ObjectNotFound:
         LOG.warning('External network not found')
         return None

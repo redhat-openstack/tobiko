@@ -20,7 +20,8 @@ from oslo_config import cfg
 GROUP_NAME = 'neutron'
 OPTIONS = [
     cfg.StrOpt('external_network',
-               help="Network for creating ports on an external network"),
+               help="Network for creating ports on an external network",
+               default="public"),
     cfg.StrOpt('floating_network',
                help="Network for creating floating IPs"),
     cfg.StrOpt('ipv4_cidr',
