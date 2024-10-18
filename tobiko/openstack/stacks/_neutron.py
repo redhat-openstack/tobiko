@@ -135,10 +135,6 @@ class RouterStackFixture(ExternalNetworkStackFixture):
         super(RouterStackFixture, self).__init__()
         self._neutron_client = neutron_client
 
-    @property
-    def external_name(self) -> typing.Optional[str]:
-        return tobiko.tobiko_config().neutron.floating_network
-
     distributed: typing.Optional[bool] = None
 
     @property

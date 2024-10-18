@@ -29,7 +29,7 @@ LOG = log.getLogger(__name__)
 def get_external_subnet(ip_version=4):
     kw = {'router:external': True}
     if len(neutron.list_networks(**{'router:external': True})) > 1:
-        kw['name'] = CONF.neutron.external_network
+        kw['name'] = CONF.tobiko.neutron.external_network
 
     try:
         ext_subnet_list = neutron.find_network(**kw)['subnets']

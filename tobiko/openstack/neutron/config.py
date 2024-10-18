@@ -22,8 +22,6 @@ OPTIONS = [
     cfg.StrOpt('external_network',
                help="Network for creating ports on an external network",
                default="public"),
-    cfg.StrOpt('floating_network',
-               help="Network for creating floating IPs"),
     cfg.StrOpt('ipv4_cidr',
                default='10.100.0.0/16',
                help="The CIDR block to allocate IPv4 subnets from"),
