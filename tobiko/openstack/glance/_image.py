@@ -444,6 +444,21 @@ class CustomizedGlanceImageFixture(FileGlanceImageFixture):
         return 'customized'
 
     def customize_image_file(self, base_file: str) -> str:
+
+        def workaround_passt(full_command, exc):
+            which_passt = sh.execute(
+                'which passt', expect_exit_status=None).stdout.rstrip()
+            if which_passt == '':
+                raise exc
+
+            cmd = f'mv {which_passt} {which_passt}.bak'
+            cmd_cleanup = f'mv {which_passt}.bak {which_passt}'
+            tobiko.add_cleanup(sh.execute, cmd_cleanup,
+                               expect_exit_status=None, sudo=True)
+            LOG.exception("Executing virt-customize without passt")
+            sh.execute(cmd, sudo=True)
+            sh.execute(full_command)
+
         customized_file = f'{base_file}-{self._get_customized_suffix()}'
         if os.path.isfile(customized_file):
             if (os.stat(base_file).st_mtime_ns <
@@ -464,7 +479,10 @@ class CustomizedGlanceImageFixture(FileGlanceImageFixture):
                                             'virt-customize',
                                             '-a',
                                             work_file])
-                sh.execute(command + options)
+                try:
+                    sh.execute(command + options)
+                except sh.ShellCommandFailed as exc:
+                    workaround_passt(command + options, exc)
 
             sh.get_file(work_file, customized_file)
             return customized_file
