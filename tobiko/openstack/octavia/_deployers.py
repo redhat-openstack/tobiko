@@ -147,6 +147,7 @@ def deploy_ipv4_lb(provider: str,
     return lb, listener, pool
 
 
+@tobiko.interworker_synched('deploy_ipv4_amphora_lb')
 def deploy_ipv4_amphora_lb(protocol: str = _constants.PROTOCOL_HTTP,
                            protocol_port: int = 80,
                            lb_algorithm: str = (
@@ -176,6 +177,7 @@ def deploy_ipv4_amphora_lb(protocol: str = _constants.PROTOCOL_HTTP,
                           servers_stacks=servers_stacks)
 
 
+@tobiko.interworker_synched('deploy_ipv4_ovn_lb')
 def deploy_ipv4_ovn_lb(protocol: str = _constants.PROTOCOL_TCP,
                        protocol_port: int = 80,
                        lb_algorithm: str = (
