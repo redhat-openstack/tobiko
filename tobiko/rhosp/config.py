@@ -108,6 +108,14 @@ TRIPLEO_OPTIONS = [
                 help='Dictionary with the node groups corresponding to '
                      'different hostname prefixes',
                 default={'ctrl': 'controller', 'cmp': 'compute'}),
+
+    cfg.BoolOpt('run_background_ping_in_pod',
+                default=False,
+                help='Wheter background ping should be run directly from '
+                     'the undercloud node (default) or using POD on the OCP '
+                     'cluster. The latter is is useful e.g. for the '
+                     'data plane adoption jobs when background ping should '
+                     'be run from the POD even before adoption.'),
 ]
 
 
