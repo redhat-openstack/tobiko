@@ -21,10 +21,9 @@ import tobiko
 from tobiko.openstack import neutron
 from tobiko.openstack import nova
 from tobiko.openstack import stacks
+from tobiko.openstack import topology
 from tobiko.shell import ping
 from tobiko.shell import sh
-from tobiko.tripleo import undercloud
-from tobiko.tripleo import nova as tripleo_nova
 
 
 @pytest.mark.minimal
@@ -62,7 +61,6 @@ class NetworkTest(testtools.TestCase):
 
 
 @pytest.mark.background
-@undercloud.skip_if_missing_undercloud
 class BackgroundProcessTest(NetworkTest):
 
     def test_check_background_vm_ping(self):
@@ -72,7 +70,7 @@ class BackgroundProcessTest(NetworkTest):
             then execute some check logic i.e. a check function.
             if the process by name isn't running,
             start a separate process i.e a background function"""
-        tripleo_nova.check_or_start_background_vm_ping()
+        topology.get_openstack_topology().check_or_start_background_vm_ping()
 
 
 @pytest.mark.migrate_server
