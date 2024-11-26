@@ -650,6 +650,10 @@ class OpenStackTopology(tobiko.SharedFixture):
                                        ip_version=self.ip_version,
                                        ssh_config=True)
 
+    def check_or_start_background_vm_ping(self):
+        tobiko.skip_test("Background ping not supported by "
+                         "this topology class.")
+
 
 def get_openstack_topology(topology_class: typing.Type = None) -> \
         OpenStackTopology:

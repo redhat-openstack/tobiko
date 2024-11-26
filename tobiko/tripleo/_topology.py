@@ -32,6 +32,7 @@ from tobiko.shell import ssh
 from tobiko.tripleo import _overcloud
 from tobiko.tripleo import _undercloud
 from tobiko.tripleo import containers
+from tobiko.tripleo import nova as tripleo_nova
 
 CONF = config.CONF
 LOG = log.getLogger(__name__)
@@ -186,6 +187,9 @@ class TripleoTopology(rhosp.RhospTopology):
             LOG.warning("Unable to obtain any node subgroup from node "
                         "name: '%s'", node.name)
         return subgroups
+
+    def check_or_start_background_vm_ping(self):
+        tripleo_nova.check_or_start_background_vm_ping()
 
 
 class TripleoTopologyNode(rhosp.RhospNode):
