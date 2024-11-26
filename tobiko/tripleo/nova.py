@@ -9,17 +9,17 @@ from oslo_log import log
 import pandas
 
 import tobiko
-from tobiko import tripleo
 from tobiko.tripleo import overcloud
 from tobiko.shell import ping
 from tobiko.shell import sh
 from tobiko.openstack import nova
 from tobiko.openstack import topology
-from tobiko.openstack import stacks
 from tobiko.tripleo import containers
 
 
 LOG = log.getLogger(__name__)
+
+_STACKS_IMPORTED = False
 
 
 def check_nova_services_health(timeout=600., interval=2.):
@@ -229,12 +229,18 @@ def check_computes_vms_running_via_virsh():
 
 def get_nova_server_floating_ip():
     """get an a running's vm floating_ip"""
+    # pylint: disable=global-statement
+    global _STACKS_IMPORTED
+    if not _STACKS_IMPORTED:
+        from tobiko.openstack import stacks
+        _STACKS_IMPORTED = True
+    # pylint: disable=possibly-used-before-assignment
     return tobiko.setup_fixture(
            stacks.CirrosServerStackFixture).floating_ip_address
 
 
 # Test is inteded for D/S env
-@tripleo.skip_if_missing_overcloud
+@overcloud.skip_if_missing_overcloud
 def check_or_start_background_vm_ping():
     """Check if process exists, if so stop and check ping health
     if not : start a new separate ping process.
@@ -251,7 +257,7 @@ def check_or_start_background_vm_ping():
 
 
 # Test is inteded for D/S env
-@tripleo.skip_if_missing_overcloud
+@overcloud.skip_if_missing_overcloud
 def skip_check_or_start_background_vm_ping():
     """Like the above, but skips the ping check, truncates results
     and reexecutes the test"""
