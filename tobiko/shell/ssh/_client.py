@@ -27,6 +27,7 @@ import typing
 import netaddr
 import testtools
 from oslo_log import log
+from oslo_utils.secretutils import md5
 import paramiko
 from paramiko import common
 
@@ -36,6 +37,22 @@ from tobiko.shell.ssh import _command
 
 
 LOG = log.getLogger(__name__)
+
+
+def get_fingerprint(self):
+    """Patch paramiko
+
+    This method needs to be patched to allow paramiko to work under FIPS.
+    Until the patch to do this merges, patch paramiko here.
+
+    TODO(eolivare) Remove this when paramiko is patched.
+    See https://github.com/paramiko/paramiko/pull/1928
+    """
+    return md5(self.asbytes(), usedforsecurity=False).digest()
+
+
+# mypy: disable-error-code="assignment"
+paramiko.pkey.PKey.get_fingerprint = get_fingerprint
 
 
 def valid_hostname(value):
