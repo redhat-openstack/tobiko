@@ -26,11 +26,14 @@ from tobiko.shell import ping
 from tobiko.shell import sh
 
 
-@pytest.mark.minimal
-class NetworkTest(testtools.TestCase):
+class BaseNetworkTest(testtools.TestCase):
 
     #: Resources stack with Nova server to send messages to
     stack = tobiko.required_fixture(stacks.CirrosPeerServerStackFixture)
+
+
+@pytest.mark.minimal
+class NetworkTest(BaseNetworkTest):
 
     def test_stack_create_complete(self):
         self.stack.key_pair_stack.wait_for_create_complete()
@@ -61,7 +64,7 @@ class NetworkTest(testtools.TestCase):
 
 
 @pytest.mark.background
-class BackgroundProcessTest(NetworkTest):
+class BackgroundProcessTest(BaseNetworkTest):
 
     def test_check_background_vm_ping(self):
         """ Tests that are designed to run in the background ,
