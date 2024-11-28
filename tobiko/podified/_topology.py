@@ -174,6 +174,11 @@ class PodifiedTopology(rhosp.RhospTopology):
                                  node_type=EDPM_NODE)
             assert isinstance(node, EdpmNode)
 
+    def check_or_start_background_vm_ping(self, server_ip):
+        _openshift.check_or_start_tobiko_ping_command(
+            server_ip=server_ip
+        )
+
 
 class EdpmNode(rhosp.RhospNode):
 

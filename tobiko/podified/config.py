@@ -32,6 +32,23 @@ OPTIONS = [
     cfg.StrOpt('osp_project',
                default='openstack',
                help="Openshift project that includes the Openstack resources"),
+    cfg.StrOpt('background_tasks_project',
+               default='tobiko',
+               help='Name of the OpenShift project which will be used to run '
+                    'PODs with tobiko background commands, like e.g.'
+                    '`tobiko ping`'),
+    cfg.StrOpt('tobiko_image',
+               default='quay.io/podified-antelope-centos9/openstack-tobiko:current-podified',  # noqa
+               help='Contaniner image used to run background tobiko commands '
+                    'like e.g. `tobiko ping` in the POD.'),
+    cfg.IntOpt('tobiko_start_pod_timeout',
+               default=60,
+               help='Defines how long Tobiko will wait until POD with the '
+                    'background command (like tobiko ping) will be `Running`. '
+                    'In most cases, if tobiko image is already in the local '
+                    'registry it will need just few seconds to start POD but '
+                    'if image is not yet cached locally it may take a bit '
+                    'longer time to download it.'),
 ]
 
 
