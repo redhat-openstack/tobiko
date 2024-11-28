@@ -35,7 +35,6 @@ Tobiko package
    modules/http
    modules/openstack/index
    modules/podman
-   modules/run
    modules/shell/index
    modules/shiftstack
    modules/tripleo/index
