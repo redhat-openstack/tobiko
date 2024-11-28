@@ -117,11 +117,7 @@ class RetryAttempt(object):
         return ', '.join(details)
 
     @property
-    def is_first(self) -> bool:
-        return self.number == 0
-
-    @property
-    def is_last(self) -> bool:
+    def is_last(self):
         try:
             self.check_limits()
         except Exception:
