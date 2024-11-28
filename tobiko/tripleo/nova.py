@@ -19,8 +19,6 @@ from tobiko.tripleo import containers
 
 LOG = log.getLogger(__name__)
 
-_STACKS_IMPORTED = False
-
 
 def check_nova_services_health(timeout=600., interval=2.):
     retry = tobiko.retry(timeout=timeout, interval=interval)
@@ -227,67 +225,59 @@ def check_computes_vms_running_via_virsh():
                              f"{compute.hostname}")
 
 
-def get_nova_server_floating_ip():
-    """get an a running's vm floating_ip"""
-    # pylint: disable=global-statement
-    global _STACKS_IMPORTED
-    if not _STACKS_IMPORTED:
-        from tobiko.openstack import stacks
-        _STACKS_IMPORTED = True
-    # pylint: disable=possibly-used-before-assignment
-    return tobiko.setup_fixture(
-           stacks.CirrosServerStackFixture).floating_ip_address
-
-
 # Test is inteded for D/S env
 @overcloud.skip_if_missing_overcloud
-def check_or_start_background_vm_ping():
+def check_or_start_background_vm_ping(server_ip):
     """Check if process exists, if so stop and check ping health
     if not : start a new separate ping process.
     Executes a Background ping to a vm floating_ip,
     this test is intended to be run and picked up again
     by the next tobiko run. Ping results are parsed
     and a failure is raised if ping failure is above a certain amount"""
-    ping_vm_fip = get_nova_server_floating_ip()
     sh.check_or_start_background_process(
         bg_function=ping.write_ping_to_file,
         bg_process_name='tobiko_background_ping',
         check_function=ping.check_ping_statistics,
-        ping_ip=ping_vm_fip)
+        ping_ip=server_ip)
 
 
 # Test is inteded for D/S env
 @overcloud.skip_if_missing_overcloud
-def skip_check_or_start_background_vm_ping():
+def skip_check_or_start_background_vm_ping(server_ip):
     """Like the above, but skips the ping check, truncates results
     and reexecutes the test"""
-    ping_vm_fip = get_nova_server_floating_ip()
     sh.check_or_start_background_process(
         bg_function=ping.write_ping_to_file,
         bg_process_name='tobiko_background_ping',
         check_function=ping.skip_check_ping_statistics,
-        ping_ip=ping_vm_fip)
+        ping_ip=server_ip)
 
 
-def skip_background_vm_ping_checks(func):
+def skip_background_vm_ping_checks(server_ip):
     """Skip ping_check_decorator - to be used when traffic to vm
     must be dropped for the duration of the test - func"""
-    @wraps(func)
-    def wrapper(*args):  # pylint: disable=W0613
-        tobiko.add_cleanup(skip_check_or_start_background_vm_ping)
-        check_or_start_background_vm_ping()
-        func(*args)
-    return wrapper
+    def decor(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):  # pylint: disable=W0613
+            tobiko.add_cleanup(
+                skip_check_or_start_background_vm_ping, server_ip)
+            check_or_start_background_vm_ping(server_ip)
+            func(*args)
+        return wrapper
+    return decor
 
 
-def skip_background_vm_ping_checks_when_nondvr(func):
+def skip_background_vm_ping_checks_when_nondvr(server_ip):
     """Similar to skip_background_vm_ping_checks, but the background ping
     checks and the restart of the background ping process is only executed when
     DVR is disabled"""
-    @wraps(func)
-    def wrapper(*args):  # pylint: disable=W0613
-        if not overcloud.is_dvr_enabled():
-            tobiko.add_cleanup(skip_check_or_start_background_vm_ping)
-            check_or_start_background_vm_ping()
-        func(*args)
-    return wrapper
+    def decor(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):  # pylint: disable=W0613
+            if not overcloud.is_dvr_enabled():
+                tobiko.add_cleanup(
+                    skip_check_or_start_background_vm_ping, server_ip)
+                check_or_start_background_vm_ping(server_ip)
+            func(*args, **kwargs)
+        return wrapper
+    return decor

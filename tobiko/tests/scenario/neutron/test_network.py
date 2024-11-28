@@ -73,7 +73,8 @@ class BackgroundProcessTest(BaseNetworkTest):
             then execute some check logic i.e. a check function.
             if the process by name isn't running,
             start a separate process i.e a background function"""
-        topology.get_openstack_topology().check_or_start_background_vm_ping()
+        topology.get_openstack_topology().check_or_start_background_vm_ping(
+            self.stack.peer_stack.floating_ip_address)
 
 
 @pytest.mark.migrate_server
