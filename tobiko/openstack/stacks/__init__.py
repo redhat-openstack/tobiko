@@ -94,9 +94,7 @@ QosServerStackFixture = _qos.QosServerStackFixture
 
 UbuntuFlavorStackFixture = _ubuntu.UbuntuFlavorStackFixture
 UbuntuImageFixture = _ubuntu.UbuntuImageFixture
-UbuntuMinimalImageFixture = _ubuntu.UbuntuMinimalImageFixture
 UbuntuServerStackFixture = _ubuntu.UbuntuServerStackFixture
-UbuntuMinimalServerStackFixture = _ubuntu.UbuntuMinimalServerStackFixture
 UbuntuExternalServerStackFixture = _ubuntu.UbuntuExternalServerStackFixture
 
 VlanNetworkStackFixture = _vlan.VlanNetworkStackFixture

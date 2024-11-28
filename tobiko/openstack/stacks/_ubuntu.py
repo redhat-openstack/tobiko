@@ -25,20 +25,6 @@ from tobiko.shell import sh
 
 
 CONF = config.CONF
-
-
-class UbuntuMinimalImageFixture(glance.FileGlanceImageFixture):
-    image_name = CONF.tobiko.ubuntu.image_name
-    image_file = CONF.tobiko.ubuntu.image_file
-    disk_format = CONF.tobiko.ubuntu.disk_format or "qcow2"
-    container_format = CONF.tobiko.ubuntu.container_format or "bare"
-    username = CONF.tobiko.ubuntu.username or 'ubuntu'
-    password = CONF.tobiko.ubuntu.password or 'ubuntu'
-    connection_timeout = CONF.tobiko.nova.ubuntu_connection_timeout
-    disabled_algorithms = CONF.tobiko.ubuntu.disabled_algorithms
-    is_reachable_timeout = CONF.tobiko.nova.ubuntu_is_reachable_timeout
-
-
 IPERF3_SERVICE_FILE = """
 [Unit]
 Description=iperf3 server on port %i
@@ -55,8 +41,7 @@ DefaultInstance=5201
 """
 
 
-class UbuntuImageFixture(UbuntuMinimalImageFixture,
-                         glance.CustomizedGlanceImageFixture):
+class UbuntuImageFixture(glance.CustomizedGlanceImageFixture):
     """Ubuntu server image running an HTTP server
 
     The server has additional installed packages compared to
@@ -73,6 +58,15 @@ class UbuntuImageFixture(UbuntuMinimalImageFixture,
     - nginx HTTP server listening on TCP port 80
     - iperf3 server listening on TCP port 5201
     """
+    image_name = CONF.tobiko.ubuntu.image_name
+    image_file = CONF.tobiko.ubuntu.image_file
+    disk_format = CONF.tobiko.ubuntu.disk_format or "qcow2"
+    container_format = CONF.tobiko.ubuntu.container_format or "bare"
+    username = CONF.tobiko.ubuntu.username or 'ubuntu'
+    password = CONF.tobiko.ubuntu.password or 'ubuntu'
+    connection_timeout = CONF.tobiko.nova.ubuntu_connection_timeout
+    disabled_algorithms = CONF.tobiko.ubuntu.disabled_algorithms
+    is_reachable_timeout = CONF.tobiko.nova.ubuntu_is_reachable_timeout
 
     def __init__(self,
                  ethernet_devide: str = None,
@@ -182,16 +176,7 @@ class UbuntuFlavorStackFixture(_nova.FlavorStackFixture):
     swap = 512
 
 
-class UbuntuMinimalServerStackFixture(_nova.CloudInitServerStackFixture):
-
-    #: Glance image used to create a Nova server instance
-    image_fixture = tobiko.required_fixture(UbuntuMinimalImageFixture)
-
-    #: Flavor used to create a Nova server instance
-    flavor_stack = tobiko.required_fixture(UbuntuFlavorStackFixture)
-
-
-class UbuntuServerStackFixture(UbuntuMinimalServerStackFixture,
+class UbuntuServerStackFixture(_nova.CloudInitServerStackFixture,
                                _vlan.VlanServerStackFixture):
     """Ubuntu server running an HTTP server
 
@@ -203,6 +188,8 @@ class UbuntuServerStackFixture(UbuntuMinimalServerStackFixture,
 
     #: Glance image used to create a Nova server instance
     image_fixture = tobiko.required_fixture(UbuntuImageFixture)
+    #: Flavor used to create a Nova server instance
+    flavor_stack = tobiko.required_fixture(UbuntuFlavorStackFixture)
 
     @property
     def is_reachable_timeout(self) -> tobiko.Seconds:

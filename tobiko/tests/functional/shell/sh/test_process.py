@@ -67,7 +67,7 @@ class LocalProcessTest(ProcessTest):
 class SSHProcessFixture(ProcessFixture):
 
     stack = tobiko.required_fixture(
-        stacks.UbuntuMinimalServerStackFixture)
+        stacks.UbuntuServerStackFixture)
 
     def setup_fixture(self):
         self.ssh_client = self.stack.ssh_client

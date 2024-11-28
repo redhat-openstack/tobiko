@@ -139,7 +139,7 @@ class GetL3AgentModeTest(testtools.TestCase):
 class SSHGetL3AgentModeTest(GetL3AgentModeTest):
 
     server_stack = tobiko.required_fixture(
-        stacks.UbuntuMinimalServerStackFixture)
+        stacks.UbuntuServerStackFixture)
 
     @property
     def connection(self) -> sh.SSHShellConnection:

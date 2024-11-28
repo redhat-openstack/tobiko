@@ -87,7 +87,7 @@ class ProxyJumpWhichTest(WhichTest):
 class SSHWhichTest(WhichTest):
 
     server_stack = tobiko.required_fixture(
-        stacks.UbuntuMinimalServerStackFixture)
+        stacks.UbuntuServerStackFixture)
 
     @property
     def ssh_client(self):
