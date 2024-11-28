@@ -19,6 +19,8 @@ import os
 import tempfile
 import time
 import typing  # noqa
+from abc import ABC, abstractmethod
+from urllib.parse import urlparse
 
 from oslo_log import log
 import requests
@@ -82,7 +84,8 @@ class GlanceImageStatus(object):
 
 
 @keystone.skip_unless_has_keystone_credentials()
-class GlanceImageFixture(_client.HasGlanceClientMixin, tobiko.SharedFixture):
+class GlanceImageFixture(
+        _client.HasGlanceClientMixin, tobiko.SharedFixture, ABC):
 
     image_name: typing.Optional[str] = None
     username: typing.Optional[str] = None
@@ -185,7 +188,7 @@ class GlanceImageFixture(_client.HasGlanceClientMixin, tobiko.SharedFixture):
                                            expected_status=expected_status)
 
 
-class UploadGlanceImageFixture(GlanceImageFixture):
+class UploadGlanceImageFixture(GlanceImageFixture, ABC):
 
     disk_format = "raw"
     container_format = "bare"
@@ -296,20 +299,27 @@ class UploadGlanceImageFixture(GlanceImageFixture):
         raise NotImplementedError
 
 
-class FileGlanceImageFixture(UploadGlanceImageFixture):
+class UrlGlanceImageFixture(UploadGlanceImageFixture, ABC):
 
-    image_file = None
-    image_dir = None
-    compression_type = None
+    image_url: str = ''
+    image_dir: str = ''
+    image_file: str = ''
+    compression_type: typing.Optional[str] = None
 
-    def __init__(self, image_file=None, image_dir=None, **kwargs):
-        super(FileGlanceImageFixture, self).__init__(**kwargs)
-
-        if image_file:
-            self.image_file = image_file
-        elif not self.image_file:
-            self.image_file = self.fixture_name
-        tobiko.check_valid_type(self.image_file, str)
+    def __init__(self,
+                 image_url: str = None,
+                 image_dir: str = None,
+                 **kwargs):
+        super().__init__(**kwargs)
+        if image_url:
+            self.image_url = image_url
+        tobiko.check_valid_type(self.image_url, str)
+        # self.image_url has to be a URL - if it refers to a local file, it
+        # should start with file://
+        url = urlparse(self.image_url)
+        if not self.image_file:
+            self.image_file = (url.path if url.scheme == 'file'
+                               else os.path.basename(url.path))
 
         if image_dir:
             self.image_dir = image_dir
@@ -330,9 +340,17 @@ class FileGlanceImageFixture(UploadGlanceImageFixture):
         return os.path.join(self.real_image_dir, self.image_file)
 
     def get_image_data(self):
-        return self.get_image_file(image_file=self.real_image_file)
+        real_image_file = self.real_image_file
+        # if the file exists, then skip the download part
+        if os.path.exists(real_image_file):
+            return self.get_image_from_file(real_image_file)
+        # else, download the image
+        return self.get_image_from_url(real_image_file)
 
-    def get_image_file(self, image_file: str):
+    def customize_image_file(self, base_file: str) -> str:
+        return base_file
+
+    def get_image_from_file(self, image_file: str):
         image_file = self.customize_image_file(base_file=image_file)
         image_size = os.path.getsize(image_file)
         LOG.debug('Uploading image %r data from file %r (%d bytes)',
@@ -342,25 +360,7 @@ class FileGlanceImageFixture(UploadGlanceImageFixture):
             compression_type=self.compression_type)
         return image_data, image_size
 
-    def customize_image_file(self, base_file: str) -> str:
-        return base_file
-
-
-class URLGlanceImageFixture(FileGlanceImageFixture):
-
-    image_url: str
-
-    def __init__(self,
-                 image_url: str = None,
-                 **kwargs):
-        super().__init__(**kwargs)
-        if image_url is None:
-            image_url = self.image_url
-        else:
-            self.image_url = image_url
-        tobiko.check_valid_type(image_url, str)
-
-    def get_image_file(self, image_file: str):
+    def get_image_from_url(self, image_file: str):
         # pylint: disable=missing-timeout
         http_request = requests.get(self.image_url, stream=True)
         expected_size = int(http_request.headers.get('content-length', 0))
@@ -394,8 +394,7 @@ class URLGlanceImageFixture(FileGlanceImageFixture):
             self._download_image_file(image_file=image_file,
                                       chunks=chunks,
                                       expected_size=expected_size)
-        return super(URLGlanceImageFixture, self).get_image_file(
-            image_file=image_file)
+        return self.get_image_from_file(image_file=image_file)
 
     def _download_image_file(self, image_file, chunks, expected_size):
         image_dir = os.path.dirname(image_file)
@@ -419,7 +418,7 @@ class URLGlanceImageFixture(FileGlanceImageFixture):
         os.rename(temp_file, image_file)
 
 
-class CustomizedGlanceImageFixture(FileGlanceImageFixture):
+class CustomizedGlanceImageFixture(UrlGlanceImageFixture, ABC):
 
     @property
     def firstboot_commands(self) -> typing.List[str]:
@@ -437,6 +436,11 @@ class CustomizedGlanceImageFixture(FileGlanceImageFixture):
     def write_files(self) -> typing.Dict[str, str]:
         return {}
 
+    @property
+    @abstractmethod
+    def customization_required(self) -> bool:
+        pass
+
     username: str = ''
     password: str = ''
 
@@ -444,7 +448,6 @@ class CustomizedGlanceImageFixture(FileGlanceImageFixture):
         return 'customized'
 
     def customize_image_file(self, base_file: str) -> str:
-
         def workaround_passt(full_command, exc):
             which_passt = sh.execute(
                 'which passt', expect_exit_status=None).stdout.rstrip()
@@ -458,6 +461,10 @@ class CustomizedGlanceImageFixture(FileGlanceImageFixture):
             LOG.exception("Executing virt-customize without passt")
             sh.execute(cmd, sudo=True)
             sh.execute(full_command)
+
+        # if the image does not have to be customized, then do nothing
+        if not self.customization_required:
+            return base_file
 
         customized_file = f'{base_file}-{self._get_customized_suffix()}'
         if os.path.isfile(customized_file):

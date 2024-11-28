@@ -40,11 +40,10 @@ CIRROS_IMAGE_URL = (
     version=CIRROS_IMAGE_VERSION)
 
 
-class CirrosImageFixture(glance.URLGlanceImageFixture):
+class CirrosImageFixture(glance.UrlGlanceImageFixture):
 
     image_url = CONF.tobiko.cirros.image_url or CIRROS_IMAGE_URL
     image_name = CONF.tobiko.cirros.image_name
-    image_file = CONF.tobiko.cirros.image_file
     container_format = CONF.tobiko.cirros.container_format or "bare"
     disk_format = CONF.tobiko.cirros.disk_format or "qcow2"
     username = CONF.tobiko.cirros.username or 'cirros'

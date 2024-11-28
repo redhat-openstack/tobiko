@@ -58,8 +58,9 @@ class UbuntuImageFixture(glance.CustomizedGlanceImageFixture):
     - nginx HTTP server listening on TCP port 80
     - iperf3 server listening on TCP port 5201
     """
-    image_name = CONF.tobiko.ubuntu.image_name
+    image_url = CONF.tobiko.ubuntu.image_url
     image_file = CONF.tobiko.ubuntu.image_file
+    image_name = CONF.tobiko.ubuntu.image_name
     disk_format = CONF.tobiko.ubuntu.disk_format or "qcow2"
     container_format = CONF.tobiko.ubuntu.container_format or "bare"
     username = CONF.tobiko.ubuntu.username or 'ubuntu'
@@ -73,6 +74,10 @@ class UbuntuImageFixture(glance.CustomizedGlanceImageFixture):
                  **kwargs):
         super().__init__(**kwargs)
         self._ethernet_device = ethernet_devide
+
+    @property
+    def customization_required(self) -> bool:
+        return not CONF.tobiko.ubuntu.customized_image_provided
 
     @property
     def firstboot_commands(self) -> typing.List[str]:

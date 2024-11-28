@@ -15,7 +15,6 @@
 #    under the License.
 from __future__ import absolute_import
 
-import abc
 import typing
 from abc import ABC
 
@@ -77,7 +76,7 @@ class FlavorStackFixture(heat.HeatStackFixture):
 
 
 @neutron.skip_if_missing_networking_extensions('port-security')
-class ServerStackFixture(heat.HeatStackFixture, abc.ABC):
+class ServerStackFixture(heat.HeatStackFixture, ABC):
 
     #: Heat template file
     template = _hot.heat_template_file('nova/server.yaml')
@@ -481,7 +480,7 @@ class CloudInitServerStackFixture(ServerStackFixture, ABC):
                                       **params)
 
 
-class ExternalServerStackFixture(ServerStackFixture, abc.ABC):
+class ExternalServerStackFixture(ServerStackFixture, ABC):
     # pylint: disable=abstract-method
 
     #: stack with the network where the server port is created
@@ -505,7 +504,7 @@ class ExternalServerStackFixture(ServerStackFixture, abc.ABC):
         return self.network_stack.network_id
 
 
-class PeerServerStackFixture(ServerStackFixture, abc.ABC):
+class PeerServerStackFixture(ServerStackFixture, ABC):
     """Server witch networking access requires passing by another Nova server
     """
 
@@ -537,7 +536,7 @@ class PeerServerStackFixture(ServerStackFixture, abc.ABC):
 
 
 @nova.skip_if_missing_hypervisors(count=2, state='up', status='enabled')
-class DifferentHostServerStackFixture(PeerServerStackFixture, abc.ABC):
+class DifferentHostServerStackFixture(PeerServerStackFixture, ABC):
     # pylint: disable=abstract-method
 
     @property
@@ -545,7 +544,7 @@ class DifferentHostServerStackFixture(PeerServerStackFixture, abc.ABC):
         return [self.peer_stack.server_id]
 
 
-class SameHostServerStackFixture(PeerServerStackFixture, abc.ABC):
+class SameHostServerStackFixture(PeerServerStackFixture, ABC):
 
     @property
     def same_host(self):
@@ -559,7 +558,7 @@ def as_str(text):
         return text.decode()
 
 
-class HttpServerStackFixture(PeerServerStackFixture, abc.ABC):
+class HttpServerStackFixture(PeerServerStackFixture, ABC):
 
     http_server_port = 80
 

@@ -23,8 +23,8 @@
         {% endfor %}
         {% for file_name, dict_value in download_images.items() %}
         - section: "{{ dict_value.type }}"
-          option: image_file
-          value: "{{ download_images_dir }}/{{ file_name }}"
+          option: image_url
+          value: "file://{{ download_images_dir }}/{{ file_name }}"
         {% endfor %}
   vars:
     sections: "{{ test_default_conf | combine(test_conf, recursive=True) }}"

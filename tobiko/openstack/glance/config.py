@@ -70,6 +70,10 @@ def get_images_options():
                          help=("Allow to disable SSH auth algorithms"
                                "in order to SSH to old servers like"
                                "CirrOS ones")),
+             cfg.BoolOpt('customized_image_provided',
+                         default=False,
+                         help=("Whether the provided image (URL or file) is"
+                               "already customized or not"))
              ]
         )]
 
