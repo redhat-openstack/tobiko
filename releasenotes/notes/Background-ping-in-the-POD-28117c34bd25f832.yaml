@@ -1,0 +1,35 @@
+---
+prelude: New CLI command `tobiko`
+features:
+  - |
+    New CLI command `tobiko` is added. This new tool can be used to e.g. run some
+    background commands by Tobiko. Currently the only supported command is
+    `tobiko ping` which can be used to run ping of the server in the background
+    process (e.g. to run it from the POD on the OpenShift cluster)
+  - |
+    Support for running background ping process from the OpenShift POD. This
+    will be done that way automatically when Tobiko will be using `podified`
+    topology class but also can be enabled on the `tripleo` topology by setting
+    `run_background_ping_in_pod` to `true` in the tobiko config file.
+    Running background ping from the POD on the `tripleo` topology is useful in
+    e.g. adoption jobs to run background ping during the whole adoption process.
+other:
+  - |
+    Introduced new config option `run_background_ping_in_pod` which can be used to
+    run background ping process using OpenShift POD even if tests are run on the
+    `tripleo` topology.
+  - |
+    Introduced new config option `tobiko_image` which can be used to specify image
+    which will be used to run POD with e.g. `tobiko ping` command to run background
+    ping inside the OpenShift POD.
+  - |
+    Introduced new config option `tobiko_start_pod_timeout` which can be used to define
+    how much time Tobiko will wait for the POD with background process to be `Running`.
+    In most cases there is no need to wait long time for that but if image specified in
+    the `tobiko_image` config option is not in the local registry, downloading it may take
+    some time and then adjusting this timeout setting may be necessary.
+  - |
+    Introduced new config option `background_tasks_project` which allows to speficy
+    an OpenShift namespace in which PODs with background tasks, like e.g. `tobiko ping`
+    will be created. If this namespace don't exists in the OpenShift cluster, it will be
+    created.
