@@ -28,6 +28,7 @@ from tobiko.openstack import keystone
 from tobiko.openstack import neutron
 from tobiko.openstack import nova as nova_osp
 from tobiko.openstack import octavia
+from tobiko.openstack import stacks
 from tobiko.openstack import topology
 from tobiko.openstack import tests
 from tobiko.shell import sh
@@ -165,6 +166,8 @@ class DisruptTripleoNodesTest(testtools.TestCase):
     vms_detailed_info = None
     undisrupt_network_at_teardown = False
 
+    stack = tobiko.required_fixture(stacks.CirrosServerStackFixture)
+
     def tearDown(self):
         super(DisruptTripleoNodesTest, self).tearDown()
 
@@ -197,11 +200,16 @@ class DisruptTripleoNodesTest(testtools.TestCase):
     def test_0vercloud_health_check(self):
         OvercloudHealthCheck.run_before(skip_mac_table_size_test=False)
 
-    @nova.skip_background_vm_ping_checks_when_nondvr
     def test_z99_hard_reboot_controllers_recovery(self):
-        OvercloudHealthCheck.run_before()
-        cloud_disruptions.reset_all_controller_nodes()
-        OvercloudHealthCheck.run_after()
+
+        @nova.skip_background_vm_ping_checks_when_nondvr(
+            self.stack.floating_ip_address)
+        def _run_test():
+            OvercloudHealthCheck.run_before()
+            cloud_disruptions.reset_all_controller_nodes()
+            OvercloudHealthCheck.run_after()
+
+        _run_test()
 
     @staticmethod
     def _any_amphora_lb():
@@ -211,19 +219,25 @@ class DisruptTripleoNodesTest(testtools.TestCase):
                 any([lb['provider'] == octavia.AMPHORA_PROVIDER
                      for lb in octavia.list_load_balancers()]))
 
-    @nova.skip_background_vm_ping_checks
     def test_soft_reboot_computes_recovery(self):
-        OvercloudHealthCheck.run_before()
 
-        sequentially = self._any_amphora_lb()
-        cloud_disruptions.reset_all_compute_nodes(hard_reset=False,
-                                                  sequentially=sequentially)
-        # verify VM status is updated after reboot
-        nova.wait_for_all_instances_status('SHUTOFF')
-        # start all VM instance
-        # otherwise sidecar containers will not run after computes reboot
-        nova.start_all_instances()
-        OvercloudHealthCheck.run_after(passive_checks_only=True)
+        @nova.skip_background_vm_ping_checks(
+            self.stack.floating_ip_address)
+        def _run_test():
+            OvercloudHealthCheck.run_before()
+
+            sequentially = self._any_amphora_lb()
+            cloud_disruptions.reset_all_compute_nodes(
+                hard_reset=False,
+                sequentially=sequentially)
+            # verify VM status is updated after reboot
+            nova.wait_for_all_instances_status('SHUTOFF')
+            # start all VM instance
+            # otherwise sidecar containers will not run after computes reboot
+            nova.start_all_instances()
+            OvercloudHealthCheck.run_after(passive_checks_only=True)
+
+        _run_test()
 
     # TODO(eolivare): the following test is skipped due to rhbz#1890895
     # def test_hard_reboot_computes_recovery(self):
@@ -236,60 +250,87 @@ class DisruptTripleoNodesTest(testtools.TestCase):
     #     nova.start_all_instances()
     #     OvercloudHealthCheck.run_after(passive_checks_only=True)
 
-    @nova.skip_background_vm_ping_checks_when_nondvr
     @testtools.skipIf(has_external_lb, SKIP_MESSAGE_EXTLB)
     def test_z999_reboot_controller_galera_main_vip(self):
-        # This test case may fail at times if RHBZ#2124877 is not resolved
-        # but that bug is due to a race condition,
-        # so it is not reproducible 100% times
-        OvercloudHealthCheck.run_before(passive_checks_only=True)
-        multi_ip_test_fixture, ports_before_stack_creation = \
-            cloud_disruptions.reboot_controller_galera_main_vip()
-        OvercloudHealthCheck.run_after(passive_checks_only=True)
-        self.vms_detailed_info = cloud_disruptions.get_vms_detailed_info(
-            multi_ip_test_fixture)
-        LOG.debug('detailed info from the list of vms created: %r',
-                  self.vms_detailed_info)
-        cloud_disruptions.check_no_duplicate_ips(
-            self.vms_detailed_info, ports_before_stack_creation)
+        @nova.skip_background_vm_ping_checks_when_nondvr(
+            self.stack.floating_ip_address)
+        def _run_test():
+            # This test case may fail at times if RHBZ#2124877 is not resolved
+            # but that bug is due to a race condition,
+            # so it is not reproducible 100% times
+            OvercloudHealthCheck.run_before(passive_checks_only=True)
+            multi_ip_test_fixture, ports_before_stack_creation = \
+                cloud_disruptions.reboot_controller_galera_main_vip()
+            OvercloudHealthCheck.run_after(passive_checks_only=True)
+            self.vms_detailed_info = cloud_disruptions.get_vms_detailed_info(
+                multi_ip_test_fixture)
+            LOG.debug('detailed info from the list of vms created: %r',
+                      self.vms_detailed_info)
+            cloud_disruptions.check_no_duplicate_ips(
+                self.vms_detailed_info, ports_before_stack_creation)
 
-    @nova.skip_background_vm_ping_checks_when_nondvr
+        _run_test()
+
     @testtools.skipIf(has_external_lb, SKIP_MESSAGE_EXTLB)
     def test_z99_reboot_controller_main_vip(self):
-        OvercloudHealthCheck.run_before()
-        cloud_disruptions.reset_controller_main_vip()
-        OvercloudHealthCheck.run_after()
+        @nova.skip_background_vm_ping_checks_when_nondvr(
+            self.stack.floating_ip_address)
+        def _run_test():
+            OvercloudHealthCheck.run_before()
+            cloud_disruptions.reset_controller_main_vip()
+            OvercloudHealthCheck.run_after()
 
-    @nova.skip_background_vm_ping_checks_when_nondvr
+        _run_test()
+
     @testtools.skipIf(has_external_lb, SKIP_MESSAGE_EXTLB)
     def test_z99_reboot_controller_non_main_vip(self):
-        OvercloudHealthCheck.run_before()
-        cloud_disruptions.reset_controllers_non_main_vip()
-        OvercloudHealthCheck.run_after()
+        @nova.skip_background_vm_ping_checks_when_nondvr(
+            self.stack.floating_ip_address)
+        def _run_test():
+            OvercloudHealthCheck.run_before()
+            cloud_disruptions.reset_controllers_non_main_vip()
+            OvercloudHealthCheck.run_after()
 
-    @nova.skip_background_vm_ping_checks_when_nondvr
+        _run_test()
+
     @testtools.skipIf(has_external_lb, SKIP_MESSAGE_EXTLB)
     def test_z99_crash_controller_main_vip(self):
-        OvercloudHealthCheck.run_before()
-        cloud_disruptions.crash_controller_main_vip()
-        OvercloudHealthCheck.run_after()
 
-    @nova.skip_background_vm_ping_checks_when_nondvr
+        @nova.skip_background_vm_ping_checks_when_nondvr(
+            self.stack.floating_ip_address)
+        def _run_test():
+            OvercloudHealthCheck.run_before()
+            cloud_disruptions.crash_controller_main_vip()
+            OvercloudHealthCheck.run_after()
+
+        _run_test()
+
     @overcloud.skip_unless_kexec_tools_installed
     @testtools.skipIf(has_external_lb, SKIP_MESSAGE_EXTLB)
     def test_z99_crash_controller_non_main_vip(self):
-        OvercloudHealthCheck.run_before()
-        cloud_disruptions.crash_controllers_non_main_vip()
-        OvercloudHealthCheck.run_after()
 
-    @nova.skip_background_vm_ping_checks_when_nondvr
+        @nova.skip_background_vm_ping_checks_when_nondvr(
+            self.stack.floating_ip_address)
+        def _run_test():
+            OvercloudHealthCheck.run_before()
+            cloud_disruptions.crash_controllers_non_main_vip()
+            OvercloudHealthCheck.run_after()
+
+        _run_test()
+
     @pacemaker.skip_if_fencing_not_deployed
     @testtools.skipIf(has_external_lb, SKIP_MESSAGE_EXTLB)
     def test_network_disruptor_main_vip(self):
-        OvercloudHealthCheck.run_before()
-        self.undisrupt_network_at_teardown = True
-        cloud_disruptions.network_disrupt_controller_main_vip()
-        OvercloudHealthCheck.run_after()
+
+        @nova.skip_background_vm_ping_checks_when_nondvr(
+            self.stack.floating_ip_address)
+        def _run_test():
+            OvercloudHealthCheck.run_before()
+            self.undisrupt_network_at_teardown = True
+            cloud_disruptions.network_disrupt_controller_main_vip()
+            OvercloudHealthCheck.run_after()
+
+        _run_test()
 
     # @pacemaker.skip_if_fencing_not_deployed
     # def test_network_disruptor_non_main_vip(self):
@@ -344,12 +385,17 @@ class DisruptTripleoNodesTest(testtools.TestCase):
         cloud_disruptions.request_galera_sst()
         OvercloudHealthCheck.run_after()
 
-    @nova.skip_background_vm_ping_checks_when_nondvr
     @pytest.mark.flaky(reruns=0)
     def test_controllers_shutdown(self):
-        OvercloudHealthCheck.run_before()
-        cloud_disruptions.test_controllers_shutdown()
-        OvercloudHealthCheck.run_after()
+
+        @nova.skip_background_vm_ping_checks_when_nondvr(
+            self.stack.floating_ip_address)
+        def _run_test():
+            OvercloudHealthCheck.run_before()
+            cloud_disruptions.test_controllers_shutdown()
+            OvercloudHealthCheck.run_after()
+
+        _run_test()
 
     @overcloud.skip_unless_ovn_bgp_agent
     def test_restart_ovn_bgp_agents(self):

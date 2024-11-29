@@ -188,12 +188,12 @@ class TripleoTopology(rhosp.RhospTopology):
                         "name: '%s'", node.name)
         return subgroups
 
-    def check_or_start_background_vm_ping(self):
+    def check_or_start_background_vm_ping(self, server_ip):
         if CONF.tobiko.tripleo.run_background_ping_in_pod:
             tobiko.skip_test("Running background ping in the POD "
                              "is not implemented yet")
         else:
-            tripleo_nova.check_or_start_background_vm_ping()
+            tripleo_nova.check_or_start_background_vm_ping(server_ip)
 
 
 class TripleoTopologyNode(rhosp.RhospNode):
