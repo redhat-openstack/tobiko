@@ -18,6 +18,7 @@ from oslo_log import log
 
 import tobiko
 from tobiko import config
+from tobiko.shell import ping
 from tobiko.shell import sh
 
 CONF = config.CONF
@@ -41,11 +42,22 @@ EDPM_OTHER_GROUP = 'edpm-other'
 
 _IS_OC_CLIENT_AVAILABLE = None
 _IS_BM_CRD_AVAILABLE = None
+_TOBIKO_PROJECT_EXISTS = None
 
 try:
     import openshift_client as oc
 except ModuleNotFoundError:
     _IS_OC_CLIENT_AVAILABLE = False
+
+# NOTE(slaweq): This path is "hardcoded" in the tobiko.shell.ping._ping
+# module currently so lets use it here like that as well. Maybe in the
+# future there will be need to make it configurable but for now it is
+# not needed.
+PING_RESULTS_DIR = 'tobiko_ping_results'
+# Also directory where results are stored inside the POD is hardcoded,
+# It is in the $HOME/{PING_RESULTS_DIR}/ and $HOME inside the tobiko container
+# is "/var/lib/tobiko"
+POD_PING_RESULTS_DIR = f"/var/lib/tobiko/{PING_RESULTS_DIR}"
 
 
 def _is_oc_client_available() -> bool:
@@ -268,3 +280,121 @@ def get_pod_count(labels=None):
 def delete_pods(labels=None):
     with oc.project(CONF.tobiko.podified.osp_project):
         return oc.selector('pods', labels=labels).delete()
+
+
+def _project_exists(name):
+    projects_selector = oc.selector(f"projects/{name}")
+    return not len(projects_selector.objects()) == 0
+
+
+def _ensure_project_exists(name):
+    # pylint: disable=global-statement
+    global _TOBIKO_PROJECT_EXISTS
+    if not _TOBIKO_PROJECT_EXISTS and not _project_exists(name):
+        project_def = {
+            'apiVersion': 'v1',
+            'kind': 'Namespace',
+            'metadata': {
+                'name': name
+            }
+        }
+        oc.create(project_def)
+        _TOBIKO_PROJECT_EXISTS = True
+
+
+def tobiko_project_context():
+    _ensure_project_exists(CONF.tobiko.podified.background_tasks_project)
+    return oc.project(CONF.tobiko.podified.background_tasks_project)
+
+
+def check_or_start_tobiko_ping_command(server_ip):
+    cmd_args = ['ping', server_ip]
+    pod_name = f'tobiko-ping-{server_ip}'.replace('.', '-')
+    return check_or_start_tobiko_command(
+        cmd_args, pod_name, _check_ping_results)
+
+
+def check_or_start_tobiko_command(cmd_args, pod_name, check_function):
+    pod_obj = _get_tobiko_command_pod(pod_name)
+    if pod_obj:
+        # in any case test is still running, check for failures:
+        # execute process check i.e. go over results file
+        # truncate the log file and restart the POD with background
+        # command
+        LOG.info('running a check function: '
+                 f'on results of processes: {pod_name}')
+        check_function(pod_obj)
+        with tobiko_project_context():
+            pod_obj.delete(ignore_not_found=True)
+            LOG.info('checked and stopped previous tobiko command '
+                     f'POD {pod_name}; starting a new POD.')
+    else:
+        # First time the test is run:
+        # if POD by specific name is not present start one:
+        LOG.info('No previous tobiko command POD found: '
+                 f'{pod_name}, starting a new POD '
+                 f'of function: {cmd_args}')
+
+    pod_obj = _start_tobiko_command_pod(cmd_args, pod_name)
+    # check test is not failing from the beginning
+    check_function(pod_obj)
+
+
+def _get_tobiko_command_pod(pod_name):
+    with tobiko_project_context():
+        pod_sel = oc.selector(f'pod/{pod_name}')
+        if len(pod_sel.objects()) > 1:
+            raise tobiko.MultipleObjectsFound(pod_sel.objects())
+        if not pod_sel.objects():
+            return
+        return pod_sel.objects()[0]
+
+
+def _start_tobiko_command_pod(cmd_args, pod_name):
+    pod_def = {
+        "apiVersion": "v1",
+        "kind": "Pod",
+        "metadata": {
+            "name": pod_name,
+            "namespace": CONF.tobiko.podified.background_tasks_project
+        },
+        "spec": {
+            "containers": [{
+                "name": pod_name,
+                "image": CONF.tobiko.podified.tobiko_image,
+                "command": ["tobiko"],
+                "args": cmd_args,
+            }],
+            "restartPolicy": "Never"
+        }
+    }
+
+    with tobiko_project_context():
+        pod_sel = oc.create(pod_def)
+        with oc.timeout(CONF.tobiko.podified.tobiko_start_pod_timeout):
+            success, pod_objs, _ = pod_sel.until_all(
+                success_func=lambda pod:
+                    pod.as_dict()['status']['phase'] == 'Running'
+            )
+    if success:
+        return pod_objs[0]
+
+
+def _check_ping_results(pod):
+    # NOTE(slaweq): we have to put ping log files in the directory
+    #   as defined below because it is expected to be like that by the
+    #   tobiko.shell.ping._ping module so we can use those existing
+    #   functions to check results
+    ping_results_dest = f'{sh.get_user_home_dir()}/{PING_RESULTS_DIR}'
+    cp = oc.oc_action(
+        pod.context,
+        'cp',
+        [f"{pod.name()}:{POD_PING_RESULTS_DIR}", ping_results_dest]
+    )
+    if cp.status == 0:
+        ping.check_ping_statistics()
+        # here we should probably move those files inside the pod to some other
+        # location, or maybe simply delete them
+    else:
+        tobiko.fail("Failed to copy ping log files from the POD "
+                    f"{pod.name()}. Error: {cp.err}")
