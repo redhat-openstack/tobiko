@@ -1,5 +1,5 @@
-==========================
- Unreleased Release Notes
-==========================
+==========
+Unreleased
+==========
 
 .. release-notes::

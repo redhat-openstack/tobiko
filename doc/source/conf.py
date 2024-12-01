@@ -70,6 +70,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'oslo_config.sphinxext',
     'oslo_config.sphinxconfiggen',
+    'reno.sphinxext',
 ]
 
 # Add any paths that contain templates here, relative to this directory.

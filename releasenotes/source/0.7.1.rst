@@ -1,0 +1,6 @@
+============
+Tobiko 0.7.1
+============
+
+.. release-notes:: Release Notes
+   :version: 0.7.1

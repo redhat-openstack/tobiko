@@ -3,10 +3,14 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Tobiko Release Notes's documentation!
-================================================
+Tobiko Release Notes's
+======================
 
 .. toctree::
    :maxdepth: 1
 
    unreleased
+   0.7.1
+   0.7.0
+   0.6.2
+   0.6.0
