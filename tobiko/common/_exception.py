@@ -75,7 +75,7 @@ class TobikoException(Exception):
             message=self.message)
 
     def __eq__(self, other):
-        return type(self) == type(other) and str(self) == str(other)
+        return type(self) is type(other) and str(self) == str(other)
 
     def __hash__(self):
         return hash(type(self)) + hash(str(self))

@@ -65,7 +65,7 @@ def get_nodes_for_groups(groups):
         for group in node.groups:
             if group in groups:
                 nodes.append(node)
-    return(nodes)
+    return nodes
 
 
 def get_config_files(node, kolla_jsons, conf_ignorelist, scripts_to_check):

@@ -25,10 +25,9 @@ class Image(collections.UserDict):
         self._id = id
         self._client = client
 
-        assert self._id == data['id'],\
+        assert self._id == data['id'], \
             'Requested image id({}) does not match store id({})'.format(
-                self._id, data['id']
-            )
+                self._id, data['id'])
 
     @staticmethod
     def _split_token(values=None, sep='='):

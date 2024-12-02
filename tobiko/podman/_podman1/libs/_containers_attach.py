@@ -34,10 +34,8 @@ class Mixin:
 
         # This is the UDS where all the IO goes
         io_socket = attach['sockets']['io_socket']
-        assert len(io_socket) <= 107,\
-            'Path length for sockets too long. {} > 107'.format(
-                len(io_socket)
-            )
+        assert len(io_socket) <= 107, \
+            'Path length for sockets too long. {} > 107'.format(len(io_socket))
 
         # This is the control socket where resizing events are sent to conmon
         # attach['sockets']['control_socket']

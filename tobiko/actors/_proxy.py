@@ -25,12 +25,6 @@ import decorator
 P = typing.TypeVar('P')
 
 GenericMetaBase = abc.ABCMeta
-if hasattr(typing, 'GenericMeta'):
-    class GenericMetaBase(  # type: ignore[no-redef]
-            typing.GenericMeta,  # type: ignore[name-defined]
-            abc.ABCMeta):
-        # pylint: disable=function-redefined,no-member
-        pass
 
 
 class GenericMeta(GenericMetaBase):
@@ -47,7 +41,10 @@ class GenericMeta(GenericMetaBase):
             if inspect.ismethod(class_getitem):
                 cls = class_getitem(item)
             else:
-                cls = class_getitem(cls, item)
+                try:
+                    cls = class_getitem(cls, item)
+                except TypeError:
+                    cls = class_getitem(item)
         return cls
 
 

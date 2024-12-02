@@ -33,7 +33,7 @@ class Container(AttachMixin, StartMixin, collections.UserDict):
                 setattr(self, 'running', self.data['containerrunning'])
                 self.data['running'] = self.data['containerrunning']
 
-        assert self._id == data['id'],\
+        assert self._id == data['id'], \
             'Requested container id({}) does not match store id({})'.format(
                 self._id, data['id']
             )

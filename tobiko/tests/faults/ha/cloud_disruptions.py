@@ -607,8 +607,8 @@ def kill_rabbitmq_service():
              node.name))
     retry = tobiko.retry(timeout=30, interval=5)
     for _ in retry:
-        if not(pacemaker.PacemakerResourcesStatus().
-               rabbitmq_resource_healthy()):
+        if not (pacemaker.PacemakerResourcesStatus().
+                rabbitmq_resource_healthy()):
             return
 
 
@@ -630,8 +630,8 @@ def kill_all_galera_services():
                                                             node.name))
     retry = tobiko.retry(timeout=30, interval=5)
     for _ in retry:
-        if not(pacemaker.PacemakerResourcesStatus().
-               galera_resource_healthy()):
+        if not (pacemaker.PacemakerResourcesStatus().
+                galera_resource_healthy()):
             return
 
 

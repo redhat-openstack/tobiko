@@ -210,7 +210,7 @@ class OvercloudProcessesStatus(object):
                 ovn_proc_filtered_df[node_filter]
             total_num_processes = len(ovn_proc_filtered_per_node_df)
 
-            if type(process_dict['number']) == int:
+            if isinstance(process_dict['number'], int):
                 expected_num_processes = process_dict['number']
             elif process_dict['number'] == 'all':
                 expected_num_processes = len(node_list)

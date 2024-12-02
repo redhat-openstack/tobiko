@@ -65,7 +65,7 @@ dfs-sdk===1.2.27
 dib-utils===0.0.11
 directord===0.12.0
 diskimage-builder===3.20.3
-distlib===0.3.4
+distlib===0.3.9
 distro===1.7.0
 Django===3.2.12
 django-appconf===1.0.5
@@ -89,7 +89,7 @@ enmerkar===0.7.1
 enum-compat===0.0.3
 etcd3===0.12.0
 etcd3gw===1.0.1
-eventlet===0.33.0
+eventlet===0.36.1
 exabgp===4.2.17
 execnet===1.9.0
 extras===1.0.0
@@ -118,7 +118,7 @@ google-auth-httplib2===0.1.0
 googleapis-common-protos===1.55.0
 gossip===2.4.0
 graphviz===0.19.1
-greenlet===1.1.2
+greenlet===3.1.1
 grpcio===1.44.0
 gssapi===1.7.3
 gunicorn===20.1.0
@@ -136,6 +136,8 @@ ifaddr===0.1.7
 imagesize===1.3.0
 immutables===0.16
 importlib-metadata===4.11.1;python_version=='3.8'
+importlib-metadata===6.2.1;python_version=='3.9'
+importlib-metadata===8.5.0;python_version>='3.10'
 importlib-resources===5.2.3
 infi.dtypes.iqn===0.4.0
 infi.dtypes.wwn===0.1.1
@@ -389,7 +391,7 @@ pytz-deprecation-shim===0.1.0.post0
 pyudev===0.23.2
 pywbem===1.4.1
 pywinrm===0.4.2
-PyYAML===6.0
+PyYAML===6.0.1
 pyzabbix===1.0.0
 pyzmq===21.0.2
 rbd-iscsi-client===0.1.8
@@ -433,8 +435,7 @@ semantic-version===2.9.0
 sentinels===1.0.0
 seqdiag===3.0.0;python_version=='3.8'
 setproctitle===1.2.2
-setuptools===60.9.3;python_version=='3.8'
-setuptools===70.3.0;python_version>='3.9'
+setuptools===70.3.0;python_version=='3.9'
 simplegeneric===0.8.1
 simplejson===3.17.6
 six===1.16.0
@@ -473,7 +474,8 @@ ssh-python===0.9.0
 sshtunnel===0.4.0
 statsd===3.3.0
 stestr===3.2.1
-stevedore===3.5.0
+stevedore===3.5.0;python_version<'3.12'
+stevedore===5.4.0;python_version>='3.12'
 storage-interfaces===1.0.4
 storops===1.2.10
 storpool===7.0.0
@@ -514,9 +516,10 @@ types-cryptography===3.3.15
 types-enum34===1.1.8
 types-ipaddress===1.0.8
 types-paramiko===2.8.13
+types-setuptools===75.5.0.20241122
 typing===3.7.4.3
-typing_extensions===4.1.1
-tzdata===2021.5
+typing_extensions===4.12.2
+tzdata===2024.2
 tzlocal===4.1
 uhashring===2.1
 ujson===5.1.0;python_version=='3.8'
@@ -528,7 +531,7 @@ validations-libs===1.6.0
 vine===5.0.0
 vintage===0.4.1
 virtualbmc===2.2.1
-virtualenv===20.13.2
+virtualenv===20.27.1
 voluptuous===0.12.2
 waiting===1.4.1
 waitress===2.0.0
@@ -541,7 +544,7 @@ websockify===0.10.0
 WebTest===3.0.0
 Werkzeug===2.0.3
 whereto===0.4.0
-wrapt===1.13.3
+wrapt===1.14.0
 ws4py===0.5.1
 wsgi-intercept===1.9.3
 WSME===0.11.0
@@ -590,7 +593,7 @@ XStatic-term.js===0.0.7.0
 XStatic-tv4===1.2.7.0
 xvfbwrapper===0.2.9
 yamlloader===1.1.0
-yappi===1.3.3
+yappi===1.6.10
 yaql===2.0.0
 zake===0.2.2
 zeroconf===0.38.3;python_version=='3.8'

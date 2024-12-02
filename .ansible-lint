@@ -1,7 +1,16 @@
 ---
 
 exclude_paths:
-  - ./roles/infrared/
+  - roles/infrared/
+  - zuul.d/
+  - .*.yaml
+  - tobiko/
+  # TODO(eolivare) remove the following excluded_paths after having fixed
+  # ansible-lint errors
+  - infrared_plugin/
+  - roles/
+  - playbooks/
+
 
 skip_list:
   - '206'

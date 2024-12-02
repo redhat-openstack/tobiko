@@ -123,8 +123,9 @@ class UbuntuImageFixture(UbuntuMinimalImageFixture,
 
     @staticmethod
     def _get_ethernet_device() -> str:
-        """From OSP17 and above, Ubuntu stack should use a different interface name.
-        This method returns the interface name, depending on the OSP version.
+        """From OSP17 and above, Ubuntu stack should use a different interface
+        name. This method returns the interface name, depending on the OSP
+        version.
         """
         if_name = CONF.tobiko.ubuntu.interface_name
         if if_name is not None:

@@ -87,9 +87,9 @@ class UndercloudVersionTest(unittest.TestCase):
         if v.micro > 0:
             lower_v = f"{v.major}.{v.minor}.{v.micro - 1}"
         elif v.minor > 0:
-            lower_v = f"{v.major}.{v.minor -1}.{v.micro}"
+            lower_v = f"{v.major}.{v.minor - 1}.{v.micro}"
         elif v.major > 0:
-            lower_v = f"{v.major -1}.{v.minor}.{v.micro}"
+            lower_v = f"{v.major - 1}.{v.minor}.{v.micro}"
         else:
             raise ValueError(f"wrong version: {v}")
         return lower_v
