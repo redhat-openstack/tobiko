@@ -15,8 +15,9 @@
 #    under the License.
 from __future__ import absolute_import
 
+import functools
 import re
-import time
+import random
 
 import openshift_client as oc
 from oslo_log import log
@@ -24,115 +25,138 @@ from oslo_log import log
 import tobiko
 from tobiko import config
 from tobiko import podified
-# from tobiko.openstack import glance
-# from tobiko.openstack import keystone
-# from tobiko.openstack import neutron
-# from tobiko.openstack import stacks
-# from tobiko.openstack import tests
-# from tobiko.openstack import topology
-# from tobiko.tests.faults.ha import test_cloud_recovery
-# from tobiko.shell import ping
-# from tobiko.shell import sh
+from tobiko.openstack import keystone
 
 CONF = config.CONF
 LOG = log.getLogger(__name__)
 
+kill_galera = 'kill -9 $(pidof mysqld)'
+rm_grastate = 'rm -rf /var/lib/mysql/grastate.dat'
+galera_cluster_size = 'mysql -u root --password={passwd} -e \'SHOW STATUS ' \
+                      'LIKE "wsrep_cluster_size"\''
+check_bootstrap = """
+ps -eo lstart,cmd | grep -v grep|
+grep wsrep-cluster-address=gcomm://
+"""
 
-@podified.skip_if_not_podified
+
+class GaleraBoostrapException(tobiko.TobikoException):
+    message = "Bootstrap has not been activated"
+
+
+class DownException(tobiko.TobikoException):
+    message = "The resource is not down"
+
+
+class RestoredException(tobiko.TobikoException):
+    message = "The resource is not restored"
+
+
+@functools.lru_cache()
+def get_galera_pods_per_service(galera_service):
+    # the aim of this function is just to cache results and avoid sending
+    # oc requests every time
+    return podified.get_pods({'service': galera_service})
+
+
 def kill_all_galera_services():
     """kill all galera processes,
     check in pacemaker it is down"""
-    galera_pods_num = sum(
-        1 for node_name in oc.selector('nodes').qnames()
-        for pod_obj in oc.get_pods_by_node(node_name)
-        if 'cell1-galera' in pod_obj.fqname()
-    )
-    for i in range(galera_pods_num):
-        oc.selector('pod/openstack-cell1-galera-{}'.format(i)).object()\
-            .execute(['sh', '-c', 'kill -9 $(pidof mysqld)'],
-                     container_name='galera')
-        LOG.info('kill galera cell-{}'.format(i))
-
-    retry = tobiko.retry(timeout=30, interval=5)
-    for _ in retry:
-        try:
-            # checks wsrep cluster size is now unavailable
-            result = oc.selector('pod/openstack-cell1-galera-0').object(
-            ).execute(['sh', '-c', """mysql -u root --password=12345678
-            -e 'SHOW STATUS LIKE "wsrep_cluster_size"'"""])
-            # Capture and filter the error output
-            error_output = result.err()
-            non_error_message = """
-            Defaulted container "galera" out of: galera,
-            mysql-bootstrap (init)\n"""
-            filtered_err_output = error_output.replace(non_error_message, '')
-            if not filtered_err_output.strip():
-                continue
-        except oc.OpenShiftPythonException:
-            LOG.info('all galera cells down')
-            break
-    time.sleep(60)
-    for _ in retry:
-        try:
-            if int(re.search(r'wsrep_cluster_size\s+(\d+)', oc.selector(
-                    'pod/openstack-cell1-galera-0').object().execute(
-                ['sh', '-c', """mysql -u root --password=12345678 -e 'SHOW
-                STATUS LIKE "wsrep_cluster_size"'"""], container_name='galera'
-            ).out()).group(1)) == galera_pods_num:
-                LOG.info('all galera cells are restored')
-                return
-        except oc.OpenShiftPythonException:
-            continue
-        return False
+    # get galera pods sorted into 2 different lists:
+    # one with 'cell-galera' an one without
+    for galera_service in ('openstack-cell1-galera', 'openstack-galera'):
+        pods = get_galera_pods_per_service(galera_service)
+        kill_all_galera_pods(pods)
+        check_all_galera_cells_down(pods[0].name())
+        verify_all_galera_cells_restored(pods)
 
 
-@podified.skip_if_not_podified
 def remove_all_grastate_galera():
     """shut down galera properly,
     remove all grastate"""
-    galera_pods_num = sum(
-        1 for node_name in oc.selector('nodes').qnames()
-        for pod_obj in oc.get_pods_by_node(node_name)
-        if 'cell1-galera' in pod_obj.fqname()
-    )
-    for i in range(galera_pods_num):
-        oc.selector('pod/openstack-cell1-galera-{}'.format(i)).object()\
-            .execute(['sh', '-c', 'rm -rf /var/lib/mysql/grastate.dat '],
-                     container_name='galera')
-        LOG.info('delete grastate.dat cell-{}'.format(i))
-    for i in range(galera_pods_num):
-        oc.selector('pod/openstack-cell1-galera-{}'.format(i)).object()\
-            .execute(['sh', '-c', 'kill -9 $(pidof mysqld)'],
-                     container_name='galera')
-        LOG.info('kill galera cell-{}'.format(i))
+    for galera_service in ('openstack-cell1-galera', 'openstack-galera'):
+        pods = get_galera_pods_per_service(galera_service)
+        for pod in pods:
+            remove_grastate(pod.name())
+        # TODO: change kill to graceful stop/ scale down
+        kill_all_galera_pods(pods)
+        check_all_galera_cells_down(pods[0].name())
+        verify_all_galera_cells_restored(pods)
+
+
+def remove_one_grastate_galera():
+    """shut down galera properly,
+    delete /var/lib/mysql/grastate.dat in a random node,
+    check that bootstrap is done from a node with grastate"""
+    for galera_service in ('openstack-cell1-galera', 'openstack-galera'):
+        pods = get_galera_pods_per_service(galera_service)
+        random_pod_name = random.choice(pods).name()
+        remove_grastate(random_pod_name)
+        # TODO: change kill to graceful stop/ scale down
+        kill_all_galera_pods(pods)
+        check_all_galera_cells_down(pods[0].name())
+        verify_all_galera_cells_restored(pods)
+        # gcomm:// without args means that bootstrap is done from this node
+        bootstrap = podified.execute_in_pod(
+            random_pod_name, check_bootstrap, 'galera').out().strip()
+        if len(pods) > 1:
+            if re.search(r'wsrep-cluster-address=gcomm://(?:\s|$)', bootstrap
+                         ) is None:
+                raise GaleraBoostrapException()
+        elif re.search(r'wsrep-cluster-address=gcomm://', bootstrap) is None:
+            raise GaleraBoostrapException()
+        lastDate = re.findall(r"\w{,3}\s*\w{,3}\s*\d{,2}\s*\d{,2}:\d{,2}"
+                              r":\d{,2}\s*\d{4}", bootstrap)[-1]
+        LOG.info(f'last boostrap required at {lastDate}')
+
+
+def remove_grastate(pod_name):
+    podified.execute_in_pod(pod_name, rm_grastate, 'galera')
+    LOG.info(f'grastate.dat removed from {pod_name}')
+
+
+def kill_all_galera_pods(galera_pods):
+    for pod in galera_pods:
+        podified.execute_in_pod(pod.name(), kill_galera, 'galera')
+        LOG.info(f'kill galera pod {pod}')
+
+
+def check_all_galera_cells_down(pod_name):
+    pw = keystone.keystone_credentials().password
+
     retry = tobiko.retry(timeout=30, interval=5)
     for _ in retry:
         try:
-            # checks wsrep cluster size is now unavailable
-            result = oc.selector('pod/openstack-cell1-galera-0').object(
-            ).execute(['sh', '-c', """mysql -u root --password=12345678
-            -e 'SHOW STATUS LIKE "wsrep_cluster_size"'"""])
-            # Capture and filter the error output
-            error_output = result.err()
-            non_error_message = """
-            Defaulted container "galera" out of: galera,
-            mysql-bootstrap (init)\n"""
+            cluster_size = podified.execute_in_pod(
+                pod_name, galera_cluster_size.format(passwd=pw), 'galera')
+            error_output = cluster_size.err()
+            non_error_message = "Defaulted container \"galera\" out of:"\
+                                "galera, mysql-bootstrap (init)\n"
             filtered_err_output = error_output.replace(non_error_message, '')
             if not filtered_err_output.strip():
                 continue
         except oc.OpenShiftPythonException:
             LOG.info('all galera cells down')
-            break
-    time.sleep(60)
+            return
+    raise DownException()
+
+
+def verify_all_galera_cells_restored(pods):
+    pw = keystone.keystone_credentials().password
+
+    retry = tobiko.retry(timeout=60, interval=10)
     for _ in retry:
+        pod_name = pods[0].name()
         try:
-            if int(re.search(r'wsrep_cluster_size\s+(\d+)', oc.selector(
-                    'pod/openstack-cell1-galera-0').object().execute(
-                ['sh', '-c', """mysql -u root --password=12345678 -e 'SHOW
-                STATUS LIKE "wsrep_cluster_size"'"""], container_name='galera'
-            ).out()).group(1)) == galera_pods_num:
-                LOG.info('all galera cells are restored')
-                return
+            cluster_size = podified.execute_in_pod(
+                pod_name, galera_cluster_size.format(passwd=pw), 'galera')
         except oc.OpenShiftPythonException:
             continue
-        return False
+
+        wsrep_cluster_size = int(re.search(r'wsrep_cluster_size\s+(\d+)',
+                                           cluster_size.out()).group(1))
+        if wsrep_cluster_size == len(pods):
+            LOG.info('all galera cells are restored')
+            return
+
+    raise RestoredException()

@@ -31,3 +31,13 @@ class DisruptPodifiedNodesTest(testtools.TestCase):
         # HealthCheck.run_before()
         cloud_disruptions.kill_all_galera_services()
         # HealthCheck.run_after()
+
+    def test_remove_all_grastate_galera(self):
+        # HealthCheck.run_before()
+        cloud_disruptions.remove_all_grastate_galera()
+        # HealthCheck.run_before()
+
+    def test_remove_one_grastate_galera(self):
+        # HealthCheck.run_before()
+        cloud_disruptions.remove_one_grastate_galera()
+        # HealthCheck.run_after()
