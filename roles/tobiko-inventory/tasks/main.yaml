@@ -37,7 +37,7 @@
   vars:
     hostname: '{{ item.0 }}'
     varname: '{{ item.1 }}'
-    value: '{{ hostvars[hostname][varname] }}'
+    value: '{{ hostvars[hostname][varname] | default("") }}'
   loop: "{{ hostvars.keys() | product(['ansible_host']) | list }}"
   loop_control:
     label: '{{ hostname }}.{{ varname }} = {{ value }}'
