@@ -59,7 +59,7 @@ def get_images_options():
              cfg.StrOpt('password',
                         help="Default " + name + " password"),
              cfg.StrOpt('interface_name',
-                        default=None,
+                        default=None if name != 'ubuntu' else 'ens3',
                         help="Default " + name + " interface name"),
              cfg.FloatOpt('connection_timeout',
                           default=None,

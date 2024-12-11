@@ -72,5 +72,5 @@ download_images:
       --run-command 'systemctl enable iperf3-server@5201'
       --run-command 'echo "8021q" >> /etc/modules'
       --run-command
-      'echo "network:\n  version: 2\n  vlans:\n    vlan101:\n      dhcp4: true\n      dhcp4-overrides:\n        use-routes: false\n      dhcp6: true\n      dhcp6-overrides:\n        use-routes: false\n      id: 101\n      link: ens3\n"
+      'echo "network:\n  version: 2\n  vlans:\n    vlan101:\n      dhcp4: true\n      dhcp4-overrides:\n        use-routes: false\n      dhcp6: true\n      dhcp6-overrides:\n        use-routes: false\n      id: 101\n      link: {{ ubuntu_nic_name | default('ens3') }}\n"
       > /etc/netplan/75-tobiko-vlan.yaml'

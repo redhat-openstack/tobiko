@@ -268,6 +268,17 @@ subparsers:
                 Timeout error is raised if an ubuntu instance is not reachable
                 before it expires
             ansible_variable: ubuntu_is_reachable_timeout
+          ubuntu-vm-nic-name:
+            type: Value
+            help: |
+                NIC name expected on Ubuntu VM instances.
+                When Openstack spawns these VMs, their NIC (usually they
+                only have one NIC and one VLAN on that NIC) name is usually
+                "ens3", but with some Openstack versions, it is "enp3s0".
+                Defaults to "enp3s0" because it is the value obtained with
+                Openstack versions that use infrared.
+            default: "enp3s0"
+            ansible_variable: ubuntu_nic_name
           cleanup-containerlist-file:
             type: Bool
             help:  |

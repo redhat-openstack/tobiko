@@ -114,26 +114,7 @@ class UbuntuImageFixture(glance.CustomizedGlanceImageFixture):
         run_commands.append('echo "8021q" >> /etc/modules')
         return run_commands
 
-    @property
-    def ethernet_device(self) -> str:
-        if self._ethernet_device is None:
-            self._ethernet_device = self._get_ethernet_device()
-        return self._ethernet_device
-
-    @staticmethod
-    def _get_ethernet_device() -> str:
-        """From OSP17 and above, Ubuntu stack should use a different interface
-        name. This method returns the interface name, depending on the OSP
-        version.
-        """
-        if_name = CONF.tobiko.ubuntu.interface_name
-        if if_name is not None:
-            return if_name
-        from tobiko import tripleo
-        if tripleo.has_overcloud(min_version='17.0'):
-            return 'enp3s0'
-        else:
-            return 'ens3'
+    ethernet_device = CONF.tobiko.ubuntu.interface_name
 
     def _get_customized_suffix(self) -> str:
         return f'{super()._get_customized_suffix()}-{self.ethernet_device}'
