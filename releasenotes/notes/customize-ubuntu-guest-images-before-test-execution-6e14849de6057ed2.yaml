@@ -1,0 +1,15 @@
+---
+features:
+  - |
+    Tobiko roles can customize guest images before test execution
+
+    CI jobs using tobiko ansible roles have three options to use customized guest images:
+
+    * The new default behavior is that the Tobiko ansible roles will customize the Ubuntu guest images before test execution. The command to customize the image can be modified overriding ``download_images.ubuntu-customized.customize_command_pattern``
+    * If ``download_images.ubuntu-customized.customized`` is overriden and set to true, the image from the provided URL will not be customized. It is expected that the provided image is already customized
+    * The legacy behavior, to customize Ubuntu images during test execution, can be applied by removing the default definition from ``download_images.ubuntu-customized.customize_command_pattern`` and setting ``download_images.ubuntu-customized.customized`` to false. This option will not be available in next Tobiko releases.
+deprecations:
+  - |
+    Tobiko roles can customize guest images before test execution
+
+    The "legacy behavior" option from the New feature *Tobiko roles can customize guest images before test execution* will be deprecated. In next Tobiko releases, it will not be possible to customize Ubuntu images during test exeuction.

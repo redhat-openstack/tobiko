@@ -5,6 +5,7 @@ exclude_paths:
   - zuul.d/
   - .*.yaml
   - tobiko/
+  - releasenotes/
   # TODO(eolivare) remove the following excluded_paths after having fixed
   # ansible-lint errors
   - infrared_plugin/
