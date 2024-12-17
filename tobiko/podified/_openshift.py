@@ -381,6 +381,16 @@ def _start_tobiko_command_pod(cmd_args, pod_name):
         }
     }
 
+    if CONF.tobiko.podified.tobiko_pod_extra_network:
+        pod_def["metadata"]["k8s.v1.cni.cncf.io/networks"] = \
+            CONF.tobiko.podified.tobiko_pod_extra_network
+    if CONF.tobiko.podified.tobiko_pod_tolerations:
+        pod_def["spec"]["tolerations"] = \
+            CONF.tobiko.podified.tobiko_pod_tolerations
+    if CONF.tobiko.podified.tobiko_pod_node_selector:
+        pod_def["spec"]["nodeSelector"] = \
+            CONF.tobiko.podified.tobiko_pod_node_selector
+
     with tobiko_project_context():
         pod_sel = oc.create(pod_def)
         with oc.timeout(CONF.tobiko.podified.tobiko_start_pod_timeout):

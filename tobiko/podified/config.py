@@ -15,7 +15,7 @@ from __future__ import absolute_import
 
 import itertools
 
-from oslo_config import cfg
+from oslo_config import cfg, types
 
 
 def setup_tobiko_config(conf):
@@ -49,6 +49,27 @@ OPTIONS = [
                     'registry it will need just few seconds to start POD but '
                     'if image is not yet cached locally it may take a bit '
                     'longer time to download it.'),
+    cfg.ListOpt('tobiko_pod_tolerations',
+                default=[],
+                bounds=True,
+                item_type=types.Dict(bounds=True),
+                help='List of tolerations that have to be applied to the '
+                     'tobiko background pod. It is hence a list of '
+                     'dictionaries. No nested disctionaries can be used. '
+                     'The list has to be bound by [] and each dict has to '
+                     'be bound by {}. Example: [{effect: NoSchedule, key: testOperator, value: true}, {effect: NoExecute, key: testOperator, value: true}]'),  # noqa
+    cfg.StrOpt('tobiko_pod_extra_network',
+               default=None,
+               help='Extra network interface that needs to be attached to the '
+                    'tobiko background pod.'),
+    cfg.DictOpt('tobiko_pod_node_selector',
+                default={},
+                help='Configuration that has to be added to the tobiko '
+                     'background pod in order to select a specific OCP node.'
+                     ' The provided value has to be a non-nested dictionary '
+                     'without any {} bouds. '
+                     'Example: kubernetes.io/hostname:worker-3'),
+
 ]
 
 
