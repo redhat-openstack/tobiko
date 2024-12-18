@@ -47,9 +47,9 @@ def get_images_options():
             [cfg.StrOpt('image_name',
                         help="Default " + name + " image name"),
              cfg.StrOpt('image_url',
-                        help="Default " + name + " image URL"),
-             cfg.StrOpt('image_file',
-                        help="Default " + name + " image filename"),
+                        help="Default " + name + " image URL. A local path "
+                             "could be defined. Example: "
+                             "file:///tmp/cirros.img"),
              cfg.StrOpt('container_format',
                         help="Default " + name + " container format"),
              cfg.StrOpt('disk_format',
