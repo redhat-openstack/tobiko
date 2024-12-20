@@ -58,9 +58,6 @@ def get_images_options():
                         help="Default " + name + " username"),
              cfg.StrOpt('password',
                         help="Default " + name + " password"),
-             cfg.StrOpt('interface_name',
-                        default=None if name != 'ubuntu' else 'ens3',
-                        help="Default " + name + " interface name"),
              cfg.FloatOpt('connection_timeout',
                           default=None,
                           help=("Default " + name +
@@ -70,10 +67,6 @@ def get_images_options():
                          help=("Allow to disable SSH auth algorithms"
                                "in order to SSH to old servers like"
                                "CirrOS ones")),
-             cfg.BoolOpt('customized_image_provided',
-                         default=False,
-                         help=("Whether the provided image (URL or file) is"
-                               "already customized or not"))
              ]
         )]
 

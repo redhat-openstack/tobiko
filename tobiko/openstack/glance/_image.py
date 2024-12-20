@@ -18,8 +18,8 @@ import io
 import os
 import tempfile
 import time
-import typing  # noqa
-from abc import ABC, abstractmethod
+import typing
+from abc import ABC
 from urllib.parse import urlparse
 
 from oslo_log import log
@@ -30,7 +30,6 @@ from tobiko.config import get_bool_env
 from tobiko.openstack.glance import _client
 from tobiko.openstack.glance import _io
 from tobiko.openstack import keystone
-from tobiko.shell import sh
 
 
 LOG = log.getLogger(__name__)
@@ -347,11 +346,7 @@ class UrlGlanceImageFixture(UploadGlanceImageFixture, ABC):
         # else, download the image
         return self.get_image_from_url(real_image_file)
 
-    def customize_image_file(self, base_file: str) -> str:
-        return base_file
-
     def get_image_from_file(self, image_file: str):
-        image_file = self.customize_image_file(base_file=image_file)
         image_size = os.path.getsize(image_file)
         LOG.debug('Uploading image %r data from file %r (%d bytes)',
                   self.image_name, image_file, image_size)
@@ -416,114 +411,6 @@ class UrlGlanceImageFixture(UploadGlanceImageFixture, ABC):
                 expected_size, actual_size)
             raise RuntimeError(message)
         os.rename(temp_file, image_file)
-
-
-class CustomizedGlanceImageFixture(UrlGlanceImageFixture, ABC):
-
-    @property
-    def firstboot_commands(self) -> typing.List[str]:
-        return []
-
-    @property
-    def install_packages(self) -> typing.List[str]:
-        return []
-
-    @property
-    def run_commands(self) -> typing.List[str]:
-        return []
-
-    @property
-    def write_files(self) -> typing.Dict[str, str]:
-        return {}
-
-    @property
-    @abstractmethod
-    def customization_required(self) -> bool:
-        pass
-
-    username: str = ''
-    password: str = ''
-
-    def _get_customized_suffix(self) -> str:
-        return 'customized'
-
-    def customize_image_file(self, base_file: str) -> str:
-        def workaround_passt(full_command, exc):
-            which_passt = sh.execute(
-                'which passt', expect_exit_status=None).stdout.rstrip()
-            if which_passt == '':
-                raise exc
-
-            cmd = f'mv {which_passt} {which_passt}.bak'
-            cmd_cleanup = f'mv {which_passt}.bak {which_passt}'
-            tobiko.add_cleanup(sh.execute, cmd_cleanup,
-                               expect_exit_status=None, sudo=True)
-            LOG.exception("Executing virt-customize without passt")
-            sh.execute(cmd, sudo=True)
-            sh.execute(full_command)
-
-        # if the image does not have to be customized, then do nothing
-        if not self.customization_required:
-            return base_file
-
-        customized_file = f'{base_file}-{self._get_customized_suffix()}'
-        if os.path.isfile(customized_file):
-            if (os.stat(base_file).st_mtime_ns <
-                    os.stat(customized_file).st_mtime_ns):
-                LOG.debug(f"Image file is up to date '{customized_file}'")
-                return customized_file
-            else:
-                LOG.debug(f"Remove obsolete image file '{customized_file}'")
-                os.remove(customized_file)
-        work_file = sh.execute('mktemp').stdout.strip()
-        try:
-            LOG.debug(f"Copy base image file: '{base_file}' to '{work_file}'")
-            sh.put_file(base_file, work_file)
-
-            options = self.get_virt_customize_options()
-            if options:
-                command = sh.shell_command(['LIBGUESTFS_BACKEND=direct',
-                                            'virt-customize',
-                                            '-a',
-                                            work_file])
-                try:
-                    sh.execute(command + options)
-                except sh.ShellCommandFailed as exc:
-                    workaround_passt(command + options, exc)
-
-            sh.get_file(work_file, customized_file)
-            return customized_file
-        finally:
-            sh.execute(['rm', '-f', work_file])
-
-    def get_virt_customize_options(self) -> sh.ShellCommand:
-        options = sh.ShellCommand()
-
-        firstboot_commands = self.firstboot_commands
-        if firstboot_commands:
-            for cmd in firstboot_commands:
-                options += ['--firstboot-command', cmd]
-
-        install_packages = self.install_packages
-        if install_packages:
-            options += ['--install', ','.join(install_packages)]
-
-        username = self.username
-        password = self.password
-        if username and password:
-            options += f'--password "{username}:password:{password}"'
-
-        run_commands = self.run_commands
-        if run_commands:
-            for cmd in run_commands:
-                options += ['--run-command', cmd]
-
-        write_files = self.write_files
-        if write_files:
-            for filename, content in write_files.items():
-                options += ['--write', f'{filename}:{content}']
-
-        return options
 
 
 class InvalidGlanceImageStatus(tobiko.TobikoException):

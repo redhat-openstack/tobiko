@@ -13,8 +13,6 @@
 #    under the License.
 from __future__ import absolute_import
 
-import typing
-
 import tobiko
 from tobiko import config
 from tobiko.openstack import glance
@@ -41,7 +39,7 @@ DefaultInstance=5201
 """
 
 
-class UbuntuImageFixture(glance.CustomizedGlanceImageFixture):
+class UbuntuImageFixture(glance.UrlGlanceImageFixture):
     """Ubuntu server image running an HTTP server
 
     The server has additional installed packages compared to
@@ -68,30 +66,6 @@ class UbuntuImageFixture(glance.CustomizedGlanceImageFixture):
     disabled_algorithms = CONF.tobiko.ubuntu.disabled_algorithms
     is_reachable_timeout = CONF.tobiko.nova.ubuntu_is_reachable_timeout
 
-    def __init__(self,
-                 ethernet_devide: str = None,
-                 **kwargs):
-        super().__init__(**kwargs)
-        self._ethernet_device = ethernet_devide
-
-    @property
-    def customization_required(self) -> bool:
-        return not CONF.tobiko.ubuntu.customized_image_provided
-
-    @property
-    def firstboot_commands(self) -> typing.List[str]:
-        return super().firstboot_commands + [
-            'sh -c "hostname > /var/www/html/id"']
-
-    @property
-    def install_packages(self) -> typing.List[str]:
-        return super().install_packages + ['iperf3',
-                                           'iputils-ping',
-                                           'nano',
-                                           'ncat',
-                                           'nginx',
-                                           'vlan']
-
     # port of running HTTP server
     http_port = 80
 
@@ -103,57 +77,12 @@ class UbuntuImageFixture(glance.CustomizedGlanceImageFixture):
         return f"iperf3-server@{self.iperf3_port}.service"
 
     @property
-    def run_commands(self) -> typing.List[str]:
-        run_commands = super().run_commands
-        run_commands.append(
-            f'echo "{IPERF3_SERVICE_FILE}" '
-            '> /etc/systemd/system/iperf3-server@.service')
-        run_commands.append(
-            f"systemctl enable iperf3-server@{self.iperf3_port}")
-        run_commands.append('echo "8021q" >> /etc/modules')
-        return run_commands
-
-    ethernet_device = CONF.tobiko.ubuntu.interface_name
-
-    def _get_customized_suffix(self) -> str:
-        return f'{super()._get_customized_suffix()}-{self.ethernet_device}'
-
-    @property
     def vlan_id(self) -> int:
         return tobiko.tobiko_config().neutron.vlan_id
 
     @property
     def vlan_device(self) -> str:
         return f'vlan{self.vlan_id}'
-
-    @property
-    def vlan_config(self) -> typing.Dict[str, typing.Any]:
-        return {
-            'network': {
-                'version': 2,
-                'vlans': {
-                    self.vlan_device: {
-                        'link': self.ethernet_device,
-                        'dhcp4': True,
-                        'dhcp4-overrides': {
-                            'use-routes': False
-                        },
-                        'dhcp6': True,
-                        'dhcp6-overrides': {
-                            'use-routes': False
-                        },
-                        'id': self.vlan_id,
-                    }
-                }
-            }
-        }
-
-    @property
-    def write_files(self) -> typing.Dict[str, str]:
-        write_files = super().write_files
-        write_files['/etc/netplan/75-tobiko-vlan.yaml'] = tobiko.dump_yaml(
-            self.vlan_config)
-        return write_files
 
 
 class UbuntuFlavorStackFixture(_nova.FlavorStackFixture):
