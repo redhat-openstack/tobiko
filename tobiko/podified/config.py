@@ -42,7 +42,7 @@ OPTIONS = [
                help='Contaniner image used to run background tobiko commands '
                     'like e.g. `tobiko ping` in the POD.'),
     cfg.IntOpt('tobiko_start_pod_timeout',
-               default=60,
+               default=100,
                help='Defines how long Tobiko will wait until POD with the '
                     'background command (like tobiko ping) will be `Running`. '
                     'In most cases, if tobiko image is already in the local '
