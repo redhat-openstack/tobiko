@@ -1,0 +1,16 @@
+---
+other:
+  - |
+    Introduced new config option `tobiko_pod_tolerations`, which can be used when
+    running background ping process using OpenShift POD.
+    With this option, tolerations can be added to the POD definition.
+    Example: `[{effect: NoSchedule, key: testOperator, value: true}, {effect: NoExecute, key: testOperator, value: true}]`
+  - |
+    Introduced new config option `tobiko_pod_extra_network`, which can be used when
+    running background ping process using OpenShift POD.
+    With this option, an extra network interface can be attached to the POD.
+  - |
+    Introduced new config option `tobiko_pod_node_selector`, which can be used when
+    running background ping process using OpenShift POD.
+    This option is used to specify on which Openshift node the POD should run.
+    Example: `kubernetes.io/hostname:worker-3`
