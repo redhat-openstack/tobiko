@@ -21,6 +21,7 @@ import typing  # noqa
 import tobiko
 from tobiko.shell import sh
 from tobiko.shell import ssh
+from tobiko.shell.sh import _command
 
 
 class FilesNotFound(tobiko.TobikoException):
@@ -32,9 +33,9 @@ NameType = typing.Union[None, str, typing.List[str]]
 PathType = typing.Union[str, typing.Iterable[str]]
 
 
-def find_files(path: sh.ShellCommandType,
+def find_files(path: _command.ShellCommandType,
                name: NameType = None,
-               command: sh.ShellCommandType = 'find',
+               command: _command.ShellCommandType = 'find',
                max_depth: int = None,
                modified_since: tobiko.Seconds = None,
                ssh_client: ssh.SSHClientType = None,

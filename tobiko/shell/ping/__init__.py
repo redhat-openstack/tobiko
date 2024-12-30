@@ -65,3 +65,7 @@ PingStatistics = _statistics.PingStatistics
 write_ping_to_file = _ping.write_ping_to_file
 check_ping_statistics = _ping.check_ping_statistics
 skip_check_ping_statistics = _ping.skip_check_ping_statistics
+ping_alive = _ping.ping_alive
+stop_ping = _ping.stop_ping
+check_ping_results = _ping.check_ping_results
+execute_ping_in_background = _ping.execute_ping_in_background

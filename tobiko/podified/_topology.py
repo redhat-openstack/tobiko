@@ -26,6 +26,7 @@ from tobiko.podified import _openshift
 from tobiko.podified import containers
 from tobiko import rhosp
 from tobiko.shell import iperf3
+from tobiko.shell import ping
 from tobiko.shell import sh
 from tobiko.shell import ssh
 
@@ -176,10 +177,22 @@ class PodifiedTopology(rhosp.RhospTopology):
                                  node_type=EDPM_NODE)
             assert isinstance(node, EdpmNode)
 
-    def check_or_start_background_vm_ping(self, server_ip):
-        _openshift.check_or_start_tobiko_ping_command(
-            server_ip=server_ip
-        )
+    def check_or_start_background_vm_ping(
+            self,
+            server_ip: typing.Union[str, netaddr.IPAddress],
+            ssh_client: ssh.SSHClientType = None):
+        if not ssh_client:
+            _openshift.check_or_start_tobiko_ping_command(
+                server_ip=server_ip
+            )
+        else:
+            sh.check_or_start_external_process(
+                start_function=ping.execute_ping_in_background,
+                check_function=ping.check_ping_results,
+                liveness_function=ping.ping_alive,
+                stop_function=ping.stop_ping,
+                address=server_ip,
+                ssh_client=ssh_client)
 
     def check_or_start_background_iperf_connection(
             self,

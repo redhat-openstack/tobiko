@@ -23,6 +23,7 @@ from tobiko.shell.sh import _execute
 from tobiko.shell.sh import _hostname
 from tobiko.shell.sh import _io
 from tobiko.shell.sh import _local
+from tobiko.shell.sh import _mkdirs
 from tobiko.shell.sh import _nameservers
 from tobiko.shell.sh import _nmcli
 from tobiko.shell.sh import _path
@@ -141,3 +142,5 @@ find_command = _which.find_command
 
 get_nm_connection_ids = _nmcli.get_nm_connection_ids
 get_nm_connection_values = _nmcli.get_nm_connection_values
+
+make_remote_dirs = _mkdirs.make_remote_dirs

@@ -15,8 +15,13 @@
 #    under the License.
 from __future__ import absolute_import
 
+from tobiko.shell.files import _files
 from tobiko.shell.files import _logs
 
+
+get_home_absolute_filepath = _files.get_home_absolute_filepath
+truncate_client_logfile = _files.truncate_client_logfile
+remove_old_logfile = _files.remove_old_logfile
 
 LogFileDigger = _logs.LogFileDigger
 JournalLogDigger = _logs.JournalLogDigger

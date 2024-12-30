@@ -25,6 +25,7 @@ from oslo_log import log
 
 import tobiko
 from tobiko import config
+from tobiko.shell import files
 from tobiko.shell.iperf3 import _interface
 from tobiko.shell.iperf3 import _parameters
 from tobiko.shell import sh
@@ -38,56 +39,9 @@ LOG = log.getLogger(__name__)
 def get_iperf3_logs_filepath(address: typing.Union[str, netaddr.IPAddress],
                              path: str,
                              ssh_client: ssh.SSHClientType = None) -> str:
-    if ssh_client:
-        final_dir = _get_remote_filepath(path, ssh_client)
-    else:
-        final_dir = _get_local_filepath(path)
+    final_dir = files.get_home_absolute_filepath(path, ssh_client)
     filename = f'iperf_{address}.log'
     return os.path.join(final_dir, filename)
-
-
-def _get_local_filepath(path: str) -> str:
-    final_dir_path = f'{sh.get_user_home_dir()}/{path}'
-    if not os.path.exists(final_dir_path):
-        os.makedirs(final_dir_path)
-    return final_dir_path
-
-
-def _get_remote_filepath(path: str,
-                         ssh_client: ssh.SSHClientType) -> str:
-    homedir = sh.execute('echo ~', ssh_client=ssh_client).stdout.rstrip()
-    final_dir_path = f'{homedir}/{path}'
-    sh.execute(f'/usr/bin/mkdir -p {final_dir_path}',
-               ssh_client=ssh_client)
-    return final_dir_path
-
-
-def _truncate_iperf3_client_logfile(
-        logfile: str,
-        ssh_client: ssh.SSHClientType = None) -> None:
-    if ssh_client:
-        _truncate_remote_logfile(logfile, ssh_client)
-    else:
-        tobiko.truncate_logfile(logfile)
-
-
-def _truncate_remote_logfile(logfile: str,
-                             ssh_client: ssh.SSHClientType) -> None:
-    truncated_logfile = tobiko.get_truncated_filename(logfile)
-    sh.execute(f'/usr/bin/mv {logfile} {truncated_logfile}',
-               ssh_client=ssh_client)
-
-
-def _remove_old_logfile(logfile: str,
-                        ssh_client: ssh.SSHClientType = None):
-    if ssh_client:
-        sh.execute(f'/usr/bin/rm -f {logfile}',
-                   ssh_client=ssh_client)
-    else:
-        try:
-            os.remove(logfile)
-        except FileNotFoundError:
-            pass
 
 
 def get_bandwidth(address: typing.Union[str, netaddr.IPAddress],
@@ -169,7 +123,7 @@ def execute_iperf3_client_in_background(
     # it needs to be removed, otherwise iperf will append new log
     # to the end of the existing file and this will make json output
     # file to be malformed
-    _remove_old_logfile(output_path, ssh_client=ssh_client)
+    files.remove_old_logfile(output_path, ssh_client=ssh_client)
     # If there is ssh client for the server where iperf3 server is going
     # to run, lets make sure it is started fresh as e.g. in case of
     # failure in the previous run, it may report that is still "busy" thus
@@ -206,26 +160,20 @@ def _get_iperf3_pid(
         port: int = None,
         protocol: str = None,
         ssh_client: ssh.SSHClientType = None) -> typing.Union[int, None]:
-    try:
-        iperf_pids = sh.execute(
-            'pidof iperf3', ssh_client=ssh_client).stdout.rstrip().split(" ")
-    except sh.ShellCommandFailed:
-        return None
-    for iperf_pid in iperf_pids:
-        proc_cmdline = sh.get_command_line(
-            iperf_pid,
-            ssh_client=ssh_client)
-        if address and str(address) in proc_cmdline:
-            # This is looking for the iperf client instance
-            return int(iperf_pid)
-        elif port and protocol:
-            # By looking for port and protocol we are looking
-            # for the iperf3 server's PID
-            if "-s" in proc_cmdline and f"-p {port}" in proc_cmdline:
-                if ((protocol.lower() == 'udp' and "-u" in proc_cmdline) or
-                        (protocol.lower() == 'tcp' and
-                         '-u' not in proc_cmdline)):
-                    return int(iperf_pid)
+    if address:
+        iperf_commands = [f'iperf3 .*{address}']
+    elif protocol and protocol.lower() == 'udp':
+        iperf_commands = [f'iperf3 .*-s .*-u .*-p {port}',
+                          f'iperf3 .*-s .*-p {port} .*-u']
+    else:
+        iperf_commands = [f'iperf3 .*-s .*-p {port}']
+
+    for iperf_command in iperf_commands:
+        iperf_processes = sh.list_processes(command_line=iperf_command,
+                                            ssh_client=ssh_client)
+        if iperf_processes:
+            return iperf_processes.unique.pid
+    LOG.debug('no iperf3 processes were found')
     return None
 
 
@@ -286,7 +234,7 @@ def check_iperf3_client_results(address: typing.Union[str, netaddr.IPAddress],
         else:
             current_break = 0
 
-    _truncate_iperf3_client_logfile(logfile, ssh_client)
+    files.truncate_client_logfile(logfile, ssh_client)
 
     testcase = tobiko.get_test_case()
     testcase.assertLessEqual(longest_break,
@@ -319,7 +267,7 @@ def stop_iperf3_client(address: typing.Union[str, netaddr.IPAddress],
     if pid:
         LOG.info(f'iperf3 client process to > {address} already running '
                  f'with PID: {pid}')
-        sh.execute(f'sudo kill {pid}', ssh_client=ssh_client)
+        sh.execute(f'kill {pid}', ssh_client=ssh_client, sudo=True)
 
 
 def start_iperf3_server(

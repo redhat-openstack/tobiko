@@ -65,6 +65,12 @@ class NetworkTest(BaseNetworkTest):
 
 @pytest.mark.background
 class BackgroundProcessTest(BaseNetworkTest):
+    """Test designed to run in the background,
+    then collect results.
+    Logic: checks if process exists, if so stop the process,
+    then execute some check logic i.e. a check function.
+    if the process by name isn't running,
+    start a separate process i.e a background function"""
 
     stack = tobiko.required_fixture(stacks.AdvancedPeerServerStackFixture)
 
@@ -77,15 +83,30 @@ class BackgroundProcessTest(BaseNetworkTest):
                 'Background tests not supported by this topology class.')
 
     def test_check_background_vm_ping(self):
-        """ Tests that are designed to run in the background ,
-            then collect results.
-            Logic: checks if process exists, if so stop the process,
-            then execute some check logic i.e. a check function.
-            if the process by name isn't running,
-            start a separate process i.e a background function"""
-
+        """Ping from test machine/container/pod to VM with FIP,
+        validating north-south connectivity with SDNAT (source-destination
+        NAT)."""
         self.topology.check_or_start_background_vm_ping(
             self.stack.peer_stack.floating_ip_address)
+
+    def test_check_background_vm_ping_snat(self):
+        """Ping from a VM without FIP to an external IP,
+        validating north-south connectivity with SNAT (source NAT)."""
+        # make sure the VM does not have any FIP
+        self.assertFalse(self.stack.has_floating_ip)
+
+        try:
+            ext_subnet = neutron.list_subnets(
+                network=self.stack.network_stack.gateway_network_id,
+                ip_version=4)[0]
+        except IndexError:
+            ext_subnet = neutron.list_subnets(
+                network=self.stack.network_stack.gateway_network_id,
+                ip_version=6)[0]
+
+        self.topology.check_or_start_background_vm_ping(
+            ext_subnet['gateway_ip'],
+            ssh_client=self.stack.ssh_client)
 
     def test_east_west_tcp_traffic_background_iperf(self):
         """ Test East-West TCP traffic in the existing flow.
