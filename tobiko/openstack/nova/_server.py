@@ -136,3 +136,24 @@ def get_server_id(server: _client.ServerType) -> str:
         return server
     else:
         return server.id
+
+
+def action_on_all_instances(action):
+    """try to start/stop all instances"""
+    if action not in ('active', 'shutoff'):
+        tobiko.fail(f'Wrong action on VM instances: {action}')
+
+    client_action_method = (_client.activate_server if action == 'active'
+                            else _client.shutoff_server)
+    expected_vm_status = 'ACTIVE' if action == 'active' else 'SHUTOFF'
+
+    for instance in _client.list_servers():
+        activated_instance = client_action_method(instance)
+        instance_info = 'instance {nova_instance} is {state} on {host}'.format(
+            nova_instance=activated_instance.name,
+            state=activated_instance.status,
+            host=activated_instance._info[  # pylint: disable=W0212
+                'OS-EXT-SRV-ATTR:hypervisor_hostname'])
+        LOG.info(instance_info)
+        if activated_instance.status != expected_vm_status:
+            tobiko.fail(instance_info)

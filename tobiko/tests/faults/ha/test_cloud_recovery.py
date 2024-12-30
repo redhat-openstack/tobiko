@@ -50,16 +50,15 @@ has_external_lb = CONF.tobiko.rhosp.has_external_load_balancer
 
 def overcloud_health_checks(passive_checks_only=False,
                             skip_mac_table_size_test=False):
-    # this method will be changed in future commit
     check_pacemaker_resources_health()
     check_overcloud_processes_health()
-    nova.check_nova_services_health()
+    nova_osp.check_nova_services_health()
     tests.test_alive_agents_are_consistent_along_time()
     if not passive_checks_only:
-        # create a uniq stack
+        # create a unique stack that will be cleaned up at the end of each test
         check_vm_create()
-        nova.start_all_instances()
-        nova.check_computes_vms_running_via_virsh()
+        nova_osp.action_on_all_instances('active')
+        nova_osp.check_virsh_domains_running()
     containers.list_node_containers.cache_clear()
     containers.assert_all_tripleo_containers_running()
     containers.assert_equal_containers_state()
@@ -231,10 +230,10 @@ class DisruptTripleoNodesTest(testtools.TestCase):
                 hard_reset=False,
                 sequentially=sequentially)
             # verify VM status is updated after reboot
-            nova.wait_for_all_instances_status('SHUTOFF')
+            nova_osp.wait_for_all_instances_status('SHUTOFF')
             # start all VM instance
             # otherwise sidecar containers will not run after computes reboot
-            nova.start_all_instances()
+            nova_osp.action_on_all_instances('active')
             OvercloudHealthCheck.run_after(passive_checks_only=True)
 
         _run_test()
@@ -247,7 +246,7 @@ class DisruptTripleoNodesTest(testtools.TestCase):
     #     nova.wait_for_all_instances_status('SHUTOFF')
     #     # start all VM instance
     #     # otherwise sidecar containers will not run after computes reboot
-    #     nova.start_all_instances()
+    #     nova_osp.action_on_all_instances('active')
     #     OvercloudHealthCheck.run_after(passive_checks_only=True)
 
     @testtools.skipIf(has_external_lb, SKIP_MESSAGE_EXTLB)

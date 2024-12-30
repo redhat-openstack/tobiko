@@ -13,6 +13,7 @@
 #    under the License.
 from __future__ import absolute_import
 
+from tobiko.openstack.nova import _checks
 from tobiko.openstack.nova import _client
 from tobiko.openstack.nova import _cloud_init
 from tobiko.openstack.nova import _hypervisor
@@ -85,5 +86,12 @@ find_server_ip_address = _server.find_server_ip_address
 HasServerMixin = _server.HasServerMixin
 get_server_id = _server.get_server_id
 list_server_ip_addresses = _server.list_server_ip_addresses
+action_on_all_instances = _server.action_on_all_instances
 
 wait_for_services_up = _service.wait_for_services_up
+
+check_nova_services_health = _checks.check_nova_services_health
+check_virsh_domains_running = _checks.check_virsh_domains_running
+wait_for_all_instances_status = _checks.wait_for_all_instances_status
+check_vms_ping = _checks.check_vms_ping
+check_vm_evacuations = _checks.check_vm_evacuations
