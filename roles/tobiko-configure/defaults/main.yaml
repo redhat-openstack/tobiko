@@ -18,8 +18,8 @@ test_default_conf:
     ceph_rgw: "{{ ceph_rgw }}"
 
   nova:
-    ubuntu_connection_timeout: "{{ ubuntu_connection_timeout }}"
-    ubuntu_is_reachable_timeout: "{{ ubuntu_is_reachable_timeout }}"
+    advanced_vm_connection_timeout: "{{ advanced_vm_connection_timeout }}"
+    advanced_vm_is_reachable_timeout: "{{ advanced_vm_is_reachable_timeout }}"
 
   manila:
     share_protocol: "{{ manila_share_protocol }}"
@@ -38,7 +38,7 @@ overcloud_ssh_username: ''
 
 ceph_rgw: ''
 
-ubuntu_connection_timeout: ''
-ubuntu_is_reachable_timeout: ''
+advanced_vm_connection_timeout: ''
+advanced_vm_is_reachable_timeout: ''
 
 manila_share_protocol: ''

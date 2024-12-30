@@ -188,10 +188,10 @@ class CirrosServerTest(BaseServerTest):
     stack = tobiko.required_fixture(CirrosServerStackFixture)
 
 
-class UbuntuServerStackFixture(stacks.UbuntuServerStackFixture):
+class AdvancedServerStackFixture(stacks.AdvancedServerStackFixture):
     pass
 
 
-class UbuntuServerTest(BaseServerTest):
+class AdvancedServerTest(BaseServerTest):
     __test__ = True
-    stack = tobiko.required_fixture(UbuntuServerStackFixture)
+    stack = tobiko.required_fixture(AdvancedServerStackFixture)

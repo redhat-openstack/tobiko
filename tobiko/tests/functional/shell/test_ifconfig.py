@@ -31,8 +31,8 @@ class IfconfigTest(testtools.TestCase):
     cirros_stack = tobiko.required_fixture(
         stacks.CirrosServerStackFixture)
 
-    ubuntu_stack = tobiko.required_fixture(
-        stacks.UbuntuServerStackFixture)
+    advanced_vm_stack = tobiko.required_fixture(
+        stacks.AdvancedServerStackFixture)
 
     def test_list_ip_addresses(self, ip_version=None, **execute_params):
         result = sh.execute(command='ls /sbin/ifconfig',
@@ -59,8 +59,9 @@ class IfconfigTest(testtools.TestCase):
         self.test_list_ip_addresses(ssh_client=self.cirros_stack.ssh_client)
 
     @keystone.skip_unless_has_keystone_credentials()
-    def test_list_ip_addresses_with_ubuntu_server(self):
-        self.test_list_ip_addresses(ssh_client=self.ubuntu_stack.ssh_client)
+    def test_list_ip_addresses_with_advanced_server(self):
+        self.test_list_ip_addresses(
+            ssh_client=self.advanced_vm_stack.ssh_client)
 
     def test_list_ip_addresses_with_proxy_ssh_client(self):
         ssh_client = ssh.ssh_proxy_client()

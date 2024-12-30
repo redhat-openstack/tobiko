@@ -32,8 +32,8 @@ class IpTest(testtools.TestCase):
     cirros_stack = tobiko.required_fixture(
         stacks.CirrosServerStackFixture)
 
-    ubuntu_stack = tobiko.required_fixture(
-        stacks.UbuntuServerStackFixture)
+    advanced_vm_stack = tobiko.required_fixture(
+        stacks.AdvancedServerStackFixture)
 
     namespace = tobiko.required_fixture(
         _fixtures.NetworkNamespaceFixture)
@@ -83,8 +83,9 @@ class IpTest(testtools.TestCase):
     def test_list_ip_addresses_with_cirros_server(self):
         self.test_list_ip_addresses(ssh_client=self.cirros_stack.ssh_client)
 
-    def test_list_ip_addresses_with_ubuntu_server(self):
-        self.test_list_ip_addresses(ssh_client=self.ubuntu_stack.ssh_client)
+    def test_list_ip_addresses_with_advanced_server(self):
+        self.test_list_ip_addresses(
+            ssh_client=self.advanced_vm_stack.ssh_client)
 
     def test_list_ip_addresses_with_proxy_ssh_client(self):
         ssh_client = ssh.ssh_proxy_client()
@@ -144,8 +145,8 @@ class IpTest(testtools.TestCase):
             self.test_list_ip_addresses(network_namespace=namespace)
 
     @pytest.mark.flaky(reruns=3, reruns_delay=5)
-    def test_list_namespaces_with_ubuntu_server(self):
-        self.test_list_namespaces(ssh_client=self.ubuntu_stack.ssh_client)
+    def test_list_namespaces_with_advanced_server(self):
+        self.test_list_namespaces(ssh_client=self.advanced_vm_stack.ssh_client)
 
     @pytest.mark.flaky(reruns=3, reruns_delay=5)
     def test_list_namespaces_with_proxy_ssh_client(self):

@@ -54,6 +54,16 @@
 
     - name: "download images"
       include_role: name=tobiko-download-images
+      vars:
+        fedora_image_override_pattern:
+          advanced_vm:
+            customized: true
+            url: "{{ customized_fedora_image_url | default('') }}"
+        download_images_override: >-
+          {{
+            customized_fedora_image_url is defined |
+            ternary(fedora_image_override_pattern, {})
+          }}
 
     - name: "initialize test execution"
       include_role: name=tobiko-configure

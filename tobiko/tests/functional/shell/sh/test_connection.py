@@ -209,7 +209,7 @@ class LocalShellConnectionTest(testtools.TestCase):
 
 class SSHShellConnectionTest(LocalShellConnectionTest):
     connection_class = sh.SSHShellConnection
-    server = tobiko.required_fixture(stacks.UbuntuServerStackFixture)
+    server = tobiko.required_fixture(stacks.AdvancedServerStackFixture)
 
     @property
     def ssh_client(self) -> ssh.SSHClientFixture:

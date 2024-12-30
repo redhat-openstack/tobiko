@@ -21,7 +21,7 @@ from tobiko.openstack import heat
 from tobiko.openstack import neutron
 from tobiko.openstack.stacks import _neutron
 from tobiko.openstack.stacks import _hot
-from tobiko.openstack.stacks import _ubuntu
+from tobiko.openstack.stacks import _advanced_vm
 
 
 CONF = config.CONF
@@ -61,7 +61,7 @@ class QosNetworkStackFixture(_neutron.NetworkBaseStackFixture):
         super().setup_stack()
 
 
-class QosServerStackFixture(_ubuntu.UbuntuServerStackFixture):
+class QosServerStackFixture(_advanced_vm.AdvancedServerStackFixture):
     #: stack with the network with a qos policy
     network_stack = tobiko.required_fixture(QosNetworkStackFixture)
 

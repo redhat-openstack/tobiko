@@ -59,24 +59,30 @@ test_collect_dir: '{{ test_src_dir | realpath }}/{{ test_report_name }}'
 
 # --- download-images options -------------------------------------------------
 download_images_dir: "{{ ansible_user_dir }}/.downloaded-images"
-download_images:
-  ubuntu-customized:
-    type: ubuntu
-    url: "https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img"
+download_images_default:
+  advanced_vm:
+    username: fedora
+    type: advanced_vm
+    url: "https://download.fedoraproject.org/pub/fedora/linux/releases/40/Cloud/x86_64/images/Fedora-Cloud-Base-Generic.x86_64-40-1.14.qcow2"
     customized: false
+    copy_in_files:
+      - nginx_id.conf
+      - iperf3-server.service
     customize_command_pattern: >
       LIBGUESTFS_BACKEND=direct virt-customize -a $TMPPATH
-      --firstboot-command 'sh -c "hostname > /var/www/html/id"'
-      --install iperf3,iputils-ping,ncat,nginx,vlan
-      --run-command 'echo "[Unit]\nDescription=iperf3 server on port %i\nAfter=syslog.target network.target\n\n[Service]\nExecStart=/usr/bin/iperf3 -s -p %i\nRestart=always\nUser=root\n\n[Install]\nWantedBy=multi-user.target\nDefaultInstance=5201\n"
-      > /etc/systemd/system/iperf3-server@.service'
-      --run-command 'systemctl enable iperf3-server@5201'
-      --run-command 'echo "8021q" >> /etc/modules'
-      --run-command
-      'echo "network:\n  version: 2\n  vlans:\n    vlan101:\n      dhcp4: true\n      dhcp4-overrides:\n        use-routes: false\n      dhcp6: true\n      dhcp6-overrides:\n        use-routes: false\n      id: 101\n      link: {{ ubuntu_nic_name }}\n"
-      > /etc/netplan/75-tobiko-vlan.yaml'
+      --firstboot-command 'sh -c "nmcli connection add type vlan con-name vlan101 ifname vlan101 vlan.parent eth0 vlan.id 101 ipv6.addr-gen-mode default-or-eui64;
+      chown -R nginx:nginx /var/lib/nginx/ /var/log/nginx/; setenforce 0; systemctl restart nginx.service"'
+      --install iperf3,iputils,nmap-ncat,nginx
+      --copy-in /tmp/nginx_id.conf:/etc/nginx/conf.d
+      --run-command 'systemctl enable nginx'
+      --copy-in /tmp/iperf3-server.service:/etc/systemd/system
+      --run-command 'systemctl enable iperf3-server'
+      --root-password password:tobiko
+      --selinux-relabel
 
-# NIC name expected on Ubuntu VM instances.
-# Depending on the openstack version, it has been observed the Ubuntu VM
-# instances are created with an interface named 'ens3' or 'enp3s0'
-ubuntu_nic_name: 'ens3'
+download_images: >-
+  {{
+    download_images_default |
+    combine(download_images_override | default({}), recursive=True)
+  }}
+# download_images_override can be provided with more images or with values to override the default ones from download_images_default

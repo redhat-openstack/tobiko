@@ -25,6 +25,11 @@
         - section: "{{ dict_value.type }}"
           option: image_url
           value: "file://{{ download_images_dir }}/{{ file_name }}"
+        {% if dict_value.username is defined %}
+        - section: "{{ dict_value.type }}"
+          option: username
+          value: "{{ dict_value.username }}"
+        {% endif %}
         {% endfor %}
 
   vars:

@@ -253,11 +253,11 @@
 # Default SSH key type to login to server instances (string value)
 #key_type = ecdsa
 
-# Timeout (in seconds) for establishing connection to ubuntu (floating point value)
-#ubuntu_connection_timeout = 1500.0
+# Timeout (in seconds) for establishing connection to advanced vms (floating point value)
+#advanced_vm_connection_timeout = 1500.0
 
-# Timeout (in seconds) till ubuntu server is reachable (floating point value)
-#ubuntu_is_reachable_timeout = 900.0
+# Timeout (in seconds) till advanced vm is reachable (floating point value)
+#advanced_vm_is_reachable_timeout = 900.0
 
 # Timeout (in seconds) till cloud-init based server is reachable (floating point value)
 #cloudinit_is_reachable_timeout = 600.0
@@ -510,31 +510,31 @@
 #overcloud_groups_dict = cmp:compute,ctrl:controller
 
 
-[ubuntu]
+[advanced_vm]
 
 #
 # From tobiko
 #
 
-# Default ubuntu image name (string value)
+# Default advanced_vm image name (string value)
 #image_name = <None>
 
-# Default ubuntu image URL (string value)
+# Default advanced_vm image URL (string value)
 #image_url = <None>
 
-# Default ubuntu container format (string value)
+# Default advanced_vm container format (string value)
 #container_format = <None>
 
-# Default ubuntu disk format (string value)
+# Default advanced_vm disk format (string value)
 #disk_format = <None>
 
-# Default ubuntu username (string value)
+# Default advanced_vm username (string value)
 #username = <None>
 
-# Default ubuntu password (string value)
+# Default advanced_vm password (string value)
 #password = <None>
 
-# Default ubuntu SSH connection timeout (seconds) (floating point value)
+# Default advanced_vm SSH connection timeout (seconds) (floating point value)
 #connection_timeout = <None>
 
 # Allow to disable SSH auth algorithmsin order to SSH to old servers likeCirrOS ones

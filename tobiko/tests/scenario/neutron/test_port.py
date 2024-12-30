@@ -121,12 +121,12 @@ class PortTest(testtools.TestCase):
 # --- Test opening ports on external network ----------------------------------
 
 @stacks.skip_unless_has_external_network
-class UbuntuExternalPortTest(PortTest):
+class AdvancedExternalPortTest(PortTest):
     """Test Neutron ports"""
 
     #: Resources stack with Nova server to send messages to
     stack = tobiko.required_fixture(
-        stacks.UbuntuExternalServerStackFixture)
+        stacks.AdvancedExternalServerStackFixture)
 
 
 # --- Test la-h3 extension ----------------------------------------------------

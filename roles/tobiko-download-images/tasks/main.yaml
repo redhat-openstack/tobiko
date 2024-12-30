@@ -5,34 +5,13 @@
     state: directory
     dest: "{{ download_images_dir }}"
 
-- name: download images
-  get_url:
-    dest: "{{ download_images_dir }}/{{ item.key }}"
-    url: "{{ item.value.url }}"
-  register: download
-  retries: 5
-  until: download is success
-  with_dict: "{{ download_images }}"
-
 - name: install libguestfs-tools
   become: true
   package:
     name: libguestfs-tools
 
-- name: customize images
-# root needed to avoid the supermin issue:
-# https://github.com/virt-manager/virt-bootstrap/issues/9
-  become: yes
-  vars:
-    image_file_path: "{{ download_images_dir }}/{{ item.key }}"
-  shell: |
-    set -xe
-    TMPPATH=$(mktemp)
-    cp {{ image_file_path }} $TMPPATH
-    {{ item.value.customize_command_pattern }}
-    mv $TMPPATH {{ image_file_path }}
-    chmod a+r {{ image_file_path }}
-  when:
-    - not (item.value.customized | default(False) | bool)
-    - item.value.customize_command_pattern is defined
-  with_dict: "{{ download_images }}"
+- name: "download and customize images"
+  include_tasks: download-and-customize.yaml
+  loop: '{{ download_images | dict2items }}'
+  loop_control:
+    loop_var: dl_image

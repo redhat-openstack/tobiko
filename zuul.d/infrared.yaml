@@ -33,7 +33,11 @@
       test_inventory_file: '{{ zuul_work_dir }}/ansible_hosts'
       test_inventory_groups: {undercloud: [primary]}
       tox_envlist: infrared
-      tox_extra_args: -- --collect-dir {{ test_collect_dir | quote }}
+      tox_extra_args: >-
+        --
+        --collect-dir {{ test_collect_dir | quote }}
+        --customized-fedora-image-url
+        https://download.fedoraproject.org/pub/fedora/linux/releases/40/Cloud/x86_64/images/Fedora-Cloud-Base-Generic.x86_64-40-1.14.qcow2
       tox_environ:
         ANSIBLE_INVENTORY: '{{ test_inventory_file }}'
       zuul_output_dir: '{{ ansible_user_dir }}/zuul-output'

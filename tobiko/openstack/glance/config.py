@@ -28,7 +28,7 @@ OPTIONS = [
 
 
 GLANCE_IMAGE_NAMES = ['cirros',
-                      'ubuntu']
+                      'advanced_vm']
 
 
 def register_tobiko_options(conf):

@@ -23,24 +23,10 @@ from tobiko.shell import sh
 
 
 CONF = config.CONF
-IPERF3_SERVICE_FILE = """
-[Unit]
-Description=iperf3 server on port %i
-After=syslog.target network.target
-
-[Service]
-ExecStart=/usr/bin/iperf3 -s -p %i
-Restart=always
-User=root
-
-[Install]
-WantedBy=multi-user.target
-DefaultInstance=5201
-"""
 
 
-class UbuntuImageFixture(glance.UrlGlanceImageFixture):
-    """Ubuntu server image running an HTTP server
+class AdvancedImageFixture(glance.UrlGlanceImageFixture):
+    """Advanced server image running an HTTP server
 
     The server has additional installed packages compared to
     the minimal one:
@@ -49,32 +35,27 @@ class UbuntuImageFixture(glance.UrlGlanceImageFixture):
     - ping
     - ncat
     - nginx
-    - vlan
 
     The image will also have below running services:
 
     - nginx HTTP server listening on TCP port 80
     - iperf3 server listening on TCP port 5201
     """
-    image_url = CONF.tobiko.ubuntu.image_url
-    image_name = CONF.tobiko.ubuntu.image_name
-    disk_format = CONF.tobiko.ubuntu.disk_format or "qcow2"
-    container_format = CONF.tobiko.ubuntu.container_format or "bare"
-    username = CONF.tobiko.ubuntu.username or 'ubuntu'
-    password = CONF.tobiko.ubuntu.password or 'ubuntu'
-    connection_timeout = CONF.tobiko.nova.ubuntu_connection_timeout
-    disabled_algorithms = CONF.tobiko.ubuntu.disabled_algorithms
-    is_reachable_timeout = CONF.tobiko.nova.ubuntu_is_reachable_timeout
+    image_url = CONF.tobiko.advanced_vm.image_url
+    image_name = CONF.tobiko.advanced_vm.image_name
+    disk_format = CONF.tobiko.advanced_vm.disk_format or "qcow2"
+    container_format = CONF.tobiko.advanced_vm.container_format or "bare"
+    username = CONF.tobiko.advanced_vm.username or 'cloud-user'
+    connection_timeout = CONF.tobiko.nova.advanced_vm_connection_timeout
+    disabled_algorithms = CONF.tobiko.advanced_vm.disabled_algorithms
+    is_reachable_timeout = CONF.tobiko.nova.advanced_vm_is_reachable_timeout
 
     # port of running HTTP server
     http_port = 80
-
     # port of running Iperf3 server
     iperf3_port = 5201
 
-    @property
-    def iperf3_service_name(self) -> str:
-        return f"iperf3-server@{self.iperf3_port}.service"
+    iperf3_service_name = "iperf3-server.service"
 
     @property
     def vlan_id(self) -> int:
@@ -85,14 +66,14 @@ class UbuntuImageFixture(glance.UrlGlanceImageFixture):
         return f'vlan{self.vlan_id}'
 
 
-class UbuntuFlavorStackFixture(_nova.FlavorStackFixture):
+class AdvancedFlavorStackFixture(_nova.FlavorStackFixture):
     ram = 256
     swap = 512
 
 
-class UbuntuServerStackFixture(_nova.CloudInitServerStackFixture,
-                               _vlan.VlanServerStackFixture):
-    """Ubuntu server running an HTTP server
+class AdvancedServerStackFixture(_nova.CloudInitServerStackFixture,
+                                 _vlan.VlanServerStackFixture):
+    """Advanced server running an HTTP server
 
     The server has additional commands compared to the minimal one:
 
@@ -101,9 +82,9 @@ class UbuntuServerStackFixture(_nova.CloudInitServerStackFixture,
     """
 
     #: Glance image used to create a Nova server instance
-    image_fixture = tobiko.required_fixture(UbuntuImageFixture)
+    image_fixture = tobiko.required_fixture(AdvancedImageFixture)
     #: Flavor used to create a Nova server instance
-    flavor_stack = tobiko.required_fixture(UbuntuFlavorStackFixture)
+    flavor_stack = tobiko.required_fixture(AdvancedFlavorStackFixture)
 
     @property
     def is_reachable_timeout(self) -> tobiko.Seconds:
@@ -114,6 +95,7 @@ class UbuntuServerStackFixture(_nova.CloudInitServerStackFixture,
     def http_port(self) -> int:
         return self.image_fixture.http_port
 
+    # port of running Iperf3 server
     @property
     def iperf3_port(self) -> int:
         return self.image_fixture.iperf3_port
@@ -140,7 +122,7 @@ class UbuntuServerStackFixture(_nova.CloudInitServerStackFixture,
 
 
 @topology.skip_unless_osp_version('17.0', lower=True)
-class UbuntuExternalServerStackFixture(UbuntuServerStackFixture,
-                                       _nova.ExternalServerStackFixture):
-    """Ubuntu server with port on special external network
+class AdvancedExternalServerStackFixture(AdvancedServerStackFixture,
+                                         _nova.ExternalServerStackFixture):
+    """Advanced server with port on special external network
     """

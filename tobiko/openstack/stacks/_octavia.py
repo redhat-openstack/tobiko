@@ -18,13 +18,13 @@ from __future__ import absolute_import
 from oslo_log import log
 
 from tobiko import config
-from tobiko.openstack.stacks import _ubuntu
+from tobiko.openstack.stacks import _advanced_vm
 
 CONF = config.CONF
 LOG = log.getLogger(__name__)
 
 
-class OctaviaServerStackFixture(_ubuntu.UbuntuServerStackFixture):
+class OctaviaServerStackFixture(_advanced_vm.AdvancedServerStackFixture):
     has_floating_ip = False
 
 

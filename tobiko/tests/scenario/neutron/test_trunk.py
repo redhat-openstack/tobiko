@@ -30,7 +30,7 @@ CONF = config.CONF
 LOG = log.getLogger(__name__)
 
 
-class RebootTrunkServerStackFixture(stacks.UbuntuServerStackFixture):
+class RebootTrunkServerStackFixture(stacks.AdvancedServerStackFixture):
 
     def validate_created_stack(self):
         # (fressi) must wait cloud init to complete Nova
