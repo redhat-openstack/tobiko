@@ -42,12 +42,6 @@ repos:
         pass_filenames: false
         # args: [--ignore-missing-imports]
 
-  - repo: https://github.com/ansible/ansible-lint.git
-    rev: v6.21.1
-    hooks:
-      - id: ansible-lint
-        files: \.(yaml|yml)$
-
   - repo: local
     hooks:
       - id: pylint
