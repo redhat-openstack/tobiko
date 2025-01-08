@@ -31,7 +31,6 @@ delete_image = _client.delete_image
 GlanceImageFixture = _image.GlanceImageFixture
 HasImageMixin = _image.HasImageMixin
 UrlGlanceImageFixture = _image.UrlGlanceImageFixture
-CustomizedGlanceImageFixture = _image.CustomizedGlanceImageFixture
 
 open_image_file = _io.open_image_file
 

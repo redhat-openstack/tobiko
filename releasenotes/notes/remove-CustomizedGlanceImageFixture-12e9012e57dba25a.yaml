@@ -1,0 +1,15 @@
+---
+deprecations:
+  - |
+    CustomizedGlanceImageFixture class is not supported anymore.
+    This means the Ubuntu image provided via tobiko.conf, which could be customized during test execution in previous tobiko versions,
+    has to include all the expected customizations.
+    When using the tobiko ansible roles, the tobiko-download-images roles performes the required customizations by default.
+    The URL to download an image without any customizations and the command that are executed during the opendev jobs can be found here:
+    https://opendev.org/x/tobiko/src/commit/eb83ebe860dfb4206b346a822675c01f8ba82ccf/roles/tobiko-common/defaults/main.yaml#L62
+
+  - |
+    Due to the deprecation of the CustomizedGlanceImageFixture class, some configuration parameters have been deprecated at image level.
+
+    * `interface_name` is not supported anymore because tobiko does not need to create a VLAN over that interface (the customized image already includes it).
+    * `customized_image_provided` boolean is not supported anymore because the provided images were previously customized.

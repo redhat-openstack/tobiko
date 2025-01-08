@@ -38,9 +38,6 @@
 # Default cirros password (string value)
 #password = <None>
 
-# Default cirros interface name (string value)
-#interface_name = <None>
-
 # Default cirros SSH connection timeout (seconds) (floating point value)
 #connection_timeout = <None>
 
@@ -536,9 +533,6 @@
 
 # Default ubuntu password (string value)
 #password = <None>
-
-# Default ubuntu interface name (string value)
-#interface_name = <None>
 
 # Default ubuntu SSH connection timeout (seconds) (floating point value)
 #connection_timeout = <None>

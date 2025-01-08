@@ -25,17 +25,7 @@
         - section: "{{ dict_value.type }}"
           option: image_url
           value: "file://{{ download_images_dir }}/{{ file_name }}"
-        {%   if dict_value.customized | default(False) | bool or dict_value.customize_command_pattern is defined %}
-        - section: "{{ dict_value.type }}"
-          option: customized_image_provided
-          value: True
-        {%   endif %}
         {% endfor %}
-        {% if ubuntu_nic_name is defined %}
-        - section: ubuntu
-          option: interface_name
-          value: "{{ ubuntu_nic_name }}"
-        {% endif %}
 
   vars:
     sections: "{{ test_default_conf | combine(test_conf, recursive=True) }}"
