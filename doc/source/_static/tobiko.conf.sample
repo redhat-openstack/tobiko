@@ -26,9 +26,6 @@
 # Default cirros image URL (string value)
 #image_url = <None>
 
-# Default cirros image filename (string value)
-#image_file = <None>
-
 # Default cirros container format (string value)
 #container_format = <None>
 
@@ -527,9 +524,6 @@
 
 # Default ubuntu image URL (string value)
 #image_url = <None>
-
-# Default ubuntu image filename (string value)
-#image_file = <None>
 
 # Default ubuntu container format (string value)
 #container_format = <None>

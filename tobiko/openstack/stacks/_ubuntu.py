@@ -59,7 +59,6 @@ class UbuntuImageFixture(glance.CustomizedGlanceImageFixture):
     - iperf3 server listening on TCP port 5201
     """
     image_url = CONF.tobiko.ubuntu.image_url
-    image_file = CONF.tobiko.ubuntu.image_file
     image_name = CONF.tobiko.ubuntu.image_name
     disk_format = CONF.tobiko.ubuntu.disk_format or "qcow2"
     container_format = CONF.tobiko.ubuntu.container_format or "bare"

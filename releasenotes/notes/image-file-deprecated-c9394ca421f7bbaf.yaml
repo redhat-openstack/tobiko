@@ -1,0 +1,15 @@
+---
+deprecations:
+  - |
+    The config parameter `image_file` is not available anymore.
+    With this parameter, it was possible to configure the local path to the
+    images that could be used to create either Cirros or Ubuntu VM instances.
+    It is still possible to do this, using the existing parameter `image_url`:
+
+    .. code-block:: text
+
+      [cirros]
+      image_url=file:///tmp/cirros.img
+
+    Internally, the `image_file` attribute is still part of the `UrlGlanceImageFixture` class
+    and it indicates where the image file is saved locally.
