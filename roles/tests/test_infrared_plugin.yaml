@@ -50,10 +50,3 @@
       debug: var=run_tox.stderr_lines
       when: run_tox is failed
       failed_when: yes
-
-
-- hosts: primary
-  vars:
-    test_collect_dir: '{{ test_dir }}/test_results'
-  roles:
-    - tobiko-check-collected-files

@@ -1,0 +1,10 @@
+test_workflow_steps:
+  - tox_description: 'run unit tests using Python 3.9'
+    tox_envlist: py39
+    python_version: '3.9'
+    bindep_profile: test py39
+    test_flaky: true
+
+  - tox_description: 'run functional test cases'
+    tox_envlist: functional
+    test_flaky: true
