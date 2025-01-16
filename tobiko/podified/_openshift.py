@@ -382,8 +382,9 @@ def _start_tobiko_command_pod(cmd_args, pod_name):
     }
 
     if CONF.tobiko.podified.tobiko_pod_extra_network:
-        pod_def["metadata"]["k8s.v1.cni.cncf.io/networks"] = \
-            CONF.tobiko.podified.tobiko_pod_extra_network
+        pod_def["metadata"]["annotations"] = {
+            "k8s.v1.cni.cncf.io/networks":
+            CONF.tobiko.podified.tobiko_pod_extra_network}
     if CONF.tobiko.podified.tobiko_pod_tolerations:
         pod_def["spec"]["tolerations"] = \
             CONF.tobiko.podified.tobiko_pod_tolerations
