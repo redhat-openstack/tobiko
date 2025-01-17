@@ -176,7 +176,7 @@ def assert_ovn_containers_running():
     groups = [group for group in potential_groups if
               group in topology.get_openstack_topology().groups]
     for group in groups:
-        assert_containers_running(group, ovn_containers, full_name=False)
+        assert_containers_running(group, ovn_containers)
     LOG.info("Networking OVN containers verified in running state")
 
 
