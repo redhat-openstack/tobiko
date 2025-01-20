@@ -55,8 +55,15 @@ def reboot_host(ssh_client: ssh.SSHClientFixture,
                                  method=method)
     tobiko.setup_fixture(reboot)
     if wait:
-        # when pings are not replied, we consider the reboot operation started
-        ping.wait_for_ping_hosts([ssh_client.host], check_unreachable=True)
+        try:
+            # when pings are not replied, the reboot operation starts
+            # in some cases the reboot is fast enough and no pings are
+            # unreplied - do not fail in such a case and check uptime instead
+            ping.wait_for_ping_hosts([ssh_client.host],
+                                     check_unreachable=True,
+                                     retry_timeout=30.)
+        except ping.ReachableHostsException:
+            LOG.exception("no unreplied pings were found - let's check uptime")
         reboot.wait_for_operation()
     return reboot
 
