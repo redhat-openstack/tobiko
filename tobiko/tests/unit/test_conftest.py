@@ -13,8 +13,9 @@
 #    under the License.
 from __future__ import absolute_import
 
+from unittest import mock
+
 from oslo_log import log
-import mock
 
 import tobiko
 from tobiko.tests import unit

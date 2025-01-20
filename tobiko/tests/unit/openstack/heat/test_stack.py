@@ -15,10 +15,10 @@ from __future__ import absolute_import
 
 from collections import abc
 import time
+from unittest import mock
 
 from heatclient.v1 import client as heatclient
 from heatclient import exc
-import mock
 
 import tobiko
 from tobiko.openstack import heat

@@ -14,9 +14,9 @@
 from __future__ import absolute_import
 
 import inspect
+from unittest import mock
 
 from keystoneclient.v3 import endpoints
-import mock
 from octaviaclient.api.v2 import octavia as octaviaclient
 
 from tobiko.openstack import keystone

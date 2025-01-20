@@ -13,8 +13,9 @@
 #    under the License.
 from __future__ import absolute_import
 
+from unittest import mock
+
 from heatclient.v1 import client as heatclient
-import mock
 
 from tobiko.openstack import keystone
 from tobiko.openstack import heat
