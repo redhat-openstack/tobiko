@@ -14,7 +14,7 @@
 #    under the License.
 from __future__ import absolute_import
 
-import mock
+from unittest import mock
 
 from tobiko.tests.unit.openstack import _keystone
 from tobiko.tests import unit

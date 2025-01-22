@@ -14,8 +14,9 @@
 #    under the License.
 from __future__ import absolute_import
 
+from unittest import mock
+
 from keystoneauth1 import session as keystonesession
-import mock
 
 from tobiko.openstack import keystone
 from tobiko.tests.unit import openstack

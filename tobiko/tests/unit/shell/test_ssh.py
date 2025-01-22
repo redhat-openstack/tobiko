@@ -17,8 +17,8 @@ from __future__ import absolute_import
 
 import io
 import os
+from unittest import mock
 
-import mock
 import paramiko
 
 import tobiko

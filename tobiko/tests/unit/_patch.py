@@ -14,8 +14,7 @@
 from __future__ import absolute_import
 
 import time
-
-import mock
+from unittest import mock
 
 import tobiko
 from tobiko import common

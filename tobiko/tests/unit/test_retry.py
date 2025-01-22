@@ -14,8 +14,8 @@
 from __future__ import absolute_import
 
 import itertools
+from unittest import mock
 
-import mock
 import testtools
 
 import tobiko

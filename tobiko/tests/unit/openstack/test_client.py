@@ -15,9 +15,9 @@
 from __future__ import absolute_import
 
 import inspect
+from unittest import mock
 
 from keystoneauth1 import session as _session
-import mock
 
 import tobiko
 from tobiko.openstack import _client
