@@ -24,6 +24,7 @@ from tobiko.shell.sh import _hostname
 from tobiko.shell.sh import _io
 from tobiko.shell.sh import _local
 from tobiko.shell.sh import _nameservers
+from tobiko.shell.sh import _nmcli
 from tobiko.shell.sh import _path
 from tobiko.shell.sh import _process
 from tobiko.shell.sh import _ps
@@ -135,3 +136,6 @@ get_file_size = _wc.get_file_size
 CommandNotFound = _which.CommandNotFound
 SkipOnCommandNotFound = _which.SkipOnCommandNotFound
 find_command = _which.find_command
+
+get_nm_connection_ids = _nmcli.get_nm_connection_ids
+get_nm_connection_values = _nmcli.get_nm_connection_values
