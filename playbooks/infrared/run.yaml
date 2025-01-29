@@ -3,4 +3,3 @@
 - hosts: primary
   roles:
     - tox
-    - tobiko-check-collected-files

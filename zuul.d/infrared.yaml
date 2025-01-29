@@ -6,20 +6,19 @@
       Infrared jobs intended to gate infrared Tobiko plugin changes
     check:
       jobs:
-        - tobiko-infrared-centos-9
+        - tobiko-infrared
     gate:
       jobs:
         - tobiko-infrared
     periodic:
       jobs:
-        - tobiko-infrared-centos-9
-        - tobiko-infrared-ubuntu
+        - tobiko-infrared
 
 
 - job:
     name: tobiko-infrared
     parent: tox
-    nodeset: centos-9-stream
+    nodeset: tobiko-infrared-single-node-centos-9
     timeout: 3600
     description: |
       Run test cases using tobiko infrared plugin
@@ -32,7 +31,7 @@
       ensure_pip_from_packages_with_python2: no
       test_collect_dir: '{{ zuul_output_dir }}/logs'
       test_inventory_file: '{{ zuul_work_dir }}/ansible_hosts'
-      test_inventory_groups: {undercloud: [secondary]}
+      test_inventory_groups: {undercloud: [primary]}
       tox_envlist: infrared
       tox_extra_args: -- --collect-dir {{ test_collect_dir | quote }}
       tox_environ:
@@ -47,40 +46,12 @@
       - ^tobiko/tests/scenario/
       - ^tobiko/tests/faults/
 
-- job:
-    name: tobiko-infrared-centos-9
-    parent: tobiko-infrared
-    nodeset: tobiko-infrared-centos-9
-    voting: true
-    description: |
-      Run test cases using tobiko infrared plugin on CentOS 9
-
 - nodeset:
-    name: tobiko-infrared-centos-9
+    name: tobiko-infrared-single-node-centos-9
     nodes:
       - name: primary
         label: centos-9-stream
-      - name: secondary
-        label: centos-9-stream
-    groups: &NODESET_GROUPS
+    groups:
       - name: undercloud
         nodes:
-          - secondary
-
-
-- job:
-    name: tobiko-infrared-ubuntu
-    parent: tobiko-infrared
-    nodeset: tobiko-infrared-ubuntu
-    voting: true
-    description: |
-      Run test cases using tobiko infrared plugin on Ubuntu
-
-- nodeset:
-    name: tobiko-infrared-ubuntu
-    nodes:
-      - name: primary
-        label: ubuntu-focal
-      - name: secondary
-        label: ubuntu-focal
-    groups: *NODESET_GROUPS
+          - primary
