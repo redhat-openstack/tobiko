@@ -15,6 +15,8 @@
 #    under the License.
 from __future__ import absolute_import
 
+import typing
+
 import tobiko
 from tobiko.shell import sh
 from tobiko.openstack import stacks
@@ -27,7 +29,7 @@ class AdvancedServerStackTest(test_cirros.CirrosServerStackTest):
     #: Stack of resources with a server attached to a floating IP
     stack = tobiko.required_fixture(stacks.AdvancedServerStackFixture)
 
-    nameservers_filenames = ('/etc/resolv.conf',)
+    nameservers_filenames: typing.Optional[typing.Sequence[str]] = []
 
     def test_python(self):
         python_version = sh.execute(['python3', '--version'],

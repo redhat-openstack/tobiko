@@ -59,10 +59,23 @@ def list_nameservers(ssh_client: typing.Optional[ssh.SSHClientFixture] = None,
         filenames = ['/etc/resolv.conf']
 
     nameservers: tobiko.Selection[netaddr.IPAddress] = tobiko.Selection()
+    # obtain nameservers from the resolv.conf file
     for filename in filenames:
         nameservers.extend(parse_resolv_conf_file(ssh_client=ssh_client,
                                                   filename=filename,
                                                   **execute_params))
+
+    # obtain nameservers from nmcli, if available
+    try:
+        sh.find_command('nmcli', ssh_client=ssh_client)
+    except sh.CommandNotFound:
+        msg = 'nmcli command not available'
+        if ssh_client:
+            msg += f' on {ssh_client.host}'
+        LOG.debug(msg)
+    else:
+        nameservers.extend(parse_dns_nmcli(ssh_client=ssh_client))
+
     if ip_version:
         nameservers = nameservers.with_attributes(version=ip_version)
     return nameservers
@@ -71,8 +84,7 @@ def list_nameservers(ssh_client: typing.Optional[ssh.SSHClientFixture] = None,
 def parse_resolv_conf_file(
         filename: str,
         ssh_client: typing.Optional[ssh.SSHClientFixture] = None,
-        **execute_params) -> \
-        typing.Generator[netaddr.IPAddress, None, None]:
+        **execute_params) -> typing.Generator[netaddr.IPAddress, None, None]:
     lines: typing.List[str] = \
         sh.execute(f"cat '{filename}'",
                    ssh_client=ssh_client,
@@ -94,3 +106,18 @@ def parse_resolv_conf_file(
                     yield netaddr.IPAddress(nameserver)
                 except netaddr.AddrFormatError:
                     LOG.exception(f"Invalid nameserver address: {nameserver}")
+
+
+def parse_dns_nmcli(
+        ssh_client: typing.Optional[ssh.SSHClientFixture] = None) -> \
+        typing.Generator[netaddr.IPAddress, None, None]:
+    connections = sh.get_nm_connection_ids(ssh_client=ssh_client)
+    for connection in connections:
+        nameservers = sh.get_nm_connection_values(connection,
+                                                  'IP4.DNS,IP6.DNS',
+                                                  ssh_client=ssh_client)
+        for nameserver in nameservers:
+            try:
+                yield netaddr.IPAddress(nameserver)
+            except netaddr.AddrFormatError:
+                LOG.exception(f"Invalid nameserver address: {nameserver}")
