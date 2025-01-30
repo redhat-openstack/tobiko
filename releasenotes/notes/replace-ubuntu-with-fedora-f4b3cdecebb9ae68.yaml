@@ -1,0 +1,22 @@
+---
+other:
+  - |
+    From this release onwards, tobiko will use by default Fedora as guest images.
+    The tobiko-download ansible role downloads a Fedora image and customizes it, by default.
+    The tobiko tests will find that image in a local disk and upload it to glance.
+    The resource names (images, VM instances, etc)  do not include "Fedora", but "Advanced" images or VMs.
+    The test names and test class names using these Advanced images usually include the string "Advanced" too.
+    The `[ubuntu]` section from the tobiko.conf file is replaced with the `[advanced_vm]` section.
+    If the tobiko ansible roles are not used, an already customized image can be configured in tobiko.conf
+
+    .. code-block:: text
+
+      [advanced_vm]
+      image_url=file:///tmp/fedora-customized.qcow2 # or https://file-server.com/fedora-customized.qcow2
+
+  - |
+    Changes in the tobiko infrared plugin parameters:
+
+    * `--ubuntu-connection-timeout` is renamed to `--advanced-vm-connection-timeout`
+    * `--ubuntu-is-reachable-timeout` is renamed to `advanced-vm-is-reachable-timeout`
+    * New parameter added, `--customized-fedora-image-url`: URL to customized fedora image that tobiko ansible roles will download and will be used to create Advanced VM instances
