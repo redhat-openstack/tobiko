@@ -29,10 +29,10 @@ class VlanProxyServerStackTest(test_cirros.CirrosServerStackTest):
     stack = tobiko.required_fixture(stacks.VlanProxyServerStackFixture)
 
 
-class UbuntuVlanServerTest(testtools.TestCase):
+class AdvancedVlanServerTest(testtools.TestCase):
 
     #: Stack of resources with a server attached to a floating IP
-    stack = tobiko.required_fixture(stacks.UbuntuServerStackFixture)
+    stack = tobiko.required_fixture(stacks.AdvancedServerStackFixture)
 
     def test_vlan_ipv4_fixed_ip(self):
         self._test_vlan_fixed_ip(ip_version=4)

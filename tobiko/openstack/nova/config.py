@@ -28,13 +28,13 @@ OPTIONS = [
     cfg.StrOpt('key_type',
                default=DEFAULT_KEY_TYPE,
                help="Default SSH key type to login to server instances"),
-    cfg.FloatOpt('ubuntu_connection_timeout',
+    cfg.FloatOpt('advanced_vm_connection_timeout',
                  default=1500.,
                  help="Timeout (in seconds) for establishing connection "
-                      "to ubuntu"),
-    cfg.FloatOpt('ubuntu_is_reachable_timeout',
+                      "to advanced_vm"),
+    cfg.FloatOpt('advanced_vm_is_reachable_timeout',
                  default=900.,
-                 help="Timeout (in seconds) till ubuntu server is reachable"),
+                 help="Timeout (in seconds) till advanced_vm is reachable"),
     cfg.FloatOpt('cloudinit_is_reachable_timeout',
                  default=600.,
                  help="Timeout (in seconds) till cloud-init based server is "

@@ -256,29 +256,25 @@ subparsers:
             help: Skip Swift containers healthchecks when CephAdm is deployed
             ansible_variable: ceph_rgw
             default: False
-          ubuntu-connection-timeout:
+          advanced-vm-connection-timeout:
             type: Value
             help: |
-                Timeout error is raised if a connection to an ubuntu instance
+                Timeout error is raised if a connection to an advanced_vm instance
                 is not successful before it expires
-            ansible_variable: ubuntu_connection_timeout
-          ubuntu-is-reachable-timeout:
+            ansible_variable: advanced_vm_connection_timeout
+          advanced-vm-is-reachable-timeout:
             type: Value
             help: |
-                Timeout error is raised if an ubuntu instance is not reachable
+                Timeout error is raised if an advanced_vm instance is not reachable
                 before it expires
-            ansible_variable: ubuntu_is_reachable_timeout
-          ubuntu-vm-nic-name:
+            ansible_variable: advanced_vm_is_reachable_timeout
+          customized-fedora-image-url:
             type: Value
             help: |
-                NIC name expected on Ubuntu VM instances.
-                When Openstack spawns these VMs, their NIC (usually they
-                only have one NIC and one VLAN on that NIC) name is usually
-                "ens3", but with some Openstack versions, it is "enp3s0".
-                Defaults to "enp3s0" because it is the value obtained with
-                Openstack versions that use infrared.
-            default: "enp3s0"
-            ansible_variable: ubuntu_nic_name
+                URL to customized fedora image that tobiko ansible roles will
+                download and will be used to create Advanced VM instances and
+                run tests on them.
+            ansible_variable: customized_fedora_image_url
           cleanup-containerlist-file:
             type: Bool
             help:  |

@@ -34,7 +34,7 @@ from tobiko.openstack import stacks
 @keystone.skip_unless_has_keystone_credentials()
 class CurlExecuteTest(testtools.TestCase):
 
-    stack = tobiko.required_fixture(stacks.UbuntuServerStackFixture)
+    stack = tobiko.required_fixture(stacks.AdvancedServerStackFixture)
 
     def test_execute_curl(
             self,
@@ -53,7 +53,8 @@ class CurlExecuteTest(testtools.TestCase):
                                    retry_count=30,
                                    retry_timeout=300.,
                                    retry_interval=10.).strip()
-        self.assertEqual(self.stack.server_name, result)
+        short_vm_name_from_curl = result.split('.')[0]
+        self.assertEqual(self.stack.server_name, short_vm_name_from_curl)
 
     def test_execute_curl_ipv4(self):
         self.test_execute_curl(ip_address=self.get_fixed_ip(ip_version=4),

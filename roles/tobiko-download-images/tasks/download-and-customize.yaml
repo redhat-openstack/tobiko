@@ -1,0 +1,36 @@
+---
+
+- name: download images
+  get_url:
+    dest: "{{ download_images_dir }}/{{ dl_image.key }}"
+    url: "{{ dl_image.value.url }}"
+  register: download
+  retries: 5
+  until: download is success
+
+- name: copy files needed for image customization
+  copy:
+    src: "{{ item }}"
+    dest: "/tmp/{{ item }}"
+    force: true
+    mode: "0644"
+  loop: "{{ dl_image.value.copy_in_files }}"
+  when:
+    - dl_image.value.copy_in_files is defined
+
+- name: customize images
+  # root needed to avoid the supermin issue:
+  # https://github.com/virt-manager/virt-bootstrap/issues/9
+  become: yes
+  vars:
+    image_file_path: "{{ download_images_dir }}/{{ dl_image.key }}"
+  shell: |
+    set -xe
+    TMPPATH=$(mktemp)
+    cp {{ image_file_path }} $TMPPATH
+    {{ dl_image.value.customize_command_pattern }}
+    mv $TMPPATH {{ image_file_path }}
+    chmod a+r {{ image_file_path }}
+  when:
+    - not (dl_image.value.customized | default(False) | bool)
+    - dl_image.value.customize_command_pattern is defined

@@ -29,11 +29,7 @@ OPTIONS = [
                default=24,
                help="The mask bits for IPv4 subnets"),
     cfg.ListOpt('ipv4_dns_nameservers',
-                # This value is a workaround to avoid UbuntuExternalPortTest
-                # failures - with certain ubuntu images, routes to the
-                # nameservers were added to a VLAN interface, breaking
-                # connectivity from the VMs to the external network.
-                default=["8.8.8.8"],
+                default=None,
                 help="List of nameservers IPv4 addresses"),
     cfg.StrOpt('ipv6_cidr',
                default='fc00::/48',

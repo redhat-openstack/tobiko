@@ -22,7 +22,7 @@ from tobiko.openstack.stacks import _neutron
 from tobiko.openstack.stacks import _nova
 from tobiko.openstack.stacks import _octavia
 from tobiko.openstack.stacks import _qos
-from tobiko.openstack.stacks import _ubuntu
+from tobiko.openstack.stacks import _advanced_vm
 from tobiko.openstack.stacks import _vlan
 
 
@@ -92,10 +92,11 @@ QosNetworkStackFixture = _qos.QosNetworkStackFixture
 QosPolicyStackFixture = _qos.QosPolicyStackFixture
 QosServerStackFixture = _qos.QosServerStackFixture
 
-UbuntuFlavorStackFixture = _ubuntu.UbuntuFlavorStackFixture
-UbuntuImageFixture = _ubuntu.UbuntuImageFixture
-UbuntuServerStackFixture = _ubuntu.UbuntuServerStackFixture
-UbuntuExternalServerStackFixture = _ubuntu.UbuntuExternalServerStackFixture
+AdvancedFlavorStackFixture = _advanced_vm.AdvancedFlavorStackFixture
+AdvancedImageFixture = _advanced_vm.AdvancedImageFixture
+AdvancedServerStackFixture = _advanced_vm.AdvancedServerStackFixture
+AdvancedExternalServerStackFixture = \
+    _advanced_vm.AdvancedExternalServerStackFixture
 
 VlanNetworkStackFixture = _vlan.VlanNetworkStackFixture
 VlanProxyServerStackFixture = _vlan.VlanProxyServerStackFixture

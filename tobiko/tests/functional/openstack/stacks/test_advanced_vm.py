@@ -21,13 +21,13 @@ from tobiko.openstack import stacks
 from tobiko.tests.functional.openstack.stacks import test_cirros
 
 
-class UbuntuServerStackTest(test_cirros.CirrosServerStackTest):
+class AdvancedServerStackTest(test_cirros.CirrosServerStackTest):
     """Tests connectivity to Nova instances via floating IPs"""
 
     #: Stack of resources with a server attached to a floating IP
-    stack = tobiko.required_fixture(stacks.UbuntuServerStackFixture)
+    stack = tobiko.required_fixture(stacks.AdvancedServerStackFixture)
 
-    nameservers_filenames = ('/run/systemd/resolve/resolv.conf',)
+    nameservers_filenames = ('/etc/resolv.conf',)
 
     def test_python(self):
         python_version = sh.execute(['python3', '--version'],

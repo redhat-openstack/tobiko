@@ -68,9 +68,9 @@ class GetHostnameTest(testtools.TestCase):
     def test_cirros_hostname(self):
         self.test_ssh_hostname(ssh_client=self.cirros_server.ssh_client)
 
-    ubuntu_server = tobiko.required_fixture(
-        stacks.UbuntuServerStackFixture)
+    advanced_server = tobiko.required_fixture(
+        stacks.AdvancedServerStackFixture)
 
     @keystone.skip_unless_has_keystone_credentials()
-    def test_ubuntu_hostname(self):
-        self.test_ssh_hostname(ssh_client=self.ubuntu_server.ssh_client)
+    def test_advanced_vm_hostname(self):
+        self.test_ssh_hostname(ssh_client=self.advanced_server.ssh_client)

@@ -210,7 +210,7 @@ class SSHExecuteTest(ExecuteTest):
     expected_shell = SSH_EXPECTED_SHELL
 
     server_stack = tobiko.required_fixture(
-        stacks.UbuntuServerStackFixture)
+        stacks.AdvancedServerStackFixture)
 
     @property
     def ssh_client(self):

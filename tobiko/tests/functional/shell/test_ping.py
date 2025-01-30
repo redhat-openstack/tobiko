@@ -220,6 +220,6 @@ class CirrosPingTest(PingTest):
         return self.stack.ssh_client
 
 
-class UbuntuPingTest(CirrosPingTest):
+class AdvancedPingTest(CirrosPingTest):
 
-    stack = tobiko.required_fixture(stacks.UbuntuServerStackFixture)
+    stack = tobiko.required_fixture(stacks.AdvancedServerStackFixture)

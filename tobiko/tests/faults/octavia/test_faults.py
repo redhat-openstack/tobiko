@@ -44,7 +44,7 @@ class OctaviaBasicFaultTest(testtools.TestCase):
     listener = None
     pool = None
     server_stack = tobiko.required_fixture(
-        stacks.UbuntuServerStackFixture)
+        stacks.AdvancedServerStackFixture)
     other_server_stack = tobiko.required_fixture(
         stacks.OctaviaOtherServerStackFixture)
 
