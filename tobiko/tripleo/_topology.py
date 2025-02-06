@@ -25,6 +25,7 @@ from tobiko import config
 from tobiko.openstack import neutron
 from tobiko.openstack import nova
 from tobiko.openstack import topology
+from tobiko.podified import _openshift
 from tobiko import rhosp
 from tobiko.shell import files
 from tobiko.shell import sh
@@ -190,8 +191,10 @@ class TripleoTopology(rhosp.RhospTopology):
 
     def check_or_start_background_vm_ping(self, server_ip):
         if CONF.tobiko.tripleo.run_background_ping_in_pod:
-            tobiko.skip_test("Running background ping in the POD "
-                             "is not implemented yet")
+            # this fails if `oc` (openshift client) is not available
+            # so, if `run_background_ping_in_pod` is true, make sure `oc` is
+            # available
+            _openshift.check_or_start_tobiko_ping_command(server_ip)
         else:
             tripleo_nova.check_or_start_background_vm_ping(server_ip)
 
