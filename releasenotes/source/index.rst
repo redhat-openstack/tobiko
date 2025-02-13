@@ -10,6 +10,7 @@ Tobiko Release Notes's
    :maxdepth: 1
 
    unreleased
+   0.8.6
    0.8.5
    0.8.4
    0.7.1
