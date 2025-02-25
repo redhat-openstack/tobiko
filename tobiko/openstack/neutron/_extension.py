@@ -14,10 +14,16 @@
 from __future__ import absolute_import
 
 from collections import abc
+import functools
+
+from oslo_log import log
 
 import tobiko
 from tobiko.openstack import keystone
 from tobiko.openstack.neutron import _client
+
+
+LOG = log.getLogger(__name__)
 
 
 @keystone.skip_unless_has_keystone_credentials()
@@ -34,7 +40,9 @@ class NetworkingExtensionsFixture(tobiko.SharedFixture):
         self.client = _client.get_neutron_client()
 
     def get_networking_extensions(self):
+        LOG.debug('Getting list of network extensions...')
         extensions = self.client.list_extensions()
+        LOG.debug(f'List of network extensions obtained: {extensions}')
         if isinstance(extensions, abc.Mapping):
             extensions = extensions['extensions']
         ignore_extensions = set(
@@ -44,6 +52,7 @@ class NetworkingExtensionsFixture(tobiko.SharedFixture):
                                     if e['alias'] not in ignore_extensions)
 
 
+@functools.lru_cache()
 def get_networking_extensions():
     return tobiko.setup_fixture(NetworkingExtensionsFixture).extensions
 
