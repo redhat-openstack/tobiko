@@ -109,13 +109,16 @@ TRIPLEO_OPTIONS = [
                      'different hostname prefixes',
                 default={'ctrl': 'controller', 'cmp': 'compute'}),
 
-    cfg.BoolOpt('run_background_ping_in_pod',
+    cfg.BoolOpt('run_background_services_in_pod',
+                deprecated_name='run_background_ping_in_pod',
                 default=False,
-                help='Wheter background ping should be run directly from '
-                     'the undercloud node (default) or using POD on the OCP '
-                     'cluster. The latter is is useful e.g. for the '
+                help='Wheter background services, like e.g. ping or iperf3 '
+                     'should be run directly from the undercloud node '
+                     '(default) or using POD on the OCP cluster. '
+                     'The latter is useful e.g. for the '
                      'data plane adoption jobs when background ping should '
-                     'be run from the POD even before adoption.'),
+                     'be run from the POD even before adoption but it '
+                     'requires access to the OpenShift cluster API.'),
 ]
 
 
