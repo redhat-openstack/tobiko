@@ -107,6 +107,8 @@ interworker_synched = _lockutils.interworker_synched
 
 makedirs = _os.makedirs
 open_output_file = _os.open_output_file
+get_truncated_filename = _os.get_truncated_filename
+truncate_logfile = _os.truncate_logfile
 
 runs_operation = _operation.runs_operation
 before_operation = _operation.before_operation

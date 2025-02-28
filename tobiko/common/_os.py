@@ -16,6 +16,7 @@ from __future__ import absolute_import
 import contextlib
 import os
 import tempfile
+import time
 
 from oslo_log import log
 
@@ -57,3 +58,13 @@ def open_output_file(filename, mode='w', temp_dir=None, text=False):
         with _exception.exc_info():
             if os.path.isfile(temp_filename):
                 os.remove(temp_filename)
+
+
+def get_truncated_filename(filepath: str) -> str:
+    check_time = time.strftime("%Y_%m_%d-%H-%M-%S")
+    return f'{filepath}_checked_{check_time}'
+
+
+def truncate_logfile(filepath):
+    """append _checked to a ping statistics file once finished it's check"""
+    os.rename(filepath, get_truncated_filename(filepath))
