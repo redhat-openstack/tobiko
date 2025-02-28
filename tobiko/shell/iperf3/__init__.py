@@ -16,6 +16,12 @@
 from __future__ import absolute_import
 
 from tobiko.shell.iperf3 import _assert
+from tobiko.shell.iperf3 import _execute
 
 
 assert_has_bandwith_limits = _assert.assert_has_bandwith_limits
+execute_iperf3_client_in_background = \
+        _execute.execute_iperf3_client_in_background
+check_iperf3_client_results = _execute.check_iperf3_client_results
+iperf3_client_alive = _execute.iperf3_client_alive
+stop_iperf3_client = _execute.stop_iperf3_client

@@ -29,6 +29,11 @@ def get_iperf3_client_command(parameters: _parameters.Iperf3ClientParameters):
     return interface.get_iperf3_client_command(parameters)
 
 
+def get_iperf3_server_command(parameters: _parameters.Iperf3ServerParameters):
+    interface = Iperf3Interface()
+    return interface.get_iperf3_server_command(parameters)
+
+
 class Iperf3Interface:
 
     def get_iperf3_client_command(
@@ -36,6 +41,13 @@ class Iperf3Interface:
             parameters: _parameters.Iperf3ClientParameters) \
             -> sh.ShellCommand:
         options = self.get_iperf3_client_options(parameters=parameters)
+        return sh.shell_command('iperf3') + options
+
+    def get_iperf3_server_command(
+            self,
+            parameters: _parameters.Iperf3ServerParameters) \
+            -> sh.ShellCommand:
+        options = self.get_iperf3_server_options(parameters=parameters)
         return sh.shell_command('iperf3') + options
 
     def get_iperf3_client_options(
@@ -54,6 +66,20 @@ class Iperf3Interface:
             options += self.get_download_option(parameters.download)
         if parameters.protocol is not None:
             options += self.get_protocol_option(parameters.protocol)
+        if parameters.logfile is not None:
+            options += self.get_logfile_option(parameters.logfile)
+        return options
+
+    def get_iperf3_server_options(
+            self,
+            parameters: _parameters.Iperf3ServerParameters) \
+            -> sh.ShellCommand:
+        options = sh.ShellCommand(['-J'])
+        options += self.get_server_mode_option()
+        if parameters.port is not None:
+            options += self.get_port_option(parameters.port)
+        if parameters.protocol is not None:
+            options += self.get_protocol_option(parameters.protocol)
         return options
 
     @staticmethod
@@ -63,6 +89,10 @@ class Iperf3Interface:
     @staticmethod
     def get_client_mode_option(server_address: str):
         return ['-c', server_address]
+
+    @staticmethod
+    def get_server_mode_option():
+        return ["-s"]
 
     @staticmethod
     def get_download_option(download: bool):
@@ -82,7 +112,7 @@ class Iperf3Interface:
 
     @staticmethod
     def get_timeout_option(timeout: int):
-        if timeout > 0:
+        if timeout >= 0:
             return ['-t', timeout]
         else:
             return []
@@ -90,3 +120,7 @@ class Iperf3Interface:
     @staticmethod
     def get_port_option(port):
         return ['-p', port]
+
+    @staticmethod
+    def get_logfile_option(logfile):
+        return ['--logfile', logfile]

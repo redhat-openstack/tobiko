@@ -29,6 +29,12 @@ class Iperf3ClientParameters(typing.NamedTuple):
     port: typing.Optional[int] = None
     protocol: typing.Optional[str] = None
     timeout: typing.Optional[int] = None
+    logfile: typing.Optional[str] = None
+
+
+class Iperf3ServerParameters(typing.NamedTuple):
+    port: typing.Optional[int] = None
+    protocol: typing.Optional[str] = None
 
 
 def iperf3_client_parameters(
@@ -37,7 +43,8 @@ def iperf3_client_parameters(
         download: bool = None,
         port: int = None,
         protocol: str = None,
-        timeout: int = None):
+        timeout: int = None,
+        logfile: str = None):
     """Get iperf3 client parameters
     mode allowed values: client or server
     ip is only needed for client mode
@@ -60,4 +67,18 @@ def iperf3_client_parameters(
                                   download=download,
                                   port=port,
                                   protocol=protocol,
-                                  timeout=timeout)
+                                  timeout=timeout,
+                                  logfile=logfile)
+
+
+def iperf3_server_parameters(
+        port: int = None, protocol: str = None) -> Iperf3ServerParameters:
+    """Get iperf3 server parameters
+    """
+    config = tobiko.tobiko_config().iperf3
+    if port is None:
+        port = config.port
+    if protocol is None:
+        protocol = config.protocol
+    return Iperf3ServerParameters(port=port,
+                                  protocol=protocol)
