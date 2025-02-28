@@ -126,3 +126,9 @@ class AdvancedExternalServerStackFixture(AdvancedServerStackFixture,
                                          _nova.ExternalServerStackFixture):
     """Advanced server with port on special external network
     """
+
+
+class AdvancedPeerServerStackFixture(AdvancedServerStackFixture,
+                                     _nova.PeerServerStackFixture):
+    #: Peer server used to reach this one
+    peer_stack = tobiko.required_fixture(AdvancedServerStackFixture)

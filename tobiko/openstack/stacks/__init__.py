@@ -97,6 +97,7 @@ AdvancedImageFixture = _advanced_vm.AdvancedImageFixture
 AdvancedServerStackFixture = _advanced_vm.AdvancedServerStackFixture
 AdvancedExternalServerStackFixture = \
     _advanced_vm.AdvancedExternalServerStackFixture
+AdvancedPeerServerStackFixture = _advanced_vm.AdvancedPeerServerStackFixture
 
 VlanNetworkStackFixture = _vlan.VlanNetworkStackFixture
 VlanProxyServerStackFixture = _vlan.VlanProxyServerStackFixture
