@@ -34,6 +34,9 @@ class ShellCommand(tuple):
     def __add__(self, other: ShellCommandType) -> 'ShellCommand':
         return shell_command(tuple(self) + shell_command(other))
 
+    def __contains__(self, item) -> bool:
+        return item in str(self)
+
 
 def shell_command(command: ShellCommandType,
                   **shlex_params) -> ShellCommand:
