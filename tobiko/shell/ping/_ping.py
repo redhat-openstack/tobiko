@@ -466,12 +466,6 @@ def get_vm_ping_log_files(glob_ping_log_pattern='tobiko_ping_results/ping_'
         yield vm_ping_log_filename
 
 
-def rename_ping_staistics_file_to_checked(filepath):
-    """append _checked to a ping statistics file once finished it's check"""
-    check_time = time.strftime("%Y_%m_%d-%H-%M-%S")
-    os.rename(filepath, f'{filepath}_checked_{check_time}')
-
-
 def check_ping_statistics(failure_limit=10):
     """Gets a list of ping_vm_log files and
     iterates their lines, checks if max ping
@@ -495,7 +489,7 @@ def check_ping_statistics(failure_limit=10):
             else:
                 LOG.info(f'no failures in ping log file: {filename}')
 
-            rename_ping_staistics_file_to_checked(filename)
+            tobiko.truncate_logfile(filename)
 
             if ping_failures_len >= failure_limit:
                 tobiko.fail(f'{ping_failures_len} pings failure found '
@@ -505,5 +499,5 @@ def check_ping_statistics(failure_limit=10):
 
 def skip_check_ping_statistics():
     for filename in list(get_vm_ping_log_files()):
-        rename_ping_staistics_file_to_checked(filename)
+        tobiko.truncate_logfile(filename)
         LOG.info(f'skipping ping failures in ping log file: {filename}')
