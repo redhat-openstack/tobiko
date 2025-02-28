@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    Added support for running ``iperf3`` client and server in background. Iperf3
+    client can be run in guest VM is ``ssh_client`` object is provided or
+    locally on the machine where Tobiko is run.
+    Added two new config options for the RHOSO topologies:
+
+    * ``max_traffic_break_allowed`` - to specify longest allowed single break
+      in the traffic tested with iperf3,
+    * ``max_total_breaks_allowed`` - to specify total allowed breaks time
+      in the traffic tested with iperf3.

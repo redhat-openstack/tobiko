@@ -654,6 +654,16 @@ class OpenStackTopology(tobiko.SharedFixture):
         tobiko.skip_test("Background ping not supported by "
                          "this topology class.")
 
+    def check_or_start_background_iperf_connection(
+            self,
+            server_ip: typing.Union[str, netaddr.IPAddress],  # noqa; pylint: disable=W0613
+            port: int,  # noqa; pylint: disable=W0613
+            protocol: str,  # noqa; pylint: disable=W0613
+            ssh_client: ssh.SSHClientType = None,  # noqa; pylint: disable=W0613
+            iperf3_server_ssh_client: ssh.SSHClientType = None):  # noqa; pylint: disable=W0613
+        tobiko.skip_test("Background iperf not supported by "
+                         "this topology class.")
+
 
 def get_openstack_topology(topology_class: typing.Type = None) -> \
         OpenStackTopology:
