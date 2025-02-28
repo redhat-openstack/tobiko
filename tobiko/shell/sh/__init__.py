@@ -94,6 +94,8 @@ process = _process.process
 start_background_process = _process.start_background_process
 check_or_start_background_process =\
     _process.check_or_start_background_process
+check_or_start_external_process =\
+    _process.check_or_start_external_process
 get_user_home_dir = _path.get_user_home_dir
 str_from_stream = _process.str_from_stream
 ShellProcessFixture = _process.ShellProcessFixture

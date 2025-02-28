@@ -583,3 +583,52 @@ def check_or_start_background_process(bg_function=None,
                              bg_process_name=bg_process_name, **kwargs)
     # check test is not failing from the start
     check_function()
+
+
+def check_or_start_external_process(start_function,
+                                    check_function,
+                                    liveness_function=None,
+                                    stop_function=None,
+                                    **kwargs):
+    """Start or restart an external process.
+
+    Check if a process exists, if so restart the process, execute some check
+    logic i.e. a check function. if the process by name isn't running, start a
+    new separate process i.e an iperf3 client
+
+    :param start_function: function name
+    :param check_function: function name
+    :param liveness_function: function name
+    :param stop_function: function name
+    """
+    service_alive = None
+    if liveness_function:
+        service_alive = liveness_function(**kwargs)
+    if service_alive:
+        # if we want to terminate the specific external process by
+        # close it, otherwise the check will continue to run in the
+        # background
+        # This step is needed e.g. for iperf as it stores results in the file
+        # when it is stopped
+        if stop_function:
+            stop_function(**kwargs)
+            LOG.info('checked and stopped previous external processes and log '
+                     'starting a new external process')
+    else:
+        # First time the test is run:
+        # if background process by specific name is not present ,
+        # start one in the background:
+        LOG.info('No previous external processes found')
+
+    # check logs of the process
+    # execute process check i.e. go over process results file
+    # truncate the log file and restart the background process
+    LOG.info(f'running a check function: {check_function} '
+             f'for the external process.')
+    check_function(**kwargs)
+
+    LOG.info(f'Starting a new external process of function: {start_function}')
+    start_function(**kwargs)
+    if liveness_function and not liveness_function(**kwargs):
+        LOG.error(f'Service did not start properly with '
+                  f'function: {start_function}')
