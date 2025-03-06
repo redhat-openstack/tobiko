@@ -18,6 +18,7 @@ from __future__ import absolute_import
 from tobiko.shell.iperf3 import _assert
 from tobiko.shell.iperf3 import _execute
 from tobiko.shell.iperf3 import _interface
+from tobiko.shell.iperf3 import _parameters
 
 JSON_STREAM = _interface.JSON_STREAM
 
@@ -25,5 +26,12 @@ assert_has_bandwith_limits = _assert.assert_has_bandwith_limits
 execute_iperf3_client_in_background = \
         _execute.execute_iperf3_client_in_background
 check_iperf3_client_results = _execute.check_iperf3_client_results
+get_iperf3_logs_filepath = _execute.get_iperf3_logs_filepath
 iperf3_client_alive = _execute.iperf3_client_alive
 stop_iperf3_client = _execute.stop_iperf3_client
+start_iperf3_server = _execute.start_iperf3_server
+
+get_iperf3_client_command = _interface.get_iperf3_client_command
+
+Iperf3ClientParameters = _parameters.Iperf3ClientParameters
+iperf3_client_parameters = _parameters.iperf3_client_parameters

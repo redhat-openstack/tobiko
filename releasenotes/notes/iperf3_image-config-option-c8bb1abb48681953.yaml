@@ -1,0 +1,9 @@
+---
+other:
+  - |
+    New config option ``podified/iperf3_image`` is added. This option can be
+    used to specify iperf3 container image used to run iperf3 in the POD.
+    Default value is
+    ``quay.io/podified-antelope-centos9/openstack-tobiko:current-podified`` but
+    this image currently don't provide iperf3 in the required version so other
+    image should be used in tests. Iperf3 >= 3.17 is required in this case.

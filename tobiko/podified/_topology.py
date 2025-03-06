@@ -189,20 +189,27 @@ class PodifiedTopology(rhosp.RhospTopology):
             ssh_client: ssh.SSHClientType = None,
             iperf3_server_ssh_client: ssh.SSHClientType = None):
 
+        kwargs = {
+            'address': server_ip,
+            'port': port,
+            'protocol': protocol,
+            'ssh_client': ssh_client,
+            'iperf3_server_ssh_client': iperf3_server_ssh_client,
+            'check_function': iperf3.check_iperf3_client_results
+        }
         if not ssh_client:
             LOG.debug("Running iperf3 client in the POD is "
                       "implemented yet.")
+            kwargs['start_function'] = _openshift.start_iperf3
+            kwargs['liveness_function'] = _openshift.iperf3_pod_alive
+            kwargs['stop_function'] = _openshift.stop_iperf3_client
         else:
-            sh.check_or_start_external_process(
-                start_function=iperf3.execute_iperf3_client_in_background,
-                check_function=iperf3.check_iperf3_client_results,
-                liveness_function=iperf3.iperf3_client_alive,
-                stop_function=iperf3.stop_iperf3_client,
-                address=server_ip,
-                port=port,
-                protocol=protocol,
-                ssh_client=ssh_client,
-                iperf3_server_ssh_client=iperf3_server_ssh_client)
+            kwargs['start_function'] = \
+                iperf3.execute_iperf3_client_in_background
+            kwargs['liveness_function'] = iperf3.iperf3_client_alive
+            kwargs['stop_function'] = iperf3.stop_iperf3_client
+
+        sh.check_or_start_external_process(**kwargs)
 
 
 class EdpmNode(rhosp.RhospNode):
