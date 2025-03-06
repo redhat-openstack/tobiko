@@ -37,6 +37,9 @@ class ShellCommand(tuple):
     def __contains__(self, item) -> bool:
         return item in str(self)
 
+    def as_list(self):
+        return str(self).split(" ")
+
 
 def shell_command(command: ShellCommandType,
                   **shlex_params) -> ShellCommand:
