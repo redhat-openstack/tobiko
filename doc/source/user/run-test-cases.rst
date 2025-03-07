@@ -68,6 +68,11 @@ Run the Tobiko Workflow
 
 .. include:: _run_workflow.rst
 
+Running Tobiko Test Cases in the Podified environment using ci-framework
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. include:: _run_using_ci_framework.rst
+
 Test Cases Report Files
 ~~~~~~~~~~~~~~~~~~~~~~~
 
