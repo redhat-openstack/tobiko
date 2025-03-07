@@ -36,6 +36,11 @@ file is and run the following command::
 
     tail -F tobiko.log
 
+Prepare advanced image to be used by Tobiko (optional)
+------------------------------------------------------
+
+.. include:: _prepare_advanced_image.rst
+
 .. _run-tobiko-test-cases:
 
 Run Tobiko Test Cases
