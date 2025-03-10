@@ -94,6 +94,21 @@ class BackgroundProcessTest(BaseNetworkTest):
                 ssh_client=self.stack.peer_stack.ssh_client,
                 iperf3_server_ssh_client=self.stack.ssh_client)
 
+    def test_north_south_tcp_traffic_background_iperf(self):
+        """ Test North-South TCP traffic in the existing flow.
+
+        This test is intended to test TCP traffic with bigger amount of
+        data send VM with Floating IP and external world.
+        Traffic is send in the single flow using "iperf" tool.
+        """
+
+        topology.get_openstack_topology().\
+            check_or_start_background_iperf_connection(
+                self.stack.peer_stack.floating_ip_address,
+                port=5204,
+                protocol='tcp',
+                iperf3_server_ssh_client=self.stack.peer_stack.ssh_client)
+
 
 @pytest.mark.migrate_server
 class SameHostNetworkTest(NetworkTest):
