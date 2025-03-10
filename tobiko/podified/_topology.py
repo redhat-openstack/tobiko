@@ -15,6 +15,7 @@ from __future__ import absolute_import
 
 import typing
 
+import netaddr
 from oslo_log import log
 
 import tobiko
@@ -24,6 +25,7 @@ from tobiko.podified import _edpm
 from tobiko.podified import _openshift
 from tobiko.podified import containers
 from tobiko import rhosp
+from tobiko.shell import iperf3
 from tobiko.shell import sh
 from tobiko.shell import ssh
 
@@ -178,6 +180,29 @@ class PodifiedTopology(rhosp.RhospTopology):
         _openshift.check_or_start_tobiko_ping_command(
             server_ip=server_ip
         )
+
+    def check_or_start_background_iperf_connection(
+            self,
+            server_ip: typing.Union[str, netaddr.IPAddress],
+            port: int,
+            protocol: str,
+            ssh_client: ssh.SSHClientType = None,
+            iperf3_server_ssh_client: ssh.SSHClientType = None):
+
+        if not ssh_client:
+            LOG.debug("Running iperf3 client in the POD is "
+                      "implemented yet.")
+        else:
+            sh.check_or_start_external_process(
+                start_function=iperf3.execute_iperf3_client_in_background,
+                check_function=iperf3.check_iperf3_client_results,
+                liveness_function=iperf3.iperf3_client_alive,
+                stop_function=iperf3.stop_iperf3_client,
+                address=server_ip,
+                port=port,
+                protocol=protocol,
+                ssh_client=ssh_client,
+                iperf3_server_ssh_client=iperf3_server_ssh_client)
 
 
 class EdpmNode(rhosp.RhospNode):

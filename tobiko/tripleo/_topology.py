@@ -198,6 +198,30 @@ class TripleoTopology(rhosp.RhospTopology):
         else:
             tripleo_nova.check_or_start_background_vm_ping(server_ip)
 
+    def check_or_start_background_iperf_connection(
+            self,
+            server_ip: typing.Union[str, netaddr.IPAddress],
+            port: int,
+            protocol: str,
+            ssh_client: ssh.SSHClientType = None,
+            iperf3_server_ssh_client: ssh.SSHClientType = None):
+
+        if (not ssh_client and
+                CONF.tobiko.tripleo.run_background_services_in_pod):
+            # this fails if `oc` (openshift client) is not available
+            # so, if `run_background_services_in_pod` is true, make sure `oc`
+            # is available
+            # _openshift.check_or_start_tobiko_iperf_command(server_ip)
+            LOG.debug("Running iperf3 client in the POD is not "
+                      "implemented yet")
+        else:
+            tripleo_nova.check_or_start_background_iperf_connection(
+                server_ip=server_ip,
+                port=port,
+                protocol=protocol,
+                ssh_client=ssh_client,
+                iperf3_server_ssh_client=iperf3_server_ssh_client)
+
 
 class TripleoTopologyNode(rhosp.RhospNode):
 
