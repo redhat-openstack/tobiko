@@ -70,6 +70,23 @@ RHOSP_OPTIONS = [
                 default=False,
                 deprecated_group=TRIPLEO_GROUP_NAME,
                 help="whether Ceph RGW is deployed"),
+
+    # Background connectivity related settings:
+    cfg.IntOpt('max_traffic_break_allowed',
+               default=0,
+               help="longest allowed single break time during the background "
+                    "connectivity tests like e.g. those using iperf3 "
+                    "(in seconds)"),
+    cfg.IntOpt('max_total_breaks_allowed',
+               default=0,
+               help="longest allowed total break time during the background "
+                    "connectivity tests like e.g. those using iperf3. "
+                    "This option represents total time when connetion "
+                    "was not working. "
+                    "For example it could be: not working for 3 seconds, "
+                    "then working for 60 seconds and then again not working "
+                    "for another 10 seconds. In such case this total break "
+                    "time would be 13 seconds."),
 ]
 
 TRIPLEO_OPTIONS = [
