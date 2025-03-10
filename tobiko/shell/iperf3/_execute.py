@@ -35,9 +35,9 @@ CONF = config.CONF
 LOG = log.getLogger(__name__)
 
 
-def _get_filepath(address: typing.Union[str, netaddr.IPAddress],
-                  path: str,
-                  ssh_client: ssh.SSHClientType = None) -> str:
+def get_iperf3_logs_filepath(address: typing.Union[str, netaddr.IPAddress],
+                             path: str,
+                             ssh_client: ssh.SSHClientType = None) -> str:
     if ssh_client:
         final_dir = _get_remote_filepath(path, ssh_client)
     else:
@@ -162,7 +162,7 @@ def execute_iperf3_client_in_background(
         iperf3_server_ssh_client: ssh.SSHClientType = None,
         output_dir: str = 'tobiko_iperf_results',
         **kwargs) -> None:
-    output_path = _get_filepath(address, output_dir, ssh_client)
+    output_path = get_iperf3_logs_filepath(address, output_dir, ssh_client)
     LOG.info(f'starting iperf3 client process to > {address} , '
              f'output file is : {output_path}')
     # just in case there is some leftover file from previous run,
@@ -178,7 +178,7 @@ def execute_iperf3_client_in_background(
         _stop_iperf3_server(
             port=port, protocol=protocol,
             ssh_client=iperf3_server_ssh_client)
-        _start_iperf3_server(
+        start_iperf3_server(
             port=port, protocol=protocol,
             ssh_client=iperf3_server_ssh_client)
 
@@ -235,7 +235,7 @@ def check_iperf3_client_results(address: typing.Union[str, netaddr.IPAddress],
                                 **kwargs):  # noqa; pylint: disable=W0613
     # This function expects that the result file is available locally already
     #
-    logfile = _get_filepath(address, output_dir, ssh_client)
+    logfile = get_iperf3_logs_filepath(address, output_dir, ssh_client)
     try:
         iperf_log_raw = sh.execute(
             f"cat {logfile}", ssh_client=ssh_client).stdout
@@ -296,7 +296,7 @@ def stop_iperf3_client(address: typing.Union[str, netaddr.IPAddress],
         sh.execute(f'sudo kill {pid}', ssh_client=ssh_client)
 
 
-def _start_iperf3_server(
+def start_iperf3_server(
         port: typing.Union[int, None],
         protocol: typing.Union[str, None],
         ssh_client: ssh.SSHClientType):

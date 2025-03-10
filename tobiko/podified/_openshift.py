@@ -13,13 +13,18 @@
 #    under the License.
 from __future__ import absolute_import
 
+import json
+import typing
+
 import netaddr
 from oslo_log import log
 
 import tobiko
 from tobiko import config
+from tobiko.shell import iperf3
 from tobiko.shell import ping
 from tobiko.shell import sh
+from tobiko.shell import ssh
 
 CONF = config.CONF
 LOG = log.getLogger(__name__)
@@ -327,7 +332,7 @@ def check_or_start_tobiko_ping_command(server_ip):
 
 
 def check_or_start_tobiko_command(cmd_args, pod_name, check_function):
-    pod_obj = _get_tobiko_command_pod(pod_name)
+    pod_obj = _get_pod(pod_name)
     if pod_obj:
         # in any case test is still running, check for failures:
         # execute process check i.e. go over results file
@@ -352,7 +357,7 @@ def check_or_start_tobiko_command(cmd_args, pod_name, check_function):
     check_function(pod_obj)
 
 
-def _get_tobiko_command_pod(pod_name):
+def _get_pod(pod_name):
     with tobiko_project_context():
         pod_sel = oc.selector(f'pod/{pod_name}')
         if len(pod_sel.objects()) > 1:
@@ -362,7 +367,7 @@ def _get_tobiko_command_pod(pod_name):
         return pod_sel.objects()[0]
 
 
-def _start_tobiko_command_pod(cmd_args, pod_name):
+def _start_pod(cmd, args, pod_name, pod_image):
     pod_def = {
         "apiVersion": "v1",
         "kind": "Pod",
@@ -373,9 +378,9 @@ def _start_tobiko_command_pod(cmd_args, pod_name):
         "spec": {
             "containers": [{
                 "name": pod_name,
-                "image": CONF.tobiko.podified.tobiko_image,
-                "command": ["tobiko"],
-                "args": cmd_args,
+                "image": pod_image,
+                "command": cmd,
+                "args": args,
             }],
             "restartPolicy": "Never"
         }
@@ -403,6 +408,12 @@ def _start_tobiko_command_pod(cmd_args, pod_name):
         return pod_objs[0]
 
 
+def _start_tobiko_command_pod(cmd_args, pod_name):
+    return _start_pod(
+        cmd=["tobiko"], args=cmd_args, pod_name=pod_name,
+        pod_image=CONF.tobiko.podified.tobiko_image)
+
+
 def _check_ping_results(pod):
     # NOTE(slaweq): we have to put ping log files in the directory
     #   as defined below because it is expected to be like that by the
@@ -427,3 +438,89 @@ def execute_in_pod(pod_name, command, container_name=None):
     with oc.project(CONF.tobiko.podified.osp_project):
         return oc.selector(f'pod/{pod_name}').object().execute(
             ['sh', '-c', command], container_name=container_name)
+
+
+def _get_iperf_client_pod_name(
+        address: typing.Union[str, netaddr.IPAddress]) -> str:
+    return f'tobiko-iperf-client-{address}'.replace('.', '-')
+
+
+def _store_iperf3_client_results(
+        address: typing.Union[str, netaddr.IPAddress],
+        output_dir: str = 'tobiko_iperf_results'):
+    # openshift client returns logs in dict where keyname has format
+    # <fully-qualified-name> -> <log output>
+    # In this case, we don't really need to check it as requested logs
+    # are only from the single POD so it can just try to get first
+    # item from the dict's values()
+    pod_obj = _get_pod(_get_iperf_client_pod_name(address))
+    raw_pod_logs = list(pod_obj.logs().values())[0]
+    if not raw_pod_logs:
+        LOG.warning('No logs from the iperf3 client POD.')
+        return
+
+    # Logs are printed by ipef3 client to the stdout in json
+    # format, but the format is different then what is stored
+    # in the file when "--logfile" option is used in ipef3
+    # So to be able to validate them in the same way, logs from
+    # stdout of the Pod needs to be converted
+    iperf3_results_data: dict = {
+        "intervals": []
+    }
+    for log_line in raw_pod_logs.split("\n"):
+        log_line_json = json.loads(log_line)
+        if log_line_json.get('event') != 'interval':
+            continue
+        iperf3_results_data["intervals"].append(
+            log_line_json["data"])
+
+    logfile = iperf3.get_iperf3_logs_filepath(address, output_dir)
+    with open(logfile, "w") as f:
+        json.dump(iperf3_results_data, f)
+
+
+def start_iperf3(
+        address: typing.Union[str, netaddr.IPAddress],
+        bitrate: int = None,
+        download: bool = None,
+        port: int = None,
+        protocol: str = None,
+        iperf3_server_ssh_client: ssh.SSHClientType = None,
+        **kwargs):  # noqa; pylint: disable=W0613
+
+    if iperf3_server_ssh_client:
+        iperf3.start_iperf3_server(
+            port, protocol, iperf3_server_ssh_client)
+
+    parameters = iperf3.iperf3_client_parameters(
+        address=address, bitrate=bitrate,
+        download=download, port=port, protocol=protocol,
+        timeout=0, logfile=iperf3.JSON_STREAM)
+
+    cmd_args = iperf3.get_iperf3_client_command(
+            parameters).as_list()[1:]
+    pod_name = _get_iperf_client_pod_name(address)
+    _start_pod(
+        cmd=["iperf3"], args=cmd_args, pod_name=pod_name,
+        pod_image=CONF.tobiko.podified.iperf3_image)
+
+
+def stop_iperf3_client(
+        address: typing.Union[str, netaddr.IPAddress],
+        **kwargs):  # noqa; pylint: disable=W0613
+    # First logs from the POD needs to be stored in the file
+    # so that it can be validated later
+    _store_iperf3_client_results(address)
+
+    pod_obj = _get_pod(_get_iperf_client_pod_name(address))
+    with tobiko_project_context():
+        pod_obj.delete(ignore_not_found=True)
+
+
+def iperf3_pod_alive(
+        address: typing.Union[str, netaddr.IPAddress],  # noqa; pylint: disable=W0613
+        **kwargs) -> bool:
+    pod_obj = _get_pod(_get_iperf_client_pod_name(address))
+    if not pod_obj:
+        return False
+    return pod_obj.as_dict()['status']['phase'] == 'Running'

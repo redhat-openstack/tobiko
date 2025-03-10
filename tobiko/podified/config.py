@@ -41,6 +41,13 @@ OPTIONS = [
                default='quay.io/podified-antelope-centos9/openstack-tobiko:current-podified',  # noqa
                help='Contaniner image used to run background tobiko commands '
                     'like e.g. `tobiko ping` in the POD.'),
+    cfg.StrOpt('iperf3_image',
+               default='quay.io/podified-antelope-centos9/openstack-tobiko:current-podified',  # noqa
+               help='Container image to run iperf3 client or server in the '
+                    'backgroun in POD. It can be any image which provides '
+                    'iperf3 but it should be in version 3.17 at least as '
+                    'this version supports "--json-stream" option required '
+                    'by Tobiko.'),
     cfg.IntOpt('tobiko_start_pod_timeout',
                default=100,
                help='Defines how long Tobiko will wait until POD with the '
