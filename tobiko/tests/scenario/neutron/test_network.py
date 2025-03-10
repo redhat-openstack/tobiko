@@ -66,6 +66,8 @@ class NetworkTest(BaseNetworkTest):
 @pytest.mark.background
 class BackgroundProcessTest(BaseNetworkTest):
 
+    stack = tobiko.required_fixture(stacks.AdvancedPeerServerStackFixture)
+
     def test_check_background_vm_ping(self):
         """ Tests that are designed to run in the background ,
             then collect results.
@@ -75,6 +77,22 @@ class BackgroundProcessTest(BaseNetworkTest):
             start a separate process i.e a background function"""
         topology.get_openstack_topology().check_or_start_background_vm_ping(
             self.stack.peer_stack.floating_ip_address)
+
+    def test_east_west_tcp_traffic_background_iperf(self):
+        """ Test East-West TCP traffic in the existing flow.
+
+        This test is intended to test TCP traffic with bigger amount of
+        data send between two VMs connected to the same tenant network.
+        Traffic is send in the single flow using "iperf" tool.
+        """
+
+        topology.get_openstack_topology().\
+            check_or_start_background_iperf_connection(
+                self.stack.fixed_ipv4,
+                port=5203,
+                protocol='tcp',
+                ssh_client=self.stack.peer_stack.ssh_client,
+                iperf3_server_ssh_client=self.stack.ssh_client)
 
 
 @pytest.mark.migrate_server
