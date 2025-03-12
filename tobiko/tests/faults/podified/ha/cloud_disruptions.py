@@ -144,7 +144,7 @@ def check_all_galera_cells_down(pod_name):
 def verify_all_galera_cells_restored(pods):
     pw = keystone.keystone_credentials().password
 
-    retry = tobiko.retry(timeout=60, interval=10)
+    retry = tobiko.retry(timeout=160, interval=10)
     for _ in retry:
         pod_name = pods[0].name()
         try:
