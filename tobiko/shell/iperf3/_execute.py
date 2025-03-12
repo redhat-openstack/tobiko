@@ -253,6 +253,9 @@ def check_iperf3_client_results(address: typing.Union[str, netaddr.IPAddress],
                       f'Error: {err}')
             return
 
+    # avoid test failure is iperf advertise some error/warning
+    iperf_log_raw = remove_log_lines_end_json_str(iperf_log_raw)
+
     LOG.debug(f'iperf log raw: {iperf_log_raw} ')
     if not iperf_log_raw:
         if config.is_prevent_create():
@@ -290,6 +293,17 @@ def check_iperf3_client_results(address: typing.Union[str, netaddr.IPAddress],
                              CONF.tobiko.rhosp.max_traffic_break_allowed)
     testcase.assertLessEqual(breaks_total,
                              CONF.tobiko.rhosp.max_total_breaks_allowed)
+
+
+def remove_log_lines_end_json_str(json_str: str) -> str:
+    lines = json_str.splitlines()
+    while lines:
+        if lines[-1].strip() == "}":
+            # Stop when we find }
+            break
+        # Remove last line, remove possible error logs
+        lines.pop()
+    return "\n".join(lines)
 
 
 def iperf3_client_alive(address: typing.Union[str, netaddr.IPAddress],  # noqa; pylint: disable=W0613
