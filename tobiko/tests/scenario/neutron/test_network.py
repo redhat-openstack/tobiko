@@ -68,6 +68,14 @@ class BackgroundProcessTest(BaseNetworkTest):
 
     stack = tobiko.required_fixture(stacks.AdvancedPeerServerStackFixture)
 
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.topology = topology.get_openstack_topology()
+        if not cls.topology.background_tests_supported:
+            tobiko.skip_test(
+                'Background tests not supported by this topology class.')
+
     def test_check_background_vm_ping(self):
         """ Tests that are designed to run in the background ,
             then collect results.
@@ -75,7 +83,8 @@ class BackgroundProcessTest(BaseNetworkTest):
             then execute some check logic i.e. a check function.
             if the process by name isn't running,
             start a separate process i.e a background function"""
-        topology.get_openstack_topology().check_or_start_background_vm_ping(
+
+        self.topology.check_or_start_background_vm_ping(
             self.stack.peer_stack.floating_ip_address)
 
     def test_east_west_tcp_traffic_background_iperf(self):
@@ -86,8 +95,7 @@ class BackgroundProcessTest(BaseNetworkTest):
         Traffic is send in the single flow using "iperf" tool.
         """
 
-        topology.get_openstack_topology().\
-            check_or_start_background_iperf_connection(
+        self.topology.check_or_start_background_iperf_connection(
                 self.stack.fixed_ipv4,
                 port=5203,
                 protocol='tcp',
@@ -102,8 +110,7 @@ class BackgroundProcessTest(BaseNetworkTest):
         Traffic is send in the single flow using "iperf" tool.
         """
 
-        topology.get_openstack_topology().\
-            check_or_start_background_iperf_connection(
+        self.topology.check_or_start_background_iperf_connection(
                 self.stack.peer_stack.floating_ip_address,
                 port=5204,
                 protocol='tcp',

@@ -333,6 +333,8 @@ class OpenStackTopology(tobiko.SharedFixture):
         neutron.SERVER: 'devstack@q-svc',
     }
 
+    background_tests_supported = False
+
     def __init__(self):
         super(OpenStackTopology, self).__init__()
         self._names: typing.Dict[str, OpenStackTopologyNode] = (
