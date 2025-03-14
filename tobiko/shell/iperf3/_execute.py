@@ -253,6 +253,18 @@ def check_iperf3_client_results(address: typing.Union[str, netaddr.IPAddress],
                       f'Error: {err}')
             return
 
+    LOG.debug(f'iperf log raw: {iperf_log_raw} ')
+    if not iperf_log_raw:
+        if config.is_prevent_create():
+            # Tobiko is not expected to create resources in this run
+            # so iperf should be already running and log file should
+            # be already there and not empty. If it is not,
+            # it should fail
+            tobiko.fail('Failed empty iperf file.')
+        else:
+            LOG.debug('Failed client iperf log file empty')
+            return
+
     iperf_log = json.loads(iperf_log_raw)
     longest_break = 0  # seconds
     breaks_total = 0  # seconds
