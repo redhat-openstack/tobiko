@@ -18,6 +18,9 @@ from tobiko.podified import _openshift
 from tobiko.podified import containers
 
 
+NOVA_LIBVIRT_CONTAINER = 'nova_compute'
+CONTAINER_RUNTIME = 'podman'
+
 EDPM_NODE = _topology.EDPM_NODE
 OCP_WORKER = _topology.OCP_WORKER
 EDPM_COMPUTE_GROUP = _openshift.EDPM_COMPUTE_GROUP

@@ -31,6 +31,7 @@ from tobiko import config
 from tobiko.openstack import glance
 from tobiko.openstack import keystone
 from tobiko.openstack import neutron
+from tobiko.openstack import nova
 from tobiko.openstack import stacks
 from tobiko.openstack import tests
 from tobiko.openstack import topology
@@ -38,7 +39,6 @@ from tobiko.tests.faults.ha import test_cloud_recovery
 from tobiko.shell import ping
 from tobiko.shell import sh
 from tobiko.tripleo import containers
-from tobiko.tripleo import nova
 from tobiko.tripleo import pacemaker
 from tobiko.tripleo import topology as tripleo_topology
 from tobiko import tripleo
@@ -760,6 +760,15 @@ def evac_failover_compute(compute_host, failover_type=sh.hard_reset_method):
         disrupt_node(compute_host, disrupt_method=failover_type)
 
 
+def get_random_compute_with_vms():
+    for compute in nova.list_hypervisors():
+        param = {'OS-EXT-SRV-ATTR:hypervisor_hostname':
+                 compute.hypervisor_hostname}
+        vm_list_per_compute = nova.list_servers(**param)
+        if len(vm_list_per_compute) > 0:
+            return compute.hypervisor_hostname
+
+
 def check_iha_evacuation(failover_type=None, vm_type=None):
     """check vms on compute host,disrupt compute host,
     check all vms evacuated and pingable"""
@@ -767,36 +776,37 @@ def check_iha_evacuation(failover_type=None, vm_type=None):
         LOG.info(f'Begin IHA tests iteration {iteration}')
         LOG.info('create 2 vms')
         tests.test_servers_creation(number_of_servers=2)
-        compute_host = nova.get_random_compute_with_vms_name()
-        vms_starting_state_df = nova.get_compute_vms_df(compute_host)
+        compute_host = get_random_compute_with_vms()
+        vms_starting_state = nova.list_servers(
+            **{'OS-EXT-SRV-ATTR:hypervisor_hostname': compute_host})
         if vm_type == 'shutoff':
-            nova.stop_all_instances()
+            nova.action_on_all_instances('shutoff')
         if vm_type == 'evac_image_vm':
             evac_vm_stack = tests.test_evacuable_server_creation()
-            evac_vm_id = nova.get_stack_server_id(evac_vm_stack)
-            org_nova_evac_df = nova.vm_df(evac_vm_id, nova.get_vms_table())
+            evac_vm_id = evac_vm_stack.server_details.id
+            old_nova_evac = nova.get_server(server_id=evac_vm_id)
         if not vm_type == 'shutoff':
-            nova.check_df_vms_ping(vms_starting_state_df)
+            nova.check_vms_ping(vms_starting_state)
         LOG.info(f'perform a failover on {compute_host}')
         evac_failover_compute(compute_host, failover_type=failover_type)
         test_cloud_recovery.overcloud_health_checks(passive_checks_only=True)
         if vm_type == 'evac_image_vm':
-            nova.check_vm_evacuations(vms_df_old=org_nova_evac_df,
+            nova.check_vm_evacuations(vms_old=old_nova_evac,
                                       compute_host=compute_host,
                                       timeout=600,
                                       check_no_evacuation=True)
             # delete evacuable tagged image because it prevents
             # non tagged evacuations if exists
             delete_evacuable_tagged_image()
-            new_nova_evac_df = nova.vm_df(evac_vm_id, nova.get_vms_table())
-            nova.check_vm_evacuations(org_nova_evac_df, new_nova_evac_df)
+            new_nova_evac = nova.get_server(server_id=evac_vm_id)
+            nova.check_vm_evacuations(old_nova_evac, new_nova_evac)
         else:
-            nova.check_vm_evacuations(vms_df_old=vms_starting_state_df,
+            nova.check_vm_evacuations(vms_old=vms_starting_state,
                                       compute_host=compute_host,
                                       timeout=600)
         LOG.info('check evac is Done')
         if not vm_type == 'shutoff':
-            nova.check_df_vms_ping(vms_starting_state_df)
+            nova.check_vms_ping(vms_starting_state)
 
 
 def check_iha_evacuation_evac_image_vm():

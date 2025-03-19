@@ -31,10 +31,14 @@ class HostnameError(tobiko.TobikoException):
 
 HOSTNAMES_CACHE: typing.MutableMapping[typing.Optional[ssh.SSHClientFixture],
                                        str] = weakref.WeakKeyDictionary()
+HOSTNAMES_FQDN_CACHE: \
+    typing.MutableMapping[typing.Optional[ssh.SSHClientFixture],
+                          str] = weakref.WeakKeyDictionary()
 
 
 def get_hostname(ssh_client: ssh.SSHClientType = None,
                  cached=True,
+                 fqdn=False,
                  **execute_params) -> str:
     ssh_client = ssh.ssh_client_fixture(ssh_client)
     if ssh_client is None:
@@ -42,25 +46,36 @@ def get_hostname(ssh_client: ssh.SSHClientType = None,
 
     if cached:
         try:
-            hostname = HOSTNAMES_CACHE[ssh_client]
+            if not fqdn:
+                hostname = HOSTNAMES_CACHE[ssh_client]
+            else:
+                hostname = HOSTNAMES_FQDN_CACHE[ssh_client]
         except KeyError:
             pass
         else:
             return hostname
 
     hostname = ssh_hostname(ssh_client=ssh_client,
+                            fqdn=fqdn,
                             **execute_params)
     if cached:
-        HOSTNAMES_CACHE[ssh_client] = hostname
+        if not fqdn:
+            HOSTNAMES_CACHE[ssh_client] = hostname
+        else:
+            HOSTNAMES_FQDN_CACHE[ssh_client] = hostname
     return hostname
 
 
 def ssh_hostname(ssh_client: ssh.SSHClientFixture,
+                 fqdn=False,
                  **execute_params) \
         -> str:
     tobiko.check_valid_type(ssh_client, ssh.SSHClientFixture)
+    command = 'hostname'
+    if fqdn:
+        command += ' -f'
     try:
-        result = _execute.execute('hostname',
+        result = _execute.execute(command,
                                   ssh_client=ssh_client,
                                   **execute_params)
     except _exception.ShellCommandFailed as ex:
