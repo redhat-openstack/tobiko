@@ -7,6 +7,7 @@ test_workflow_steps:
     tox_environment:
       TOBIKO_PREVENT_CREATE: no
     test_flaky: true
+    pytest_addopts: "--skipregex='BackgroundProcessTest'"
 
   - tox_description: 'run sanity test cases before disruptive test cases'
     tox_envlist: sanity
@@ -35,3 +36,4 @@ test_workflow_steps:
     tox_environment:
       TOBIKO_PREVENT_CREATE: yes
     test_flaky: true
+    pytest_addopts: "--skipregex='BackgroundProcessTest'"

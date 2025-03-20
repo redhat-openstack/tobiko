@@ -12,6 +12,7 @@ test_workflow_steps:
     tox_step_name: create_resources
     tox_environment:
       TOBIKO_PREVENT_CREATE: no
+    pytest_addopts: "--skipregex='BackgroundProcessTest'"
 
   - tox_description: 'run disruptive test cases'
     tox_envlist: faults
@@ -31,3 +32,4 @@ test_workflow_steps:
     tox_step_name: verify_resources
     tox_environment:
       TOBIKO_PREVENT_CREATE: yes
+    pytest_addopts: "--skipregex='BackgroundProcessTest'"

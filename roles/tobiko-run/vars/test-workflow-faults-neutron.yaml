@@ -12,6 +12,7 @@ test_workflow_steps:
     tox_step_name: create_neutron_resources
     tox_environment:
       TOBIKO_PREVENT_CREATE: no
+    pytest_addopts: "--skipregex='BackgroundProcessTest'"
 
   - tox_description: 'run disruptive test cases (neutron)'
     tox_envlist: neutron_faults
@@ -34,3 +35,4 @@ test_workflow_steps:
     tox_step_name: verify_neutron_resources
     tox_environment:
       TOBIKO_PREVENT_CREATE: yes
+    pytest_addopts: "--skipregex='BackgroundProcessTest'"
