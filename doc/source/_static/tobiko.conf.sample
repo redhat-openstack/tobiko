@@ -1,6 +1,39 @@
 [DEFAULT]
 
 
+[advanced_vm]
+
+#
+# From tobiko
+#
+
+# Default advanced_vm image name (string value)
+#image_name = <None>
+
+# Default advanced_vm image URL. A local path could be defined. Example:
+# file:///tmp/cirros.img (string value)
+#image_url = <None>
+
+# Default advanced_vm container format (string value)
+#container_format = <None>
+
+# Default advanced_vm disk format (string value)
+#disk_format = <None>
+
+# Default advanced_vm username (string value)
+#username = <None>
+
+# Default advanced_vm password (string value)
+#password = <None>
+
+# Default advanced_vm SSH connection timeout (seconds) (floating point value)
+#connection_timeout = <None>
+
+# Allow to disable SSH auth algorithmsin order to SSH to old servers likeCirrOS ones
+# (dict value)
+#disabled_algorithms = <None>
+
+
 [ansible]
 
 #
@@ -23,7 +56,8 @@
 # Default cirros image name (string value)
 #image_name = <None>
 
-# Default cirros image URL (string value)
+# Default cirros image URL. A local path could be defined. Example:
+# file:///tmp/cirros.img (string value)
 #image_url = <None>
 
 # Default cirros container format (string value)
@@ -188,10 +222,7 @@
 #
 
 # Network for creating ports on an external network (string value)
-#external_network = <None>
-
-# Network for creating floating IPs (string value)
-#floating_network = <None>
+#external_network = public
 
 # The CIDR block to allocate IPv4 subnets from (string value)
 #ipv4_cidr = 10.100.0.0/16
@@ -200,7 +231,7 @@
 #ipv4_prefixlen = 24
 
 # List of nameservers IPv4 addresses (list value)
-#ipv4_dns_nameservers = 8.8.8.8
+#ipv4_dns_nameservers = <None>
 
 # The CIDR block to allocate IPv6 subnets from (string value)
 #ipv6_cidr = fc00::/48
@@ -217,7 +248,7 @@
 # unknown cause.
 #  - Too big MTU values (like greater than 1400) may be refused during network creation
 # (integer value)
-#custom_mtu_size = 1350
+#custom_mtu_size = 1300
 
 # Host where nameservers files are located (string value)
 #nameservers_host = <None>
@@ -253,10 +284,10 @@
 # Default SSH key type to login to server instances (string value)
 #key_type = ecdsa
 
-# Timeout (in seconds) for establishing connection to advanced vms (floating point value)
+# Timeout (in seconds) for establishing connection to advanced_vm (floating point value)
 #advanced_vm_connection_timeout = 1500.0
 
-# Timeout (in seconds) till advanced vm is reachable (floating point value)
+# Timeout (in seconds) till advanced_vm is reachable (floating point value)
 #advanced_vm_is_reachable_timeout = 900.0
 
 # Timeout (in seconds) till cloud-init based server is reachable (floating point value)
@@ -306,6 +337,51 @@
 #timeout = 300.0
 
 
+[podified]
+
+#
+# From tobiko
+#
+
+# Openshift project that includes the Openstack resources (string value)
+#osp_project = openstack
+
+# Name of the OpenShift project which will be used to run PODs with tobiko background
+# commands, like e.g.`tobiko ping` (string value)
+#background_tasks_project = tobiko
+
+# Contaniner image used to run background tobiko commands like e.g. `tobiko ping` in the
+# POD. (string value)
+#tobiko_image = quay.io/podified-antelope-centos9/openstack-tobiko:current-podified
+
+# Container image to run iperf3 client or server in the backgroun in POD. It can be any
+# image which provides iperf3 but it should be in version 3.17 at least as this version
+# supports "--json-stream" option required by Tobiko. (string value)
+#iperf3_image = quay.io/podified-antelope-centos9/openstack-tobiko:current-podified
+
+# Defines how long Tobiko will wait until POD with the background command (like tobiko
+# ping) will be `Running`. In most cases, if tobiko image is already in the local
+# registry it will need just few seconds to start POD but if image is not yet cached
+# locally it may take a bit longer time to download it. (integer value)
+#tobiko_start_pod_timeout = 100
+
+# List of tolerations that have to be applied to the tobiko background pod. It is hence
+# a list of dictionaries. No nested disctionaries can be used. The list has to be bound
+# by [] and each dict has to be bound by {}. Example: [{effect: NoSchedule, key:
+# testOperator, value: true}, {effect: NoExecute, key: testOperator, value: true}] (list
+# value)
+#tobiko_pod_tolerations = []
+
+# Extra network interface that needs to be attached to the tobiko background pod.
+# (string value)
+#tobiko_pod_extra_network = <None>
+
+# Configuration that has to be added to the tobiko background pod in order to select a
+# specific OCP node. The provided value has to be a non-nested dictionary without any {}
+# bouds. Example: kubernetes.io/hostname:worker-3 (dict value)
+#tobiko_pod_node_selector =
+
+
 [rhosp]
 
 #
@@ -341,6 +417,20 @@
 
 # whether Ceph RGW is deployed (boolean value)
 #ceph_rgw = false
+
+# longest allowed single break time during the background connectivity tests like e.g.
+# those using iperf3 (in seconds) (integer value)
+#max_traffic_break_allowed = 0
+
+# longest allowed total break time during the background connectivity tests like e.g.
+# those using iperf3. This option represents total time when connetion was not working.
+# For example it could be: not working for 3 seconds, then working for 60 seconds and
+# then again not working for another 10 seconds. In such case this total break time
+# would be 13 seconds. (integer value)
+#max_total_breaks_allowed = 0
+
+# maximum number of unreplied pings during the background ping tests. (integer value)
+#max_ping_loss_allowed = 10
 
 
 [shell]
@@ -509,34 +599,9 @@
 # value)
 #overcloud_groups_dict = cmp:compute,ctrl:controller
 
-
-[advanced_vm]
-
-#
-# From tobiko
-#
-
-# Default advanced_vm image name (string value)
-#image_name = <None>
-
-# Default advanced_vm image URL (string value)
-#image_url = <None>
-
-# Default advanced_vm container format (string value)
-#container_format = <None>
-
-# Default advanced_vm disk format (string value)
-#disk_format = <None>
-
-# Default advanced_vm username (string value)
-#username = <None>
-
-# Default advanced_vm password (string value)
-#password = <None>
-
-# Default advanced_vm SSH connection timeout (seconds) (floating point value)
-#connection_timeout = <None>
-
-# Allow to disable SSH auth algorithmsin order to SSH to old servers likeCirrOS ones
-# (dict value)
-#disabled_algorithms = <None>
+# Wheter background services, like e.g. ping or iperf3 should be run directly from the
+# undercloud node (default) or using POD on the OCP cluster. The latter is useful e.g.
+# for the data plane adoption jobs when background ping should be run from the POD even
+# before adoption but it requires access to the OpenShift cluster API. (boolean value)
+# Deprecated group/name - [tripleo]/run_background_ping_in_pod
+#run_background_services_in_pod = false
