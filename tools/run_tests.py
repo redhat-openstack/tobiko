@@ -26,7 +26,7 @@ TOP_DIR = os.path.dirname(os.path.dirname(__file__))
 if TOP_DIR not in sys.path:
     sys.path.insert(0, TOP_DIR)
 
-from tools import common  # noqa
+from tools import common
 
 LOG = common.get_logger(__name__)
 

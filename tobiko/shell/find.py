@@ -16,7 +16,7 @@
 from __future__ import absolute_import
 
 import math
-import typing  # noqa
+import typing
 
 import tobiko
 from tobiko.shell import sh

@@ -22,7 +22,7 @@ TOP_DIR = os.path.realpath(os.path.dirname(os.path.dirname(__file__)))
 if TOP_DIR not in sys.path:
     sys.path.insert(0, TOP_DIR)
 
-from tools import common  # noqa
+from tools import common
 
 
 def main():

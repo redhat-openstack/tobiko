@@ -28,7 +28,7 @@ from tobiko.shell.sh import _io
 from tobiko.shell.sh import _local
 from tobiko.shell.sh import _process
 from tobiko.shell import ssh
-import typing  # noqa
+
 
 LOG = log.getLogger(__name__)
 

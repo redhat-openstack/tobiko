@@ -16,7 +16,7 @@ from __future__ import absolute_import
 import contextlib
 import collections
 import sys
-import typing  # noqa
+import typing
 
 from oslo_log import log
 import testtools

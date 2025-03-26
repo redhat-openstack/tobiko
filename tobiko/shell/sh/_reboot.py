@@ -14,7 +14,6 @@
 from __future__ import absolute_import
 
 import enum
-import typing  # noqa
 
 from oslo_log import log
 
