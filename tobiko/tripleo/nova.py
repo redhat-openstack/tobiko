@@ -16,11 +16,9 @@
 from __future__ import absolute_import
 
 import typing
-from functools import wraps
 
 import netaddr
 
-import tobiko
 from tobiko.tripleo import overcloud
 from tobiko.shell import iperf3
 from tobiko.shell import ping
@@ -42,48 +40,6 @@ def check_or_start_background_vm_ping(server_ip):
         bg_process_name='tobiko_background_ping',
         check_function=ping.check_ping_statistics,
         ping_ip=server_ip)
-
-
-# Test is inteded for D/S env
-@overcloud.skip_if_missing_overcloud
-def skip_check_or_start_background_vm_ping(server_ip):
-    """Like the above, but skips the ping check, truncates results
-    and reexecutes the test"""
-    sh.check_or_start_background_process(
-        bg_function=ping.write_ping_to_file,
-        bg_process_name='tobiko_background_ping',
-        check_function=ping.skip_check_ping_statistics,
-        ping_ip=server_ip)
-
-
-def skip_background_vm_ping_checks(server_ip):
-    """Skip ping_check_decorator - to be used when traffic to vm
-    must be dropped for the duration of the test - func"""
-    def decor(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):  # pylint: disable=W0613
-            tobiko.add_cleanup(
-                skip_check_or_start_background_vm_ping, server_ip)
-            check_or_start_background_vm_ping(server_ip)
-            func(*args)
-        return wrapper
-    return decor
-
-
-def skip_background_vm_ping_checks_when_nondvr(server_ip):
-    """Similar to skip_background_vm_ping_checks, but the background ping
-    checks and the restart of the background ping process is only executed when
-    DVR is disabled"""
-    def decor(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):  # pylint: disable=W0613
-            if not overcloud.is_dvr_enabled():
-                tobiko.add_cleanup(
-                    skip_check_or_start_background_vm_ping, server_ip)
-                check_or_start_background_vm_ping(server_ip)
-            func(*args, **kwargs)
-        return wrapper
-    return decor
 
 
 # Test is inteded for D/S env
