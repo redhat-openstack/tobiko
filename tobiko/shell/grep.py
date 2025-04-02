@@ -20,6 +20,7 @@ import typing  # noqa
 import tobiko
 from tobiko.shell import sh
 from tobiko.shell import ssh
+from tobiko.shell.sh import _command
 
 
 class NoMatchingLinesFound(tobiko.TobikoException):
@@ -28,8 +29,8 @@ class NoMatchingLinesFound(tobiko.TobikoException):
 
 
 def grep(pattern: str,
-         command: typing.Optional[sh.ShellCommandType] = None,
-         grep_command: sh.ShellCommandType = 'zgrep -Eh',
+         command: typing.Optional[_command.ShellCommandType] = None,
+         grep_command: _command.ShellCommandType = 'zgrep -Eh',
          files: typing.Optional[typing.List[str]] = None,
          ssh_client: ssh.SSHClientFixture = None,
          blank_lines: bool = True,
@@ -77,6 +78,6 @@ def grep_files(pattern: str,
 
 
 def grep_lines(pattern: str,
-               command: sh.ShellCommandType,
+               command: _command.ShellCommandType,
                **grep_params) -> typing.List[str]:
     return grep(pattern=pattern, command=command, **grep_params)

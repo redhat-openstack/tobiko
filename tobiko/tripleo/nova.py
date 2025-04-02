@@ -30,18 +30,29 @@ from tobiko.shell import ssh
 
 # Test is inteded for D/S env
 @overcloud.skip_if_missing_overcloud
-def check_or_start_background_vm_ping(server_ip):
+def check_or_start_background_vm_ping(
+        server_ip: typing.Union[str, netaddr.IPAddress],
+        ssh_client: ssh.SSHClientType = None):
     """Check if process exists, if so stop and check ping health
     if not : start a new separate ping process.
     Executes a Background ping to a vm floating_ip,
     this test is intended to be run and picked up again
     by the next tobiko run. Ping results are parsed
     and a failure is raised if ping failure is above a certain amount"""
-    sh.check_or_start_background_process(
-        bg_function=ping.write_ping_to_file,
-        bg_process_name='tobiko_background_ping',
-        check_function=ping.check_ping_statistics,
-        ping_ip=server_ip)
+    if ssh_client is None:
+        sh.check_or_start_background_process(
+            bg_function=ping.write_ping_to_file,
+            bg_process_name='tobiko_background_ping',
+            check_function=ping.check_ping_statistics,
+            ping_ip=server_ip)
+    else:
+        sh.check_or_start_external_process(
+            start_function=ping.execute_ping_in_background,
+            check_function=ping.check_ping_results,
+            liveness_function=ping.ping_alive,
+            stop_function=ping.stop_ping,
+            address=server_ip,
+            ssh_client=ssh_client)
 
 
 # Test is inteded for D/S env

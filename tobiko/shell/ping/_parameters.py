@@ -172,8 +172,8 @@ def get_positive_integer(name, value, default=None):
         return get_positive_integer(name, getattr(default, name))
     if value is not None:
         value = int(value)
-        if value <= 0:
-            message = "{!r} value must be positive: {!r}".format(
+        if value < 0:
+            message = "{!r} value must be zero or greater: {!r}".format(
                 name, value)
             raise ValueError(message)
     return value

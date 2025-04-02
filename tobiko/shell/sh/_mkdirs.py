@@ -23,6 +23,6 @@ from tobiko.shell import ssh
 def make_remote_dirs(file_name: str,
                      ssh_client: ssh.SSHClientType = None,
                      sudo: bool = None):
-    _execute.execute(f'mkdirs -p "{file_name}"',
+    _execute.execute(f'mkdir -p "{file_name}"',
                      ssh_client=ssh_client,
                      sudo=sudo)

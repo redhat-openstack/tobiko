@@ -27,13 +27,17 @@ import netaddr
 from oslo_log import log
 
 import tobiko
+from tobiko import config
+from tobiko.shell import files
 from tobiko.shell import sh
+from tobiko.shell import ssh
 from tobiko.shell.ping import _interface
 from tobiko.shell.ping import _exception
 from tobiko.shell.ping import _parameters
 from tobiko.shell.ping import _statistics
 
 
+CONF = config.CONF
 LOG = log.getLogger(__name__)
 
 
@@ -466,12 +470,16 @@ def get_vm_ping_log_files(glob_ping_log_pattern='tobiko_ping_results/ping_'
         yield vm_ping_log_filename
 
 
-def check_ping_statistics(failure_limit=10):
+def check_ping_statistics(failure_limit=None):
     """Gets a list of ping_vm_log files and
     iterates their lines, checks if max ping
     failures have been reached per fip=file"""
+    if failure_limit is None:
+        failure_limit = CONF.tobiko.rhosp.max_ping_loss_allowed
+    ping_files_found = 0
     # iterate over ping_vm_log files:
     for filename in list(get_vm_ping_log_files()):
+        ping_files_found += 1
         with io.open(filename, 'rt') as fd:
             LOG.info(f'checking ping log file: {filename}, '
                      f'failure_limit is :{failure_limit}')
@@ -496,8 +504,140 @@ def check_ping_statistics(failure_limit=10):
                             f'to vm fip destination: '
                             f'{ping_failures_list[-1]["destination"]}')
 
+    if ping_files_found == 0:
+        tobiko.fail('No ping log files found')
+
 
 def skip_check_ping_statistics():
     for filename in list(get_vm_ping_log_files()):
         tobiko.truncate_logfile(filename)
         LOG.info(f'skipping ping failures in ping log file: {filename}')
+
+
+def _get_ping_pid(
+        address: typing.Union[str, netaddr.IPAddress, None] = None,
+        ssh_client: ssh.SSHClientType = None) -> typing.Union[int, None]:
+    ping_command = 'ping'
+    if address is not None:
+        ping_command += f' .*{address}'
+    ping_processes = sh.list_processes(command_line=ping_command,
+                                       ssh_client=ssh_client)
+    if not ping_processes:
+        LOG.debug('no ping processes were found')
+        return None
+    else:
+        return ping_processes.unique.pid
+
+
+def ping_alive(address: typing.Union[str, netaddr.IPAddress],  # noqa; pylint: disable=W0613
+               ssh_client: ssh.SSHClientType = None,
+               **kwargs) -> bool:
+    return bool(_get_ping_pid(address=address, ssh_client=ssh_client))
+
+
+def stop_ping(address: typing.Union[str, netaddr.IPAddress],
+              ssh_client: ssh.SSHClientType = None,
+              **kwargs):  # noqa; pylint: disable=W0613
+    pid = _get_ping_pid(address=address, ssh_client=ssh_client)
+    if pid:
+        LOG.info(f'ping process to > {address} already running '
+                 f'with PID: {pid}')
+        # the SIGINT signal makes ping write the "ping statistics" block
+        # before exiting
+        sh.execute(f'kill -s SIGINT {pid}', ssh_client=ssh_client, sudo=True)
+
+
+def _get_ping_logs_filepath(address: typing.Union[str, netaddr.IPAddress],
+                            path: str,
+                            ssh_client: ssh.SSHClientType = None) -> str:
+    final_dir = files.get_home_absolute_filepath(path, ssh_client)
+    filename = f'ping_{address}.log'
+    return os.path.join(final_dir, filename)
+
+
+# TODO(eolivare): replace check_ping_statistics with check_ping_results
+def check_ping_results(address: typing.Union[str, netaddr.IPAddress],
+                       output_dir: str = 'tobiko_ping_results',
+                       ssh_client: ssh.SSHClientType = None,
+                       **kwargs):  # noqa; pylint: disable=W0613
+    testcase = tobiko.get_test_case()
+    testcase.assertFalse(ping_alive(address, ssh_client))
+
+    # This function expects that the result file is available locally already
+    logfile = _get_ping_logs_filepath(address, output_dir, ssh_client)
+    try:
+        ping_log_raw = sh.execute(
+            f"cat {logfile}", ssh_client=ssh_client).stdout
+    except sh.ShellCommandFailed as err:
+        if config.is_prevent_create():
+            # Tobiko is not expected to create resources in this run
+            # so ping should be already running and log file should
+            # be already there, if it is not, it should fail
+            tobiko.fail('Failed to read ping log from the file. '
+                        f'Ping Destination IP address: {address}; '
+                        f'Logfile: {logfile}')
+        else:
+            # Tobiko is creating resources so it is normal that file was not
+            # there yet
+            LOG.debug(f'Failed to read ping log from the file. '
+                      f'Error: {err}')
+            return
+
+    LOG.debug(f'ping log raw: {ping_log_raw}')
+    if not ping_log_raw:
+        if config.is_prevent_create():
+            # Tobiko is not expected to create resources in this run
+            # so ping should be already running and log file should
+            # be already there, if it is not, it should fail
+            tobiko.fail('Failed empty ping file.')
+        else:
+            LOG.debug('Failed ping log file empty')
+            return
+
+    files.truncate_client_logfile(logfile, ssh_client)
+
+    ping_stats = _statistics.parse_ping_statistics(ping_log_raw)
+
+    testcase.assertGreater(ping_stats.transmitted, 0)
+    testcase.assertGreater(ping_stats.received, 0)
+    testcase.assertLessEqual(ping_stats.transmitted - ping_stats.received,
+                             CONF.tobiko.rhosp.max_ping_loss_allowed)
+
+
+def start_background_ping(address: typing.Union[str, netaddr.IPAddress],
+                          output_path: str,
+                          ssh_client: ssh.SSHClientType = None):
+    parameters = _parameters.get_ping_parameters(host=address,
+                                                 count=0,
+                                                 deadline=0)
+    command = _interface.get_ping_command(parameters, ssh_client)
+    # both stdout and stderr need to be written to the provided log file
+    command += '2>&1'
+    command += f'> {output_path}'
+    process = sh.process(command, ssh_client=ssh_client)
+    process.execute()
+
+
+# TODO(eolivare): replace write_ping_to_file with execute_ping_in_background
+def execute_ping_in_background(address: typing.Union[str, netaddr.IPAddress],
+                               output_dir: str = 'tobiko_ping_results',
+                               ssh_client: ssh.SSHClientType = None,
+                               **kwargs):  # noqa; pylint: disable=W0613
+    output_path = _get_ping_logs_filepath(address, output_dir, ssh_client)
+    LOG.info(f'starting ping process to > {address} , '
+             f'output file is : {output_path}')
+    # just in case there is some leftover file from previous run,
+    # it needs to be removed, otherwise ping will append new log
+    # to the end of the existing file and this will make output
+    # file to be malformed
+    files.remove_old_logfile(output_path, ssh_client=ssh_client)
+
+    # Stop ping in case it is running
+    stop_ping(address, ssh_client)
+
+    # Start ping again
+    start_background_ping(address, output_path, ssh_client)
+
+    # if ping does not start properly, fail the test
+    if not ping_alive(address, ssh_client):
+        tobiko.fail('background ping process did not start')

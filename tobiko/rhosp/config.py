@@ -87,6 +87,10 @@ RHOSP_OPTIONS = [
                     "then working for 60 seconds and then again not working "
                     "for another 10 seconds. In such case this total break "
                     "time would be 13 seconds."),
+    cfg.IntOpt('max_ping_loss_allowed',
+               default=10,
+               help="maximum number of unreplied pings during the "
+                    "background ping tests."),
 ]
 
 TRIPLEO_OPTIONS = [
