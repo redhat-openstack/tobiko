@@ -15,7 +15,7 @@
 #    under the License.
 from __future__ import absolute_import
 
-import typing  # noqa
+import typing
 from urllib import parse
 
 import netaddr

@@ -15,9 +15,10 @@
 #    under the License.
 from __future__ import absolute_import
 
+import typing
+
 import netaddr
 from oslo_log import log
-import typing  # noqa
 
 import tobiko
 from tobiko.shell import sh

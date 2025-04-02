@@ -15,7 +15,6 @@
 #    under the License.
 from __future__ import absolute_import
 
-import typing  # noqa
 from os.path import expanduser
 
 from oslo_log import log

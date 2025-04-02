@@ -18,7 +18,7 @@ from __future__ import absolute_import
 import io
 import os
 import time
-import typing  # noqa
+import typing
 from multiprocessing import Process as MultiProcess
 
 import psutil

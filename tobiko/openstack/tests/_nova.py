@@ -16,7 +16,6 @@
 from __future__ import absolute_import
 
 import os
-import typing  # noqa
 
 import tobiko
 from tobiko.shell import ping
