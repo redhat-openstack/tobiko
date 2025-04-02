@@ -211,8 +211,6 @@ class PodifiedTopology(rhosp.RhospTopology):
             'check_function': iperf3.check_iperf3_client_results
         }
         if not ssh_client:
-            LOG.debug("Running iperf3 client in the POD is "
-                      "implemented yet.")
             kwargs['start_function'] = _openshift.start_iperf3
             kwargs['liveness_function'] = _openshift.iperf3_pod_alive
             kwargs['stop_function'] = _openshift.stop_iperf3_client
