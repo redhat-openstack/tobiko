@@ -470,16 +470,15 @@ def get_vm_ping_log_files(glob_ping_log_pattern='tobiko_ping_results/ping_'
         yield vm_ping_log_filename
 
 
-def check_ping_statistics(failure_limit=None):
+def check_ping_statistics():
     """Gets a list of ping_vm_log files and
     iterates their lines, checks if max ping
     failures have been reached per fip=file"""
-    if failure_limit is None:
-        failure_limit = CONF.tobiko.rhosp.max_ping_loss_allowed
-    ping_files_found = 0
+    failure_limit = CONF.tobiko.rhosp.max_ping_loss_allowed
+    ping_files_found = False
     # iterate over ping_vm_log files:
     for filename in list(get_vm_ping_log_files()):
-        ping_files_found += 1
+        ping_files_found = True
         with io.open(filename, 'rt') as fd:
             LOG.info(f'checking ping log file: {filename}, '
                      f'failure_limit is :{failure_limit}')
@@ -504,7 +503,7 @@ def check_ping_statistics(failure_limit=None):
                             f'to vm fip destination: '
                             f'{ping_failures_list[-1]["destination"]}')
 
-    if ping_files_found == 0:
+    if not ping_files_found:
         tobiko.fail('No ping log files found')
 
 
