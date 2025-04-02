@@ -246,7 +246,8 @@ def check_iperf3_client_results(address: typing.Union[str, netaddr.IPAddress],
 def remove_log_lines_end_json_str(json_str: str) -> str:
     lines = json_str.splitlines()
     while lines:
-        if lines[-1].strip() == "}":
+        last_line = lines[-1].strip()
+        if len(last_line) > 0 and last_line[-1] == "}":
             # Stop when we find }
             break
         # Remove last line, remove possible error logs
