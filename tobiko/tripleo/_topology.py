@@ -190,14 +190,19 @@ class TripleoTopology(rhosp.RhospTopology):
                         "name: '%s'", node.name)
         return subgroups
 
-    def check_or_start_background_vm_ping(self, server_ip):
-        if CONF.tobiko.tripleo.run_background_services_in_pod:
+    def check_or_start_background_vm_ping(
+            self,
+            server_ip: typing.Union[str, netaddr.IPAddress],
+            ssh_client: ssh.SSHClientType = None):
+        if (not ssh_client and
+                CONF.tobiko.tripleo.run_background_services_in_pod):
             # this fails if `oc` (openshift client) is not available
             # so, if `run_background_services_in_pod` is true, make sure
             # `oc` is available
             _openshift.check_or_start_tobiko_ping_command(server_ip)
         else:
-            tripleo_nova.check_or_start_background_vm_ping(server_ip)
+            tripleo_nova.check_or_start_background_vm_ping(
+                server_ip, ssh_client=ssh_client)
 
     def check_or_start_background_iperf_connection(
             self,
