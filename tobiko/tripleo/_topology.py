@@ -28,6 +28,7 @@ from tobiko.openstack import topology
 from tobiko.podified import _openshift
 from tobiko import rhosp
 from tobiko.shell import files
+from tobiko.shell import iperf3
 from tobiko.shell import sh
 from tobiko.shell import ssh
 from tobiko.tripleo import _overcloud
@@ -206,21 +207,28 @@ class TripleoTopology(rhosp.RhospTopology):
             ssh_client: ssh.SSHClientType = None,
             iperf3_server_ssh_client: ssh.SSHClientType = None):
 
+        kwargs = {
+            'port': port,
+            'protocol': protocol,
+            'ssh_client': ssh_client,
+            'iperf3_server_ssh_client': iperf3_server_ssh_client,
+        }
+
         if (not ssh_client and
                 CONF.tobiko.tripleo.run_background_services_in_pod):
             # this fails if `oc` (openshift client) is not available
             # so, if `run_background_services_in_pod` is true, make sure `oc`
             # is available
             # _openshift.check_or_start_tobiko_iperf_command(server_ip)
-            LOG.debug("Running iperf3 client in the POD is not "
-                      "implemented yet")
+            kwargs['address'] = server_ip
+            kwargs['check_function'] = iperf3.check_iperf3_client_results
+            kwargs['start_function'] = _openshift.start_iperf3
+            kwargs['liveness_function'] = _openshift.iperf3_pod_alive
+            kwargs['stop_function'] = _openshift.stop_iperf3_client
+            sh.check_or_start_external_process(**kwargs)
         else:
-            tripleo_nova.check_or_start_background_iperf_connection(
-                server_ip=server_ip,
-                port=port,
-                protocol=protocol,
-                ssh_client=ssh_client,
-                iperf3_server_ssh_client=iperf3_server_ssh_client)
+            kwargs['server_ip'] = server_ip
+            tripleo_nova.check_or_start_background_iperf_connection(**kwargs)
 
 
 class TripleoTopologyNode(rhosp.RhospNode):
