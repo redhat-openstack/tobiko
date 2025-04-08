@@ -1,0 +1,11 @@
+---
+
+test_workflow_steps:
+  - tox_description: 'create neutron workload resources'
+    tox_envlist: neutron
+    tox_step_name: create_resources
+  - tox_description: 'check neutron workload resources'
+    tox_envlist: neutron
+    tox_step_name: check_resources
+    tox_environment:
+      TOBIKO_PREVENT_CREATE: yes
