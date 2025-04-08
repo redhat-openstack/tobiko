@@ -614,6 +614,9 @@ def check_or_start_external_process(start_function,
             stop_function(**kwargs)
             LOG.info('checked and stopped previous external processes and log '
                      'starting a new external process')
+            # wait before running check_function, it may take a couple of
+            # seconds to write the log file
+            time.sleep(3)
     else:
         # First time the test is run:
         # if background process by specific name is not present ,
