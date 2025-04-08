@@ -224,7 +224,6 @@ class TripleoTopology(rhosp.RhospTopology):
             # this fails if `oc` (openshift client) is not available
             # so, if `run_background_services_in_pod` is true, make sure `oc`
             # is available
-            # _openshift.check_or_start_tobiko_iperf_command(server_ip)
             kwargs['address'] = server_ip
             kwargs['check_function'] = iperf3.check_iperf3_client_results
             kwargs['start_function'] = _openshift.start_iperf3
