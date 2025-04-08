@@ -234,7 +234,7 @@ os-refresh-config===13.0.1
 os-resource-classes===1.1.0
 os-service-types===1.7.0
 os-testr===2.0.1
-os-traits===2.7.0
+os-traits===3.4.0;python_version>='3.9'
 os-vif===2.7.1
 os-win===5.6.0
 os-xenapi===0.3.4
