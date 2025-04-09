@@ -1,0 +1,7 @@
+---
+other:
+  - |
+    Two new tests have been added to the existing list of BackgroundProcessTest:
+
+      * ``test_check_background_vm_ping_east_west``: checks connectivity between two VMs connected to the same network.
+      * ``test_check_background_vm_ping_snat``: checks external connectivity from a VM without FIP, connected to the external network through a router.
