@@ -108,6 +108,13 @@ class BackgroundProcessTest(BaseNetworkTest):
             ext_subnet['gateway_ip'],
             ssh_client=self.stack.ssh_client)
 
+    def test_check_background_vm_ping_east_west(self):
+        """Pings between VMs conected to the same tenant network,
+        validating east-west connectivity."""
+        self.topology.check_or_start_background_vm_ping(
+            self.stack.fixed_ipv4,
+            ssh_client=self.stack.peer_stack.ssh_client)
+
     def test_east_west_tcp_traffic_background_iperf(self):
         """ Test East-West TCP traffic in the existing flow.
 
