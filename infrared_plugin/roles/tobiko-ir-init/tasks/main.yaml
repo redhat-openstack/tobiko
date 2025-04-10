@@ -12,7 +12,7 @@
   vars:
     deploy_dir: '{{ tobiko_src_dir | realpath }}'
     deploy_git_repo: '{{ tobiko_git_repo }}'
-    deploy_git_refspec: "{{ tobiko_git_refspec | default('0.8.8') }}"
+    deploy_git_refspec: "{{ tobiko_git_refspec | default('0.8.9') }}"
     deploy_git_remote: "{{ tobiko_git_remote | default('') }}"
   when: create_tobiko_dir is changed
 
