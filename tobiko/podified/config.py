@@ -32,6 +32,10 @@ OPTIONS = [
     cfg.StrOpt('osp_project',
                default='openstack',
                help="Openshift project that includes the Openstack resources"),
+    cfg.StrOpt('dataplane_node_ssh_key_secret',
+               default='dataplane-ansible-ssh-private-key-secret',
+               help="Name of the Openshift secret where ssh keys to connect "
+                    "to EDPM nodes can be obtained from."),
     cfg.StrOpt('background_tasks_project',
                default='tobiko',
                help='Name of the OpenShift project which will be used to run '

@@ -32,7 +32,6 @@ LOG = log.getLogger(__name__)
 
 OSP_CONTROLPLANE = 'openstackcontrolplane'
 OSP_DP_NODESET = 'openstackdataplanenodeset'
-DP_SSH_SECRET_NAME = 'secret/dataplane-ansible-ssh-private-key-secret'
 OSP_CONFIG_SECRET_NAME = 'secret/openstack-config-secret'
 OSP_BM_HOST = 'baremetalhost.metal3.io'
 OSP_BM_CRD = 'baremetalhosts.metal3.io'
@@ -145,11 +144,15 @@ def has_podified_cp() -> bool:
 def get_dataplane_ssh_keypair():
     private_key = ""
     public_key = ""
+    secret_name = (
+        f'secret/{CONF.tobiko.podified.dataplane_node_ssh_key_secret}')
     try:
         with oc.project(CONF.tobiko.podified.osp_project):
-            secret_object = oc.selector(DP_SSH_SECRET_NAME).object()
-        private_key = secret_object.as_dict()['data']['ssh-privatekey']
-        public_key = secret_object.as_dict()['data']['ssh-publickey']
+            secret_object = oc.selector(secret_name).object()
+        private_key = secret_object.as_dict(
+            ).get('data', {}).get('ssh-privatekey', "")
+        public_key = secret_object.as_dict(
+            ).get('data', {}).get('ssh-publickey', "")
     except oc.OpenShiftPythonException as err:
         LOG.error("Error while trying to get Dataplane secret SSH Key: %s",
                   err)
