@@ -13,6 +13,7 @@
 #    under the License.
 from __future__ import absolute_import
 
+import glob
 import json
 import typing
 
@@ -345,6 +346,9 @@ def check_or_start_tobiko_command(cmd_args, pod_name, check_function):
             pod_obj.delete(ignore_not_found=True)
             LOG.info('checked and stopped previous tobiko command '
                      f'POD {pod_name}; starting a new POD.')
+    elif config.is_prevent_create():
+        tobiko.fail(f'Expected POD {pod_name} not running. '
+                    f'That POD should have been running: {cmd_args}')
     else:
         # First time the test is run:
         # if POD by specific name is not present start one:
@@ -420,18 +424,21 @@ def _check_ping_results(pod):
     #   tobiko.shell.ping._ping module so we can use those existing
     #   functions to check results
     ping_results_dest = f'{sh.get_user_home_dir()}/{PING_RESULTS_DIR}'
-    cp = oc.oc_action(
-        pod.context,
-        'cp',
-        [f"{pod.name()}:{POD_PING_RESULTS_DIR}", ping_results_dest]
-    )
-    if cp.status == 0:
-        ping.check_ping_statistics()
-        # here we should probably move those files inside the pod to some other
-        # location, or maybe simply delete them
-    else:
-        tobiko.fail("Failed to copy ping log files from the POD "
-                    f"{pod.name()}. Error: {cp.err}")
+    ping_log_file_pattern = f'{ping_results_dest}/ping_*.log'
+    for attempt in tobiko.retry(timeout=30., interval=5.):
+        cp = oc.oc_action(
+            pod.context,
+            'cp',
+            [f"{pod.name()}:{POD_PING_RESULTS_DIR}", ping_results_dest]
+        )
+        if cp.status == 0 and glob.glob(ping_log_file_pattern):
+            break
+        elif attempt.is_last:
+            tobiko.fail("Failed to copy ping log files from the POD "
+                        f"{pod.name()}. Error: {cp.err}")
+    # ping.check_ping_statistics() calls tobiko.truncate_logfile(filename) to
+    # rename log files to ping_<IP>.log_<date>
+    ping.check_ping_statistics()
 
 
 def execute_in_pod(pod_name, command, container_name=None):
