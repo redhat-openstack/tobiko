@@ -177,44 +177,55 @@ def _get_iperf3_pid(
     return None
 
 
+def _get_iperf3_log_raw(logfile: str,
+                        ssh_client: ssh.SSHClientType = None):
+    for attempt in tobiko.retry(timeout=60, interval=5):
+        # download the iperf results file to local
+        if ssh_client is not None:
+            local_tmp_file = sh.local_shell_connection().make_temp_file()
+            try:
+                sh.get_file(logfile, local_tmp_file, ssh_client)
+            except FileNotFoundError as err:
+                message = f'Failed to download iperf log file. Error {err}'
+                if attempt.is_last:
+                    tobiko.fail(message)
+                else:
+                    LOG.debug(message)
+                    LOG.debug('Retrying to download iperf log file...')
+                    continue
+            local_logfile = local_tmp_file
+        else:
+            local_logfile = logfile
+
+        # this command has to be run locally
+        iperf_log_raw = sh.execute(f"cat {local_logfile}").stdout
+
+        iperf_log_raw = remove_log_lines_end_json_str(iperf_log_raw)
+        LOG.debug(f'iperf log raw: {iperf_log_raw} ')
+
+        # return if iperf_log_raw is not empty or if this is
+        # called after the creation of the iperf background process
+        if iperf_log_raw:
+            return iperf_log_raw
+        if not config.is_prevent_create():
+            LOG.debug('iperf log file empty, which is normal after background '
+                      'process creation')
+            return  # return None
+
+        if attempt.is_last:
+            tobiko.fail('Failed empty iperf file.')
+
+
 def check_iperf3_client_results(address: typing.Union[str, netaddr.IPAddress],
                                 output_dir: str = 'tobiko_iperf_results',
                                 ssh_client: ssh.SSHClientType = None,
                                 **kwargs):  # noqa; pylint: disable=W0613
-    # This function expects that the result file is available locally already
-    #
     logfile = get_iperf3_logs_filepath(address, output_dir, ssh_client)
-    try:
-        iperf_log_raw = sh.execute(
-            f"cat {logfile}", ssh_client=ssh_client).stdout
-    except sh.ShellCommandFailed as err:
-        if config.is_prevent_create():
-            # Tobiko is not expected to create resources in this run
-            # so iperf should be already running and log file should
-            # be already there, if it is not, it should fail
-            tobiko.fail('Failed to read iperf log from the file. '
-                        f'Server IP address: {address}; Logfile: {logfile}')
-        else:
-            # Tobiko is creating resources so it is normal that file was not
-            # there yet
-            LOG.debug(f'Failed to read iperf log from the file. '
-                      f'Error: {err}')
-            return
-
-    # avoid test failure is iperf advertise some error/warning
-    iperf_log_raw = remove_log_lines_end_json_str(iperf_log_raw)
-
-    LOG.debug(f'iperf log raw: {iperf_log_raw} ')
-    if not iperf_log_raw:
-        if config.is_prevent_create():
-            # Tobiko is not expected to create resources in this run
-            # so iperf should be already running and log file should
-            # be already there and not empty. If it is not,
-            # it should fail
-            tobiko.fail('Failed empty iperf file.')
-        else:
-            LOG.debug('Failed client iperf log file empty')
-            return
+    iperf_log_raw = _get_iperf3_log_raw(logfile, ssh_client)
+    if not iperf_log_raw and not config.is_prevent_create():
+        LOG.debug('empty iperf log file is ok when TOBIKO_PREVENT_CREATE is '
+                  'disabled')
+        return
 
     iperf_log = json.loads(iperf_log_raw)
     longest_break = 0  # seconds
