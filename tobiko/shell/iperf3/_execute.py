@@ -269,6 +269,11 @@ def stop_iperf3_client(address: typing.Union[str, netaddr.IPAddress],
         LOG.info(f'iperf3 client process to > {address} already running '
                  f'with PID: {pid}')
         sh.execute(f'kill {pid}', ssh_client=ssh_client, sudo=True)
+        # wait until iperf client process disappears
+        sh.wait_for_processes(timeout=120,
+                              sleep_interval=5,
+                              ssh_client=ssh_client,
+                              pid=pid)
 
 
 def start_iperf3_server(
@@ -300,3 +305,8 @@ def _stop_iperf3_server(
         LOG.info(f'iperf3 server listening on the {protocol} port: {port} '
                  f'is already running with PID: {pid}')
         sh.execute(f'sudo kill {pid}', ssh_client=ssh_client)
+        # wait until iperf server process disappears
+        sh.wait_for_processes(timeout=120,
+                              sleep_interval=5,
+                              ssh_client=ssh_client,
+                              pid=pid)
