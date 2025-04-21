@@ -502,7 +502,7 @@ def start_iperf3(
     parameters = iperf3.iperf3_client_parameters(
         address=address, bitrate=bitrate,
         download=download, port=port, protocol=protocol,
-        timeout=0, logfile=iperf3.JSON_STREAM)
+        timeout=0, json_stream=True)
 
     cmd_args = iperf3.get_iperf3_client_command(
             parameters).as_list()[1:]

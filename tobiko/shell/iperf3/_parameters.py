@@ -29,6 +29,7 @@ class Iperf3ClientParameters(typing.NamedTuple):
     port: typing.Optional[int] = None
     protocol: typing.Optional[str] = None
     timeout: typing.Optional[int] = None
+    json_stream: typing.Optional[bool] = None
     logfile: typing.Optional[str] = None
 
 
@@ -44,6 +45,7 @@ def iperf3_client_parameters(
         port: int = None,
         protocol: str = None,
         timeout: int = None,
+        json_stream: bool = None,
         logfile: str = None):
     """Get iperf3 client parameters
     mode allowed values: client or server
@@ -68,6 +70,7 @@ def iperf3_client_parameters(
                                   port=port,
                                   protocol=protocol,
                                   timeout=timeout,
+                                  json_stream=json_stream,
                                   logfile=logfile)
 
 

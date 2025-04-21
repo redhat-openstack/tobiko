@@ -23,8 +23,6 @@ from tobiko.shell import sh
 
 LOG = log.getLogger(__name__)
 
-JSON_STREAM = "json-stream"
-
 
 def get_iperf3_client_command(parameters: _parameters.Iperf3ClientParameters):
     interface = Iperf3Interface()
@@ -68,6 +66,8 @@ class Iperf3Interface:
             options += self.get_download_option(parameters.download)
         if parameters.protocol is not None:
             options += self.get_protocol_option(parameters.protocol)
+        if parameters.json_stream is not None:
+            options += self.get_json_stream_option(parameters.json_stream)
         if parameters.logfile is not None:
             options += self.get_logfile_option(parameters.logfile)
         return options
@@ -124,7 +124,15 @@ class Iperf3Interface:
         return ['-p', port]
 
     @staticmethod
-    def get_logfile_option(logfile):
-        if logfile == JSON_STREAM:
+    def get_json_stream_option(json_stream: bool):
+        # NOTE: when iperf3 is run with --json-stream, new json
+        # entries are written for every interval
+        # This option is supported from iperf3 version 3.17:
+        if json_stream:
             return ['--json-stream']
+        else:
+            return []
+
+    @staticmethod
+    def get_logfile_option(logfile):
         return ['--logfile', logfile]

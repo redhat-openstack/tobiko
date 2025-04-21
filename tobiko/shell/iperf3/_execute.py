@@ -89,10 +89,19 @@ def execute_iperf3_client(address: typing.Union[str, netaddr.IPAddress],
         params_timeout = 0
     elif timeout is not None:
         params_timeout = int(timeout - 0.5)
+
+    # json_stream option should be set when:
+    # - tests are run_in_background
+    # - tests are executed from a VM instance
+    # This way we avoid using that option from the test machine (undercloud,
+    # test pod, devstack, ...) where it is not supported
+    # iperf3 support this option from version 3.17
+    json_stream = run_in_background and (ssh_client is not None)
+
     parameters = _parameters.iperf3_client_parameters(
         address=address, bitrate=bitrate,
         download=download, port=port, protocol=protocol,
-        timeout=params_timeout, logfile=logfile)
+        timeout=params_timeout, json_stream=json_stream, logfile=logfile)
     command = _interface.get_iperf3_client_command(parameters)
 
     # output is a dictionary
