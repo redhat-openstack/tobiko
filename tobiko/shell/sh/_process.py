@@ -587,7 +587,7 @@ def check_or_start_background_process(bg_function=None,
 
 def check_or_start_external_process(start_function,
                                     check_function,
-                                    liveness_function=None,
+                                    liveness_function,
                                     stop_function=None,
                                     **kwargs):
     """Start or restart an external process.
@@ -601,10 +601,7 @@ def check_or_start_external_process(start_function,
     :param liveness_function: function name
     :param stop_function: function name
     """
-    service_alive = None
-    if liveness_function:
-        service_alive = liveness_function(**kwargs)
-    if service_alive:
+    if liveness_function(**kwargs):
         # if we want to terminate the specific external process by
         # close it, otherwise the check will continue to run in the
         # background
@@ -617,21 +614,23 @@ def check_or_start_external_process(start_function,
             # wait before running check_function, it may take a couple of
             # seconds to write the log file
             time.sleep(3)
+
+        # check logs of the process
+        # execute process check i.e. go over process results file and
+        # truncate the log file
+        LOG.info(f'running a check function: {check_function} '
+                 f'for the external process.')
+        check_function(**kwargs)
+
     else:
         # First time the test is run:
         # if background process by specific name is not present ,
         # start one in the background:
         LOG.info('No previous external processes found')
 
-    # check logs of the process
-    # execute process check i.e. go over process results file
-    # truncate the log file and restart the background process
-    LOG.info(f'running a check function: {check_function} '
-             f'for the external process.')
-    check_function(**kwargs)
-
+    # restart the process
     LOG.info(f'Starting a new external process of function: {start_function}')
     start_function(**kwargs)
-    if liveness_function and not liveness_function(**kwargs):
+    if not liveness_function(**kwargs):
         LOG.error(f'Service did not start properly with '
                   f'function: {start_function}')
