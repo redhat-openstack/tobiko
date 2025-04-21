@@ -471,15 +471,7 @@ def _store_iperf3_client_results(
     # in the file when "--logfile" option is used in ipef3
     # So to be able to validate them in the same way, logs from
     # stdout of the Pod needs to be converted
-    iperf3_results_data: dict = {
-        "intervals": []
-    }
-    for log_line in raw_pod_logs.split("\n"):
-        log_line_json = json.loads(log_line)
-        if log_line_json.get('event') != 'interval':
-            continue
-        iperf3_results_data["intervals"].append(
-            log_line_json["data"])
+    iperf3_results_data = iperf3.parse_json_stream_output(raw_pod_logs)
 
     logfile = iperf3.get_iperf3_logs_filepath(address, output_dir)
     with open(logfile, "w") as f:

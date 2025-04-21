@@ -225,6 +225,25 @@ def _get_iperf3_log_raw(logfile: str,
             tobiko.fail('Failed empty iperf file.')
 
 
+def parse_json_stream_output(iperf_log_raw):
+    # Logs are printed by iperf3 client to the stdout or file in json
+    # format, but the format is different than what is stored
+    # without "--json-stream" option
+    # So to be able to validate them in the same way, logs
+    # need to be converted
+    iperf3_results_data: dict = {
+        "intervals": []
+    }
+    for log_line in iperf_log_raw.splitlines():
+        log_line_json = json.loads(log_line)
+        if log_line_json.get('event') != 'interval':
+            continue
+        iperf3_results_data["intervals"].append(
+            log_line_json["data"])
+
+    return iperf3_results_data
+
+
 def check_iperf3_client_results(address: typing.Union[str, netaddr.IPAddress],
                                 output_dir: str = 'tobiko_iperf_results',
                                 ssh_client: ssh.SSHClientType = None,
@@ -236,7 +255,10 @@ def check_iperf3_client_results(address: typing.Union[str, netaddr.IPAddress],
                   'disabled')
         return
 
-    iperf_log = json.loads(iperf_log_raw)
+    try:
+        iperf_log = json.loads(iperf_log_raw)
+    except json.JSONDecodeError:
+        iperf_log = parse_json_stream_output(iperf_log_raw)
     longest_break = 0  # seconds
     breaks_total = 0  # seconds
     current_break = 0  # seconds

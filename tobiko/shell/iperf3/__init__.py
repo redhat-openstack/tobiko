@@ -29,6 +29,7 @@ get_iperf3_logs_filepath = _execute.get_iperf3_logs_filepath
 iperf3_client_alive = _execute.iperf3_client_alive
 stop_iperf3_client = _execute.stop_iperf3_client
 start_iperf3_server = _execute.start_iperf3_server
+parse_json_stream_output = _execute.parse_json_stream_output
 
 get_iperf3_client_command = _interface.get_iperf3_client_command
 
