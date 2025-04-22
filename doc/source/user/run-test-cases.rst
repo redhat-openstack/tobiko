@@ -73,6 +73,11 @@ Running Tobiko Test Cases in the Podified environment using ci-framework
 
 .. include:: _run_using_ci_framework.rst
 
+Prepare Tobiko Test Pod to run Tobiko
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. include:: _prepare_tobiko_test_pod.rst
+
 Test Cases Report Files
 ~~~~~~~~~~~~~~~~~~~~~~~
 
