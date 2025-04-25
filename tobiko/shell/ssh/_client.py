@@ -386,28 +386,17 @@ class SSHClientFixture(tobiko.SharedFixture):
                                         timeout=retry_timeout,
                                         interval=retry_interval):
                 LOG.debug(f"Ensuring SSH connection (attempt={attempt})")
-                connected = False
                 try:
+                    # Create a new paramiko.SSHClient() instance and connect it
+                    # to the a server using the provided credentials
                     client = tobiko.setup_fixture(self).client
-                    # For any reason at this point client could
-                    # be None: force fixture cleanup
-                    if check_ssh_connection(client):
-                        LOG.debug("SSH connection is safe to use "
-                                  f"(attempt={attempt})")
-                        connected = True
-                        break
-                    else:
-                        LOG.warning("SSH connection is not safe to use "
-                                    f"(attempt={attempt})")
                 except Exception:
                     attempt.check_limits()
                     LOG.exception(f"Failed connecting to '{self.login}' "
                                   f"(attempt={attempt})")
-                finally:
-                    if not connected:
-                        self.close()
-            else:
-                raise RuntimeError("Broken retry loop")
+                    self.close()
+                else:
+                    break
 
         return client
 
@@ -758,16 +747,6 @@ def ssh_proxy_client(manager=None,
     return manager.get_proxy_client(host=host,
                                     host_config=host_config,
                                     config_files=config_files)
-
-
-def check_ssh_connection(client):
-    if client:
-        transport = client.get_transport()
-        if transport.is_authenticated():
-            # Send a keep-alive message
-            transport.send_ignore()
-            return True
-    return False
 
 
 SSHClientType = typing.Union[None, bool, SSHClientFixture]
