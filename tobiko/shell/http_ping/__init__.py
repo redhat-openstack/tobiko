@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Red Hat, Inc.
+# Copyright (c) 2025 Red Hat, Inc.
 #
 # All Rights Reserved.
 #
@@ -15,15 +15,8 @@
 #    under the License.
 from __future__ import absolute_import
 
-import sys
+from tobiko.shell.http_ping import _http_ping
 
-from tobiko.cmd import _http_ping
-from tobiko.cmd import _ping
-from tobiko.cmd import _main
 
-main = _main.main
-TobikoHttpPing = _http_ping.TobikoHttpPing
-TobikoPing = _ping.TobikoPing
-
-if __name__ == '__main__':
-    sys.exit(main(sys.argv[1:]))
+http_ping = _http_ping.http_ping
+get_log_dir = _http_ping.get_log_dir
