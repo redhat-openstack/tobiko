@@ -22,6 +22,7 @@ from oslo_log import log
 
 import tobiko
 from tobiko import config
+from tobiko.shell import http_ping
 from tobiko.shell import iperf3
 from tobiko.shell import ping
 from tobiko.shell import sh
@@ -64,6 +65,9 @@ PING_RESULTS_DIR = 'tobiko_ping_results'
 # It is in the $HOME/{PING_RESULTS_DIR}/ and $HOME inside the tobiko container
 # is "/var/lib/tobiko"
 POD_PING_RESULTS_DIR = f"/var/lib/tobiko/{PING_RESULTS_DIR}"
+
+HTTP_PING_RESULTS_DIR = "tobiko_http_ping_results"
+POD_HTTP_PING_RESULTS_DIR = f"/var/lib/tobiko/{HTTP_PING_RESULTS_DIR}"
 
 
 def _is_oc_client_available() -> bool:
@@ -421,6 +425,16 @@ def _start_tobiko_command_pod(cmd_args, pod_name):
         pod_image=CONF.tobiko.podified.tobiko_image)
 
 
+def _copy_file_from_pod(pod, src, dest, dest_file_pattern):
+    for attempt in tobiko.retry(timeout=30., interval=5.):
+        cp = oc.oc_action(pod.context, 'cp', [src, dest])
+        if cp.status == 0 and glob.glob(dest_file_pattern):
+            break
+        elif attempt.is_last:
+            tobiko.fail("Failed to copy files from the POD "
+                        f"{pod.name()}. Error: {cp.err}")
+
+
 def _check_ping_results(pod):
     # NOTE(slaweq): we have to put ping log files in the directory
     #   as defined below because it is expected to be like that by the
@@ -428,17 +442,9 @@ def _check_ping_results(pod):
     #   functions to check results
     ping_results_dest = f'{sh.get_user_home_dir()}/{PING_RESULTS_DIR}'
     ping_log_file_pattern = f'{ping_results_dest}/ping_*.log'
-    for attempt in tobiko.retry(timeout=30., interval=5.):
-        cp = oc.oc_action(
-            pod.context,
-            'cp',
-            [f"{pod.name()}:{POD_PING_RESULTS_DIR}", ping_results_dest]
-        )
-        if cp.status == 0 and glob.glob(ping_log_file_pattern):
-            break
-        elif attempt.is_last:
-            tobiko.fail("Failed to copy ping log files from the POD "
-                        f"{pod.name()}. Error: {cp.err}")
+    _copy_file_from_pod(
+        pod, f"{pod.name()}:{POD_PING_RESULTS_DIR}", ping_results_dest,
+        ping_log_file_pattern)
     # ping.check_ping_statistics() calls tobiko.truncate_logfile(filename) to
     # rename log files to ping_<IP>.log_<date>
     ping.check_ping_statistics()
@@ -526,3 +532,26 @@ def iperf3_pod_alive(
     if not pod_obj:
         return False
     return pod_obj.as_dict()['status']['phase'] == 'Running'
+
+
+def _get_http_ping_pod_name(
+        server_ip: typing.Union[str, netaddr.IPAddress]) -> str:
+    return f'tobiko-http-ping-{server_ip}'.replace('.', '-')
+
+
+def _check_http_ping_results_from_pod(pod):
+    """Copy log file from the POD and then check file locally."""
+    results_dest = http_ping.get_log_dir()
+    log_file_pattern = f'{results_dest}/http_ping_*.log'
+    _copy_file_from_pod(
+        pod, f"{pod.name()}:{POD_HTTP_PING_RESULTS_DIR}", results_dest,
+        log_file_pattern)
+    http_ping.check_http_ping_results()
+
+
+def check_or_start_tobiko_http_ping_command(
+        server_ip: typing.Union[str, netaddr.IPAddress]):
+    cmd_args = ['http', 'ping', server_ip]
+    pod_name = _get_http_ping_pod_name(server_ip)
+    return check_or_start_tobiko_command(
+        cmd_args, pod_name, _check_http_ping_results_from_pod)

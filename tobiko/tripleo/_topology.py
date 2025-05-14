@@ -234,6 +234,20 @@ class TripleoTopology(rhosp.RhospTopology):
             kwargs['server_ip'] = server_ip
             tripleo_nova.check_or_start_background_iperf_connection(**kwargs)
 
+    def check_or_start_background_http_ping(
+            self,
+            server_ip: typing.Union[str, netaddr.IPAddress],  # noqa; pylint: disable=W0613
+            ssh_client: ssh.SSHClientType = None):  # noqa; pylint: disable=W0613
+        if (not ssh_client and
+                CONF.tobiko.tripleo.run_background_services_in_pod):
+            _openshift.check_or_start_tobiko_http_ping_command(
+                server_ip=server_ip
+            )
+        else:
+            raise NotImplementedError(
+                "Tripleo topology do not support running background "
+                "HTTP ping test from the test runner node directly.")
+
 
 class TripleoTopologyNode(rhosp.RhospNode):
 
