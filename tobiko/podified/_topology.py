@@ -26,6 +26,7 @@ from tobiko.podified import _openshift
 from tobiko.podified import containers
 from tobiko import rhosp
 from tobiko.shell import iperf3
+from tobiko.shell import http_ping
 from tobiko.shell import ping
 from tobiko.shell import sh
 from tobiko.shell import ssh
@@ -230,6 +231,14 @@ class PodifiedTopology(rhosp.RhospTopology):
             _openshift.check_or_start_tobiko_http_ping_command(
                 server_ip=server_ip
             )
+        else:
+            sh.check_or_start_external_process(
+                start_function=http_ping.start_http_ping_process,
+                stop_function=http_ping.stop_http_ping_process,
+                liveness_function=http_ping.http_ping_process_alive,
+                check_function=http_ping.check_http_ping_results,
+                server_ip=server_ip,
+                ssh_client=ssh_client)
 
 
 class EdpmNode(rhosp.RhospNode):

@@ -18,7 +18,6 @@ from __future__ import absolute_import
 from datetime import datetime
 import glob
 import io
-import os
 import typing
 
 import netaddr
@@ -28,6 +27,7 @@ import requests
 
 import tobiko
 from tobiko import config
+from tobiko.shell import files
 from tobiko.shell import sh
 from tobiko.shell import ssh
 
@@ -39,11 +39,50 @@ RESULT_FAILED = "FAILED"
 CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
+HTTP_PING_SCRIPT_NAME = "tobiko_http_ping.sh"
+HTTP_PING_TIME_FORMAT = "%Y-%m-%d %H:%M:%S.%N"
+HTTP_PING_CURL_OUTPUT_FORMAT = "%{response_code}"
+HTTP_PING_RESULT_FORMAT = (
+    '{\\"time\\": \\"$current_time\\", \\"response\\": \\"$response\\"}')
+HTTP_PING_SCRIPT = """
+url="http://$1";
+output_file=$2;
 
-def get_log_dir():
-    log_dir = f"{sh.get_user_home_dir()}/tobiko_http_ping_results"
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
+rm $output_file
+
+while true; do
+    current_time=$(/usr/bin/date +"{time_format}");
+    response_code=$(/usr/bin/curl -o /dev/null -s -I -w "{response_format}" $url);
+    if [ "$response_code" -ge 200 ] && [ "$response_code" -lt 500 ]; then
+            response="{result_ok}";
+    else
+            response="{result_failed}";
+    fi;
+    echo "{output_result_line}" >> $output_file;
+    sleep {timeout};
+done;
+""".format(    # noqa: E501
+    time_format=HTTP_PING_TIME_FORMAT,
+    response_format=HTTP_PING_CURL_OUTPUT_FORMAT,
+    result_ok=RESULT_OK,
+    result_failed=RESULT_FAILED,
+    output_result_line=HTTP_PING_RESULT_FORMAT,
+    timeout=TIMEOUT,
+)
+
+
+def _ensure_http_ping_script_on_server(
+        ssh_client: ssh.SSHClientType = None):
+    homedir = files.get_homedir(ssh_client)
+    sh.execute(
+        f"echo '{HTTP_PING_SCRIPT}' > {homedir}/{HTTP_PING_SCRIPT_NAME}",
+        ssh_client=ssh_client)
+
+
+def get_log_dir(
+        ssh_client: ssh.SSHClientType = None):
+    log_dir = files.get_home_absolute_filepath(
+        "tobiko_http_ping_results", ssh_client)
     return log_dir
 
 
@@ -81,7 +120,11 @@ def _get_http_ping_log_file(
         # download the http ping results file to local
         try:
             sh.get_file(src_logfile, dest_logfile, ssh_client)
-        except FileNotFoundError as err:
+            # Remote log file can be now deleted so that logs from now will be
+            # in the "clean" file if they will need to be checked later
+            sh.execute(f'rm -f {src_logfile}', ssh_client=ssh_client)
+            return
+        except sh.ShellCommandFailed as err:
             message = f'Failed to download http ping log file. Error {err}'
             if attempt.is_last:
                 tobiko.fail(message)
@@ -93,9 +136,38 @@ def _get_http_ping_log_file(
             tobiko.fail('Failed to download http ping log file.')
 
 
-def get_logfile_name(
-        server_ip: typing.Union[str, netaddr.IPAddress]):
+def _get_http_ping_script_command(
+        server_ip: typing.Union[str, netaddr.IPAddress],
+        ssh_client: ssh.SSHClientType = None):
+    homedir = files.get_homedir(ssh_client)
+    logfile = _get_logfile_path(server_ip, ssh_client)
+    return f"bash {homedir}/{HTTP_PING_SCRIPT_NAME} {server_ip} {logfile}"
+
+
+def _get_logfile_name(
+        server_ip: typing.Union[str, netaddr.IPAddress]) -> str:
     return f"http_ping_{server_ip}.log"
+
+
+def _get_logfile_path(
+        server_ip: typing.Union[str, netaddr.IPAddress],
+        ssh_client: ssh.SSHClientType = None):
+    logdir_name = get_log_dir(ssh_client)
+    logfile_name = _get_logfile_name(server_ip)
+    return f"{logdir_name}/{logfile_name}"
+
+
+def _get_http_ping_pid(
+        server_ip: typing.Union[str, netaddr.IPAddress],
+        ssh_client: ssh.SSHClientType = None):
+    processes = sh.list_processes(
+        command_line=_get_http_ping_script_command(
+            server_ip, ssh_client),
+        ssh_client=ssh_client)
+    if processes:
+        return processes.unique.pid
+    LOG.debug(f'no http ping to server {server_ip} found.')
+    return None
 
 
 def check_http_ping_results(**kwargs):
@@ -104,13 +176,17 @@ def check_http_ping_results(**kwargs):
     if ssh_client:
         if not server_ip:
             tobiko.fail("Server IP is required to check http ping log file.")
-        logfile_name = get_logfile_name(server_ip)
-        src_logfile = f"{get_log_dir()}/{logfile_name}"
-        dest_logfile = f"{get_log_dir()}/{logfile_name}"
+        # Source log file is on the guest vm so ssh_client needs to be used
+        # to get it
+        src_logfile = _get_logfile_path(server_ip, ssh_client)
+        dst_logfile_name = _get_logfile_name(server_ip)
+        # Destination is local to where Tobiko is running so no need to pass
+        # ssh_client to get_log_dir() function this time
+        dest_logfile = f"{get_log_dir()}/{dst_logfile_name}"
         _get_http_ping_log_file(src_logfile, dest_logfile, ssh_client)
 
     failure_limit = CONF.tobiko.rhosp.max_ping_loss_allowed
-    logfile_name = get_logfile_name(server_ip)
+    logfile_name = _get_logfile_name(server_ip)
     for filename in list(_get_log_files(glob_log_pattern=logfile_name)):
         with io.open(filename, 'rt') as fd:
             LOG.info(f'checking HTTP ping log file: {filename}, '
@@ -137,3 +213,37 @@ def check_http_ping_results(**kwargs):
             if failures_len >= failure_limit:
                 tobiko.fail(f'{failures_len} HTTP pings failures found '
                             f'in file: {failures_list[-1]["filename"]}')
+
+
+def start_http_ping_process(
+        server_ip: typing.Union[str, netaddr.IPAddress],
+        ssh_client: ssh.SSHClientType = None):
+    # ensure bash script is on host
+    # run bash script
+    _ensure_http_ping_script_on_server(ssh_client)
+    if http_ping_process_alive(server_ip, ssh_client):
+        return
+    process = sh.process(
+        _get_http_ping_script_command(
+            server_ip, ssh_client),
+        ssh_client=ssh_client)
+    process.execute()
+
+
+def stop_http_ping_process(
+        server_ip: typing.Union[str, netaddr.IPAddress],
+        ssh_client: ssh.SSHClientType = None):
+    pid = _get_http_ping_pid(server_ip, ssh_client)
+    if pid:
+        sh.execute(f'kill {pid}', ssh_client=ssh_client, sudo=True)
+        # wait until http ping process disappears
+        sh.wait_for_processes(timeout=120,
+                              sleep_interval=5,
+                              ssh_client=ssh_client,
+                              pid=pid)
+
+
+def http_ping_process_alive(
+        server_ip: typing.Union[str, netaddr.IPAddress],
+        ssh_client: ssh.SSHClientType = None):
+    return bool(_get_http_ping_pid(server_ip, ssh_client))

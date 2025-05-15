@@ -148,6 +148,11 @@ class BackgroundProcessTest(BaseNetworkTest):
         self.topology.check_or_start_background_http_ping(
             self.stack.peer_stack.floating_ip_address)
 
+    def test_east_west_tcp_new_connections(self):
+        self.topology.check_or_start_background_http_ping(
+            self.stack.fixed_ipv4,
+            ssh_client=self.stack.peer_stack.ssh_client)
+
 
 @pytest.mark.migrate_server
 class SameHostNetworkTest(NetworkTest):

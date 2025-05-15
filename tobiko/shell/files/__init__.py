@@ -19,6 +19,7 @@ from tobiko.shell.files import _files
 from tobiko.shell.files import _logs
 
 
+get_homedir = _files.get_homedir
 get_home_absolute_filepath = _files.get_home_absolute_filepath
 truncate_client_logfile = _files.truncate_client_logfile
 remove_old_logfile = _files.remove_old_logfile
