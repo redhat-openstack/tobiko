@@ -38,6 +38,8 @@ repos:
     hooks:
       - id: mypy
         files: ^tobiko/
+        additional_dependencies:
+          - types-setuptools==80.3.0.20250505
         entry: mypy --install-types --non-interactive tobiko/
         pass_filenames: false
         # args: [--ignore-missing-imports]
