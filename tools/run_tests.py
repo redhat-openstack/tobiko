@@ -64,7 +64,7 @@ REPORT_XML = (
     os.environ.get('TOX_REPORT_XML') or
     REPORT_PREFIX + '.xml')
 
-NUM_PROCESSES = (
+MAX_PROCESSES = (
     os.environ.get('TOBIKO_NUM_PROCESSES') or
     os.environ.get('TOX_NUM_PROCESSES') or
     'auto')
@@ -176,9 +176,12 @@ def log_environ():
 
 
 def run_test_cases():
-    xdist_options = ''
-    if NUM_PROCESSES != '1':
-        xdist_options = f"--numprocesses '{NUM_PROCESSES}' --dist loadscope"
+    # numprocesses always set to "auto" to detect how many CPUs are available
+    xdist_options = "--numprocesses 'auto' --dist loadscope"
+    if MAX_PROCESSES != 'auto':
+        # the max num of processes can be limitted: only makes sense if it's
+        # lower than the actual number of processes
+        xdist_options += f" --maxprocesses '{MAX_PROCESSES}'"
     rerun_options = ''
     if RERUNS:
         rerun_options = f"--reruns '{RERUNS}' --reruns-delay '{RERUNS_DELAY}'"
