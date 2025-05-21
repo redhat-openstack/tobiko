@@ -330,7 +330,7 @@ class OpenStackTopology(tobiko.SharedFixture):
     # In case of Devstack topology file name in fact name of the systemd unit
     # as logs are stored in journalctl
     log_names_mappings = {
-        neutron.SERVER: 'devstack@q-svc',
+        neutron.SERVER: 'devstack@neutron-api',
     }
 
     background_tests_supported = False
