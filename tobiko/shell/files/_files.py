@@ -23,6 +23,14 @@ from tobiko.shell import sh
 from tobiko.shell import ssh
 
 
+def get_homedir(ssh_client: ssh.SSHClientType = None) -> str:
+    if ssh_client:
+        return sh.execute(
+            'echo ~', ssh_client=ssh_client).stdout.rstrip()
+    else:
+        return sh.get_user_home_dir()
+
+
 def get_home_absolute_filepath(path: str,
                                ssh_client: ssh.SSHClientType = None) -> str:
     if ssh_client is None:
@@ -40,7 +48,7 @@ def _get_local_filepath(path: str) -> str:
 
 def _get_remote_filepath(path: str,
                          ssh_client: ssh.SSHClientType) -> str:
-    homedir = sh.execute('echo ~', ssh_client=ssh_client).stdout.rstrip()
+    homedir = get_homedir(ssh_client)
     final_dir_path = f'{homedir}/{path}'
     sh.make_remote_dirs(final_dir_path, ssh_client=ssh_client)
     return final_dir_path
