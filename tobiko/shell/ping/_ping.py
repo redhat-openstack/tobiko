@@ -440,7 +440,8 @@ def ping_to_json(ping_result: _statistics.PingStatistics) -> str:
     return json.dumps(ping_result_line_dict)
 
 
-def write_ping_to_file(ping_ip=None, output_dir='tobiko_ping_results'):
+def write_ping_to_file(ping_ip=None, output_dir='tobiko_ping_results',
+                       interval=None):
     '''use iter_statistics to ping a host and record statistics
     put results in output_dir filenames correlate with vm fip'''
     output_dir_path = f'{sh.get_user_home_dir()}/{output_dir}'
@@ -453,6 +454,7 @@ def write_ping_to_file(ping_ip=None, output_dir='tobiko_ping_results'):
     ping_result_statistics = iter_statistics(parameters=None,
                                              host=ping_ip, until=None,
                                              timeout=99999,
+                                             interval=interval,
                                              check=True)
     for ping_result in ping_result_statistics:
         with open(output_path, "at") as ping_result_file:

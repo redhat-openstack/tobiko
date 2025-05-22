@@ -35,6 +35,12 @@ class TobikoPing(command.Command):
             help='Address of the server to ping'
         )
         parser.add_argument(
+            '-i', '--interval',
+            default=None,
+            help="Seconds of time interval between "
+                 "consecutive before ICMP messages"
+        )
+        parser.add_argument(
             '--result-file',
             default='tobiko_ping_results',
             help='Name of the directory where ping log files are '
@@ -47,7 +53,8 @@ class TobikoPing(command.Command):
         try:
             LOG.debug("Starting ping server: %s", parsed_args.server)
             ping.write_ping_to_file(ping_ip=parsed_args.server,
-                                    output_dir=parsed_args.result_file)
+                                    output_dir=parsed_args.result_file,
+                                    interval=parsed_args.interval)
             LOG.debug("Finished ping server: %s", parsed_args.server)
         except Exception as e:
             if hasattr(e, 'errno'):

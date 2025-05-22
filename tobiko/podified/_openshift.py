@@ -329,7 +329,7 @@ def tobiko_project_context():
 
 
 def check_or_start_tobiko_ping_command(server_ip):
-    cmd_args = ['ping', server_ip]
+    cmd_args = ['ping', server_ip, '--interval', CONF.tobiko.ping.interval]
     pod_name = f'tobiko-ping-{server_ip}'.replace('.', '-')
     return check_or_start_tobiko_command(
         cmd_args, pod_name, _check_ping_results)
