@@ -29,6 +29,7 @@ class Iperf3ClientParameters(typing.NamedTuple):
     port: typing.Optional[int] = None
     protocol: typing.Optional[str] = None
     timeout: typing.Optional[int] = None
+    interval: typing.Optional[int] = None
     json_stream: typing.Optional[bool] = None
     logfile: typing.Optional[str] = None
 
@@ -45,6 +46,7 @@ def iperf3_client_parameters(
         port: int = None,
         protocol: str = None,
         timeout: int = None,
+        interval: int = None,
         json_stream: bool = None,
         logfile: str = None):
     """Get iperf3 client parameters
@@ -64,12 +66,15 @@ def iperf3_client_parameters(
         protocol = config.protocol
     if timeout is None:
         timeout = config.timeout
+    if interval is None:
+        interval = config.interval
     return Iperf3ClientParameters(address=address,
                                   bitrate=bitrate,
                                   download=download,
                                   port=port,
                                   protocol=protocol,
                                   timeout=timeout,
+                                  interval=interval,
                                   json_stream=json_stream,
                                   logfile=logfile)
 

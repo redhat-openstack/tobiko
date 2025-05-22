@@ -66,6 +66,8 @@ class Iperf3Interface:
             options += self.get_download_option(parameters.download)
         if parameters.protocol is not None:
             options += self.get_protocol_option(parameters.protocol)
+        if parameters.interval is not None:
+            options += self.get_interval_option(parameters.interval)
         if parameters.json_stream is not None:
             options += self.get_json_stream_option(parameters.json_stream)
         if parameters.logfile is not None:
@@ -111,6 +113,10 @@ class Iperf3Interface:
             return ['-u']
         else:
             raise ValueError('iperf3 protocol values allowed: [tcp|udp]')
+
+    @staticmethod
+    def get_interval_option(interval: int):
+        return ['-i', interval]
 
     @staticmethod
     def get_timeout_option(timeout: int):
