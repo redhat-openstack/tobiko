@@ -222,6 +222,15 @@ class PodifiedTopology(rhosp.RhospTopology):
 
         sh.check_or_start_external_process(**kwargs)
 
+    def check_or_start_background_http_ping(
+            self,
+            server_ip: typing.Union[str, netaddr.IPAddress],  # noqa; pylint: disable=W0613
+            ssh_client: ssh.SSHClientType = None):  # noqa; pylint: disable=W0613
+        if not ssh_client:
+            _openshift.check_or_start_tobiko_http_ping_command(
+                server_ip=server_ip
+            )
+
 
 class EdpmNode(rhosp.RhospNode):
 

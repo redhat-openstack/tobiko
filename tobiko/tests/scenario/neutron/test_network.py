@@ -144,6 +144,10 @@ class BackgroundProcessTest(BaseNetworkTest):
                 protocol='tcp',
                 iperf3_server_ssh_client=self.stack.peer_stack.ssh_client)
 
+    def test_north_south_tcp_new_connections(self):
+        self.topology.check_or_start_background_http_ping(
+            self.stack.peer_stack.floating_ip_address)
+
 
 @pytest.mark.migrate_server
 class SameHostNetworkTest(NetworkTest):

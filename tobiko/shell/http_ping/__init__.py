@@ -19,4 +19,7 @@ from tobiko.shell.http_ping import _http_ping
 
 
 http_ping = _http_ping.http_ping
+get_logfile_name = _http_ping.get_logfile_name
 get_log_dir = _http_ping.get_log_dir
+
+check_http_ping_results = _http_ping.check_http_ping_results
