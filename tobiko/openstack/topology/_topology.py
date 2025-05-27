@@ -325,14 +325,6 @@ class OpenStackTopology(tobiko.SharedFixture):
     file_digger_class: typing.Type[files.LogFileDigger] = \
         files.JournalLogDigger
 
-    # This is dict which handles mapping of the log file and systemd_unit (if
-    # needed) for the OpenStack services.
-    # In case of Devstack topology file name in fact name of the systemd unit
-    # as logs are stored in journalctl
-    log_names_mappings = {
-        neutron.SERVER: 'devstack@neutron-api',
-    }
-
     background_tests_supported = False
 
     def __init__(self):
@@ -344,6 +336,15 @@ class OpenStackTopology(tobiko.SharedFixture):
         self._addresses: typing.Dict[netaddr.IPAddress,
                                      OpenStackTopologyNode] = (
             collections.OrderedDict())
+        # This is dict which handles mapping of the log file and systemd_unit
+        # (if needed) for the OpenStack services.
+        # In case of Devstack topology file name in fact name of the systemd
+        # unit as logs are stored in journalctl
+        self.log_names_mappings = {
+            neutron.SERVER: (
+                'devstack@' +
+                tobiko.tobiko_config().topology.devstack_neutron_service)
+        }
 
     def setup_fixture(self):
         self.discover_nodes()

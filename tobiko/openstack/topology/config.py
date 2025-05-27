@@ -39,6 +39,10 @@ OPTIONS = [
                default=r"(\d{4}-\d{2}-\d{2} [0-9:.]+) .+",
                help="Regex to be used to parse date and time from "
                     "the OpenStack services' log lines. "),
+    cfg.StrOpt('devstack_neutron_service',
+               default='neutron-api',
+               help="Name of the neutron service on an Openstack environment "
+                    "deployed with devstack"),
 ]
 
 
