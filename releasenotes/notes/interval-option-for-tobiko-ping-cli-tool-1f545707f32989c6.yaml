@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    New parameter `--interval` or `-i` was added to the `tobiko ping` CLI tool.
+    It can be used to configure intervals between 2 consequentive ICMP packets
+    send by the tool thus to smaller log file, especially in long running tests.

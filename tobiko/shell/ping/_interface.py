@@ -200,7 +200,7 @@ class PingInterface(object):
         return ['-s', int(size)]
 
     def get_interval_option(self, interval):
-        return ['i', int(interval)]
+        return ['-i', int(interval)]
 
     has_fragment_option = False
 
