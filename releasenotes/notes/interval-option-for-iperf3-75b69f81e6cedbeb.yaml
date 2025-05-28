@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    New config option named `interval` for the `iperf3` module was added. This
+    new option can be used to configure result report intervals for the iperf3
+    client which can make background iperf3 client's log to be much smaller in
+    the long running tests.

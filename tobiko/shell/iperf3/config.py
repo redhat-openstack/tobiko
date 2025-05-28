@@ -35,7 +35,12 @@ OPTIONS = [
                 help="direction download (True) or upload (False)"),
     cfg.IntOpt('timeout',
                default=10,
-               help="timeout of the iperf test")]
+               help="timeout of the iperf test"),
+    cfg.IntOpt('interval',
+               default=None,
+               help="Pause between results report. Default is None "
+                    "which means that iperf3 default value will be used.")
+]
 
 
 def register_tobiko_options(conf):

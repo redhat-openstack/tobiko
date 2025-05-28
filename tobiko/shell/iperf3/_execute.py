@@ -81,6 +81,7 @@ def execute_iperf3_client(address: typing.Union[str, netaddr.IPAddress],
                           protocol: str = None,
                           ssh_client: ssh.SSHClientType = None,
                           timeout: tobiko.Seconds = None,
+                          interval: int = None,
                           logfile: str = None,
                           run_in_background: bool = False) \
         -> typing.Dict:
@@ -101,7 +102,8 @@ def execute_iperf3_client(address: typing.Union[str, netaddr.IPAddress],
     parameters = _parameters.iperf3_client_parameters(
         address=address, bitrate=bitrate,
         download=download, port=port, protocol=protocol,
-        timeout=params_timeout, json_stream=json_stream, logfile=logfile)
+        timeout=params_timeout, interval=interval,
+        json_stream=json_stream, logfile=logfile)
     command = _interface.get_iperf3_client_command(parameters)
 
     # output is a dictionary
