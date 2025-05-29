@@ -62,30 +62,28 @@ def check_vms_ping(vm_list):
 def check_vm_evacuations(vms_old=None, compute_host=None, timeout=600,
                          interval=2, check_no_evacuation=False):
     """check evacuation of vms
-    input: old vm status and expected new compute"""
-
+        'vms_old' - all the vms that originally (before evacuation) were
+        running on the 'compute_host' machine"""
     for attempt in tobiko.retry(timeout=timeout, interval=interval):
         failures = []
-        param = ({} if compute_host is None
-                 else {'OS-EXT-SRV-ATTR:hypervisor_hostname': compute_host})
-        vms_new = _client.list_servers(**param)
+        vms_new = _client.list_servers()
         for vm_old in vms_old or []:
-            old_bm_host = vm_old._info[  # pylint: disable=W0212
+            vm_evacuated = vms_new.with_attributes(  # pylint: disable=W0212
+                id=vm_old.id).unique
+            new_vm_host = vm_evacuated._info[  # pylint: disable=W0212
                 'OS-EXT-SRV-ATTR:hypervisor_hostname']
-            new_vm_host = vms_new.with_attributes(  # pylint: disable=W0212
-                id=vm_old.id).uniq._info[
-                    'OS-EXT-SRV-ATTR:hypervisor_hostname']
+            LOG.info(f"server {vm_old} evacuated to {new_vm_host}")
 
             if check_no_evacuation:
-                cond = bool(old_bm_host != new_vm_host)
+                cond = bool(compute_host != new_vm_host)
             else:
-                cond = bool(old_bm_host == new_vm_host)
-
+                cond = bool(compute_host == new_vm_host)
             if cond:
                 failures.append(
                     'Failed vm evacuations: {}\n\n'.format(vm_old))
+
         if not failures:
-            LOG.debug(vms_old.to_string())
+            LOG.debug(vms_old)
             LOG.debug('All vms were evacuated!')
             return
 

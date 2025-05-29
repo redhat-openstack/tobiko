@@ -804,7 +804,7 @@ def check_iha_evacuation(failover_type=None, vm_type=None):
             nova.check_vm_evacuations(vms_old=vms_starting_state,
                                       compute_host=compute_host,
                                       timeout=600)
-        LOG.info('check evac is Done')
+        LOG.info('check evacuation is Done')
         if not vm_type == 'shutoff':
             nova.check_vms_ping(vms_starting_state)
 
