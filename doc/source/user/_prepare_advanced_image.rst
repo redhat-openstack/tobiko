@@ -29,11 +29,17 @@ This can be done with simple script::
     }
     EOF
 
+    $ cat << EOF > /tmp/config
+    SELINUX=permissive
+    SELINUXTYPE=targeted
+    EOF
+
     $ TMPPATH=$(mktemp)
     $ cp /tmp/Fedora-Cloud-Base-Generic.x86_64-40-1.14.qcow2 $TMPPATH
     $ LIBGUESTFS_BACKEND=direct
     $ virt-customize -a $TMPPATH \
-          --firstboot-command 'sh -c "nmcli connection add type vlan con-name vlan101 ifname vlan101 vlan.parent eth0 vlan.id 101 ipv6.addr-gen-mode default-or-eui64; chown -R nginx:nginx /var/lib/nginx/ /var/log/nginx/; setenforce 0; systemctl restart nginx.service"' \
+          --copy-in /tmp/config:/etc/selinux \
+          --firstboot-command 'sh -c "nmcli connection add type vlan con-name vlan101 ifname vlan101 vlan.parent eth0 vlan.id 101 ipv6.addr-gen-mode default-or-eui64"' \
           --install iperf3,iputils,nmap-ncat,nginx \
           --copy-in /tmp/nginx_id.conf:/etc/nginx/conf.d \
           --run-command 'systemctl enable nginx' \

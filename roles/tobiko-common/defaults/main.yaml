@@ -68,13 +68,14 @@ download_images_default:
     copy_in_files:
       - nginx_id.conf
       - iperf3-server.service
+      - config
     # vlan101 is created on top of both eth0 and ens3 because depending on the computes OS, VM interface name changes
     # nmcli will create two connections with same name and different UUIDs and only one of them will become active: the one that finds an existing parent NIC
     customize_command_pattern: >
       LIBGUESTFS_BACKEND=direct virt-customize -a $TMPPATH
+      --copy-in /tmp/config:/etc/selinux
       --firstboot-command 'sh -c "nmcli connection add type vlan con-name vlan101 ifname vlan101 vlan.parent eth0 vlan.id 101 ipv6.addr-gen-mode default-or-eui64;
-      nmcli connection add type vlan con-name vlan101 ifname vlan101 vlan.parent ens3 vlan.id 101 ipv6.addr-gen-mode default-or-eui64;
-      chown -R nginx:nginx /var/lib/nginx/ /var/log/nginx/; setenforce 0; systemctl restart nginx.service"'
+      nmcli connection add type vlan con-name vlan101 ifname vlan101 vlan.parent ens3 vlan.id 101 ipv6.addr-gen-mode default-or-eui64"'
       --install iperf3,iputils,nmap-ncat,nginx
       --copy-in /tmp/nginx_id.conf:/etc/nginx/conf.d
       --run-command 'systemctl enable nginx'
