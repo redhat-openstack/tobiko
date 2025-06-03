@@ -29,6 +29,7 @@ from tobiko.podified import _openshift
 from tobiko import rhosp
 from tobiko.shell import files
 from tobiko.shell import iperf3
+from tobiko.shell import http_ping
 from tobiko.shell import sh
 from tobiko.shell import ssh
 from tobiko.tripleo import _overcloud
@@ -244,9 +245,13 @@ class TripleoTopology(rhosp.RhospTopology):
                 server_ip=server_ip
             )
         else:
-            raise NotImplementedError(
-                "Tripleo topology do not support running background "
-                "HTTP ping test from the test runner node directly.")
+            sh.check_or_start_external_process(
+                start_function=http_ping.start_http_ping_process,
+                stop_function=http_ping.stop_http_ping_process,
+                liveness_function=http_ping.http_ping_process_alive,
+                check_function=http_ping.check_http_ping_results,
+                server_ip=server_ip,
+                ssh_client=ssh_client)
 
 
 class TripleoTopologyNode(rhosp.RhospNode):
