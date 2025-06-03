@@ -356,15 +356,6 @@ class InetToolsPingInterface(PingInterface):
                     '-W', parameters.deadline]
 
 
-IPUTILS_PING_USAGE = """
-ping: invalid option -- '-'
-Usage: ping [-aAbBdDfhLnOqrRUvV] [-c count] [-i interval] [-I interface]
-            [-m mark] [-M pmtudisc_option] [-l preload] [-p pattern] [-Q tos]
-            [-s packetsize] [-S sndbuf] [-t ttl] [-T timestamp_option]
-            [-w deadline] [-W timeout] [hop1 ...] destination
-""".strip()
-
-
 @ping_interface
 class BsdPingInterface(PingInterface):
 
