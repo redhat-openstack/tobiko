@@ -327,6 +327,8 @@ class OpenStackTopology(tobiko.SharedFixture):
 
     background_tests_supported = False
 
+    log_names_mappings: dict = {}
+
     def __init__(self):
         super(OpenStackTopology, self).__init__()
         self._names: typing.Dict[str, OpenStackTopologyNode] = (
@@ -340,11 +342,12 @@ class OpenStackTopology(tobiko.SharedFixture):
         # (if needed) for the OpenStack services.
         # In case of Devstack topology file name in fact name of the systemd
         # unit as logs are stored in journalctl
-        self.log_names_mappings = {
-            neutron.SERVER: (
-                'devstack@' +
-                tobiko.tobiko_config().topology.devstack_neutron_service)
-        }
+        if not self.log_names_mappings:
+            self.log_names_mappings = {
+                neutron.SERVER: (
+                    'devstack@' +
+                    tobiko.tobiko_config().topology.devstack_neutron_service)
+            }
 
     def setup_fixture(self):
         self.discover_nodes()
