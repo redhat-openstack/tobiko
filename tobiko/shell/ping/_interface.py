@@ -172,7 +172,11 @@ class PingInterface(object):
 
         interval = parameters.interval
         if interval > 1:
-            options += self.get_interval_option(interval)
+            if self.has_interval_option:
+                options += self.get_interval_option(interval)
+            else:
+                LOG.warning(f'Interval option with value {interval} ignored '
+                            f'because not supported by ping interface {self}')
 
         fragment = parameters.fragmentation
         if fragment is not None:
@@ -199,8 +203,12 @@ class PingInterface(object):
     def get_size_option(self, size):
         return ['-s', int(size)]
 
+    has_interval_option = False
+
     def get_interval_option(self, interval):
-        return ['-i', int(interval)]
+        details = ("{!r} ping implementation doesn't support "
+                   "'interval={!r}' option").format(self, interval)
+        raise _exception.UnsupportedPingOption(details=details)
 
     has_fragment_option = False
 
@@ -237,6 +245,11 @@ class IpUtilsPingInterface(PingInterface):
 
     def match_ping_usage(self, usage):
         return usage.startswith(IPUTILS_PING_USAGE)
+
+    has_interval_option = True
+
+    def get_interval_option(self, interval):
+        return ['-i', int(interval)]
 
     has_fragment_option = True
 
