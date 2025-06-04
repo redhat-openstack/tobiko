@@ -391,7 +391,9 @@ def _start_pod(cmd, args, pod_name, pod_image):
                 "name": pod_name,
                 "image": pod_image,
                 "command": cmd,
-                "args": args,
+                # All items from args have to be converted to
+                # strings, otherwise the pod creation may fail
+                "args": [str(arg) for arg in args],
             }],
             "restartPolicy": "Never"
         }
