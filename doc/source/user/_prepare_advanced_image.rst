@@ -40,7 +40,7 @@ This can be done with simple script::
     $ virt-customize -a $TMPPATH \
           --copy-in /tmp/config:/etc/selinux \
           --firstboot-command 'sh -c "nmcli connection add type vlan con-name vlan101 ifname vlan101 vlan.parent eth0 vlan.id 101 ipv6.addr-gen-mode default-or-eui64"' \
-          --install iperf3,iputils,nmap-ncat,nginx \
+          --install iperf3,iputils,nmap,nmap-ncat,nginx \
           --copy-in /tmp/nginx_id.conf:/etc/nginx/conf.d \
           --run-command 'systemctl enable nginx' \
           --copy-in /tmp/iperf3-server.service:/etc/systemd/system \

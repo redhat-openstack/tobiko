@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    New background ``dhcp ping`` test was added. This new test runs simple bash
+    script in the guest VM and sends DHCP request periodically to make sure DHCP
+    server replies with the IP address offered.
+    The ``dhcp ping`` background test requires ``nmap`` to be installed in the
+    guest VM.

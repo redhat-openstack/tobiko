@@ -153,6 +153,11 @@ class BackgroundProcessTest(BaseNetworkTest):
             self.stack.fixed_ipv4,
             ssh_client=self.stack.peer_stack.ssh_client)
 
+    def test_dhcp_service(self):
+        """ Test constantly if VM can get response from the DHCP server"""
+        self.topology.check_or_start_background_dhcp_ping(
+            ssh_client=self.stack.peer_stack.ssh_client)
+
 
 @pytest.mark.migrate_server
 class SameHostNetworkTest(NetworkTest):

@@ -27,6 +27,7 @@ from oslo_log import log
 from packaging import version
 
 import tobiko
+from tobiko.shell import dhcp_ping
 from tobiko.shell import files
 from tobiko.shell import ip
 from tobiko.shell import sh
@@ -676,6 +677,16 @@ class OpenStackTopology(tobiko.SharedFixture):
             ssh_client: ssh.SSHClientType = None):  # noqa; pylint: disable=W0613
         tobiko.skip_test("Background HTTP ping test is not supported by "
                          "this topology class.")
+
+    def check_or_start_background_dhcp_ping(
+            self,
+            ssh_client: ssh.SSHClientType):
+        sh.check_or_start_external_process(
+            start_function=dhcp_ping.start_dhcp_ping_process,
+            stop_function=dhcp_ping.stop_dhcp_ping_process,
+            liveness_function=dhcp_ping.dhcp_ping_process_alive,
+            check_function=dhcp_ping.check_dhcp_ping_results,
+            ssh_client=ssh_client)
 
 
 def get_openstack_topology(topology_class: typing.Type = None) -> \
