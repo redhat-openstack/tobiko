@@ -601,37 +601,39 @@ def check_or_start_external_process(start_function,
     :param liveness_function: function name
     :param stop_function: function name
     """
-    if liveness_function(**kwargs):
-        # if we want to terminate the specific external process by
-        # close it, otherwise the check will continue to run in the
-        # background
-        # This step is needed e.g. for iperf as it stores results in the file
-        # when it is stopped
-        if stop_function:
-            stop_function(**kwargs)
-            LOG.info('checked and stopped previous external processes and log '
-                     'starting a new external process')
-            # wait before running check_function, it may take a couple of
-            # seconds to write the log file
-            time.sleep(3)
+    try:
+        if liveness_function(**kwargs):
+            # if we want to terminate the specific external process by
+            # close it, otherwise the check will continue to run in the
+            # background
+            # This step is needed e.g. for iperf as it stores results
+            # in the file when it is stopped
+            if stop_function:
+                stop_function(**kwargs)
+                LOG.info('checked and stopped previous external processes and '
+                         'log starting a new external process')
+                # wait before running check_function, it may take a couple of
+                # seconds to write the log file
+                time.sleep(3)
 
-        # check logs of the process
-        # execute process check i.e. go over process results file and
-        # truncate the log file
-        LOG.info(f'running a check function: {check_function} '
-                 f'for the external process.')
-        check_function(**kwargs)
+            # check logs of the process
+            # execute process check i.e. go over process results file and
+            # truncate the log file
+            LOG.info(f'running a check function: {check_function} '
+                     f'for the external process.')
+            check_function(**kwargs)
 
-    else:
-        # First time the test is run:
-        # if background process by specific name is not present ,
-        # start one in the background:
-        LOG.info('No previous external processes found')
-
-    # restart the process
-    LOG.info(f'Starting a new external process of function: {start_function}')
-    start_function(**kwargs)
-    if not liveness_function(**kwargs):
-        tobiko.fail(f'Service did not start properly with '
-                    f'function: {start_function} '
-                    f'and arguments: {kwargs}')
+        else:
+            # First time the test is run:
+            # if background process by specific name is not present ,
+            # start one in the background:
+            LOG.info('No previous external processes found')
+    finally:
+        # restart the process
+        LOG.info(
+            f'Starting a new external process of function: {start_function}')
+        start_function(**kwargs)
+        if not liveness_function(**kwargs):
+            tobiko.fail(f'Service did not start properly with '
+                        f'function: {start_function} '
+                        f'and arguments: {kwargs}')
