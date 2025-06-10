@@ -158,6 +158,19 @@ class BackgroundProcessTest(BaseNetworkTest):
         self.topology.check_or_start_background_dhcp_ping(
             ssh_client=self.stack.peer_stack.ssh_client)
 
+    def test_dns_service(self):
+        """ Test constantly if VM can get response from the DNS server"""
+        port_details = self.stack.port_details
+        if not port_details:
+            tobiko.skip_test(
+                'DNS background test requires DNS information to be assigned '
+                'to the ports in Neutron.')
+
+        self.topology.check_or_start_background_dns_ping(
+            ip_address=port_details['dns_assignment'][0]['ip_address'],
+            fqdn=port_details['dns_assignment'][0]['fqdn'],
+            ssh_client=self.stack.peer_stack.ssh_client)
+
 
 @pytest.mark.migrate_server
 class SameHostNetworkTest(NetworkTest):
