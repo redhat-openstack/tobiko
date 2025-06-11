@@ -19,7 +19,6 @@ from tobiko.podman import _client
 from tobiko.podman import _shell
 from tobiko.podman import _exception
 
-Podman_Version_3 = _client.podman_version_3
 PodmanClientFixture = _client.PodmanClientFixture
 get_podman_client = _client.get_podman_client
 list_podman_containers = _client.list_podman_containers

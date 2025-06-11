@@ -11,4 +11,3 @@ pytest-reportportal      # Apache-2.0
 pytest-rerunfailures     # MPL-2.0
 pytest-subtests          # MIT
 pytest-timeout           # MIT
-varlink                  # Apache-2.0
