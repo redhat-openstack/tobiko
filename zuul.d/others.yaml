@@ -30,3 +30,18 @@
       - name: git_mirror_credentials
         secret: tobiko_git_mirror_credentials
         pass-to-parent: true
+
+
+- project-template:
+    name: tobiko-tox-py39
+    description: |
+      Jobs that runs tobiko unit tests on python3.9
+    check:
+      jobs:
+        - openstack-tox-py39
+    gate:
+      jobs:
+        - openstack-tox-py39
+    periodic:
+      jobs:
+        - openstack-tox-py39
