@@ -91,7 +91,7 @@ class GlanceImageFixture(
     password: typing.Optional[str] = None
     disabled_algorithms: typing.Optional[typing.Dict[str, typing.Any]] = None
     image = None
-    wait_interval = 5.
+    wait_interval = 3.
 
     def __init__(self,
                  image_name: typing.Optional[str] = None,
