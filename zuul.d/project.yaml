@@ -31,18 +31,3 @@
     pre-release:
       jobs:
         - tobiko-upload-git-mirror
-
-    # disable devstack-tobiko-ovs and devstack-tobiko-ovs-neutron voting
-    # temporarily due to LP #2114176
-    check:
-      jobs:
-        - devstack-tobiko-ovs:
-            voting: false
-        - devstack-tobiko-ovs-neutron:
-            voting: false
-    gate:
-      jobs:
-        - devstack-tobiko-ovs:
-            voting: false
-        - devstack-tobiko-ovs-neutron:
-            voting: false
