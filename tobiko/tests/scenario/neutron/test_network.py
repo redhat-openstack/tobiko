@@ -78,9 +78,6 @@ class BackgroundProcessTest(BaseNetworkTest):
     def setUpClass(cls):
         super().setUpClass()
         cls.topology = topology.get_openstack_topology()
-        if not cls.topology.background_tests_supported:
-            tobiko.skip_test(
-                'Background tests not supported by this topology class.')
 
     def test_check_background_vm_ping(self):
         """Ping from test machine/container/pod to VM with FIP,

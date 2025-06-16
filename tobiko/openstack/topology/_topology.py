@@ -327,8 +327,6 @@ class OpenStackTopology(tobiko.SharedFixture):
     file_digger_class: typing.Type[files.LogFileDigger] = \
         files.JournalLogDigger
 
-    background_tests_supported = False
-
     log_names_mappings: dict = {}
 
     def __init__(self):
@@ -658,7 +656,7 @@ class OpenStackTopology(tobiko.SharedFixture):
                                        ip_version=self.ip_version,
                                        ssh_config=True)
 
-    def check_or_start_background_vm_ping(self, server_ip):  # noqa; pylint: disable=W0613
+    def check_or_start_background_vm_ping(self, server_ip, ssh_client=None):  # noqa; pylint: disable=W0613
         tobiko.skip_test("Background ping not supported by "
                          "this topology class.")
 
