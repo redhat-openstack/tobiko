@@ -76,7 +76,7 @@ def wait_for_octavia_service(interval: tobiko.Seconds = None,
     for attempt in tobiko.retry(timeout=timeout,
                                 interval=interval,
                                 default_timeout=180.,
-                                default_interval=5.):
+                                default_interval=3.):
         try:  # Call any Octavia API
             octavia.list_amphorae()
         except octavia.OctaviaClientException as ex:

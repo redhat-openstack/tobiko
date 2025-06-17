@@ -115,7 +115,7 @@ class HeatStackFixture(base_fixture.BaseResourceFixture):
     retry_count: int = 3
     retry_timeout: float = 1200.
     min_retry_interval: float = 0.1
-    max_retry_interval: float = 5.
+    max_retry_interval: float = 3.
     wait_interval: tobiko.Seconds = 3
     wait_timeout: tobiko.Seconds = 600.
     template: _template.HeatTemplateFixture

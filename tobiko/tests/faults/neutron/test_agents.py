@@ -450,7 +450,7 @@ class L3AgentTest(BaseAgentTest):
 
     def wait_for_active_ha_l3_agent(self) -> AgentType:
         ha_router_id = self.ha_stack.network_stack.gateway_id
-        for attempt in tobiko.retry(timeout=180., interval=5.):
+        for attempt in tobiko.retry(timeout=180., interval=3.):
             agents = neutron.list_l3_agent_hosting_routers(ha_router_id)
             try:
                 active_agent = agents.with_items(ha_state='active').unique

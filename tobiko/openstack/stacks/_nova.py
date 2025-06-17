@@ -361,7 +361,7 @@ class ServerStackFixture(heat.HeatStackFixture, ABC):
                                     interval=retry_interval,
                                     default_count=3,
                                     default_timeout=900.,
-                                    default_interval=5.):
+                                    default_interval=3.):
             tobiko.setup_fixture(self)
             server_id = self.server_id
             try:

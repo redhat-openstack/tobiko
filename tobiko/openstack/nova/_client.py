@@ -380,7 +380,7 @@ def wait_for_server_status(
     for attempt in tobiko.retry(timeout=timeout,
                                 interval=sleep_time,
                                 default_timeout=300.,
-                                default_interval=5.):
+                                default_interval=3.):
         _server = get_server(server_id=server_id, client=client)
         if _server.status == status:
             break

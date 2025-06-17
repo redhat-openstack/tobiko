@@ -49,7 +49,7 @@ def wait_for_services_up(retry: typing.Optional[tobiko.Retry] = None,
                          **list_services_params):
     for attempt in tobiko.retry(other_retry=retry,
                                 default_timeout=300.,
-                                default_interval=5.):
+                                default_interval=3.):
         try:
             services = _client.list_services(**list_services_params)
         except (ks_exceptions.connection.ConnectFailure,

@@ -79,7 +79,7 @@ def wait_for_node_power_state(
     for attempt in tobiko.retry(timeout=timeout,
                                 interval=sleep_time,
                                 default_timeout=300.,
-                                default_interval=5.):
+                                default_interval=3.):
         _node = get_node(node_id=node_id, client=client)
         if _node.power_state == power_state:
             break

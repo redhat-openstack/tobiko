@@ -1,4 +1,4 @@
-# Copyright 2022 Red Hat
+# Copyright 2021 Red Hat
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -48,7 +48,7 @@ def wait_for_namespace_in_hosts(*namespaces: str,
                                 count=count,
                                 interval=interval,
                                 default_timeout=60.,
-                                default_interval=5.):
+                                default_interval=3.):
         try:
             if present:
                 assert_namespace_in_hosts(*namespaces,

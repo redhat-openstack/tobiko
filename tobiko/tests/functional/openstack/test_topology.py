@@ -165,7 +165,7 @@ class OpenStackTopologyTest(testtools.TestCase):
 
         # Process isn't listed after kill
         processes.unique.kill()
-        for attempt in tobiko.retry(timeout=30., interval=5.):
+        for attempt in tobiko.retry(timeout=30., interval=3.):
             processes = osp_topology.list_nodes_processes(
                 command_line=command_line,
                 hostnames=[node.hostname])

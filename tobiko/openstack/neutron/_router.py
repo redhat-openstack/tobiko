@@ -94,7 +94,7 @@ def wait_for_master_and_backup_agents(
     for attempt in tobiko.retry(timeout=timeout,
                                 interval=interval,
                                 default_timeout=300.,
-                                default_interval=5.):
+                                default_interval=3.):
         router_agents = _agent.list_l3_agent_hosting_routers(router_id)
         master_agents = router_agents.with_items(ha_state='active')
         if master_agents:

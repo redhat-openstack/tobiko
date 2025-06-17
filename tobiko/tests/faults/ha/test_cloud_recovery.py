@@ -105,11 +105,11 @@ def octavia_health_checks():
     LOG.debug("check all LBs are in healthy status")
     for lb in octavia.list_load_balancers():
         LOG.debug("checkin LBs:\n%s", lb)
-        octavia.wait_for_status(lb['id'], interval=5., timeout=120.)
+        octavia.wait_for_status(lb['id'], interval=3., timeout=120.)
         octavia.wait_for_status(lb['id'],
                                 status_key=octavia.OPERATING_STATUS,
                                 status=octavia.ONLINE,
-                                interval=5.,
+                                interval=3.,
                                 timeout=120.)
     LOG.debug("All LBs are in healthy status")
 

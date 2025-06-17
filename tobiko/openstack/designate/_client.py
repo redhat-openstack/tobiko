@@ -129,7 +129,7 @@ def wait_for_status(status_key, status, get_client, object_id,
     for attempt in tobiko.retry(timeout=timeout,
                                 interval=interval,
                                 default_timeout=300.,
-                                default_interval=5.):
+                                default_interval=3.):
         response = get_client(object_id, **kwargs)
         if response[status_key] == status:
             return response
