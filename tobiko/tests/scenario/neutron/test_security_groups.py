@@ -363,7 +363,8 @@ class StatelessSecurityGroupInstanceTest(BaseSecurityGroupTest):
         # entry is there or not (it shouldn't be)
         sh.execute('hostname', ssh_client=self.vm.ssh_client)
         conntrack_list_result = sh.execute(
-            "conntrack -L --proto tcp --dport 22 --dst %s" % vm_ip_address,
+            "conntrack -L --proto tcp --dport 22 --dst %s "
+            "--status ASSURED" % vm_ip_address,
             ssh_client=host_ssh_client, sudo=True)
         # And ensure that there is no entry found in conntrack
         self.assertEqual("", conntrack_list_result.stdout)
