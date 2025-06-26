@@ -102,7 +102,7 @@ class LocalPsTest(testtools.TestCase):
     def test_wait_for_processes(self):
         # assume the PID of the first execution of PS process is not more there
         # at the second execution
-        process = sh.list_processes(command='ps',
+        process = sh.list_processes(command=r'ps(?!imon)',
                                     **self.parameters).first
         sh.wait_for_processes(pid=process.pid,
                               command='ps',
@@ -121,7 +121,7 @@ class LocalPsTest(testtools.TestCase):
                          ex.hostname)
 
     def test_wait(self):
-        process = sh.list_processes(command='ps',
+        process = sh.list_processes(command=r'ps(?!imon)',
                                     **self.parameters).first
         process.wait()
 
