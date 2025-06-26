@@ -8,6 +8,7 @@
       - devstack-tobiko-functional
       - devstack-tobiko-neutron
       - devstack-tobiko-nova
+      - devstack-tobiko-octavia
       - devstack-tobiko-ovs
       - devstack-tobiko-storage
       - docs-on-readthedocs
@@ -17,18 +18,6 @@
       - tobiko-infrared
     vars:
         rtd_webhook_id: '84947'
-
-    check:
-      jobs:
-        - devstack-tobiko-octavia:
-            voting: false
-        - devstack-tobiko-ovs-octavia:
-            voting: false
-    gate:
-      jobs:
-        - devstack-tobiko-octavia:
-            voting: false
-
     periodic:
       jobs:
         - requirements-check:
