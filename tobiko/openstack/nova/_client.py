@@ -397,7 +397,7 @@ def wait_for_server_status(
                                              status=status,
                                              timeout=timeout) from ex
 
-        progress = getattr(server, 'progress', None)
+        progress = getattr(_server, 'progress', None)
         LOG.debug(f"Waiting for server {server_id} status to get from "
                   f"{_server.status} to {status} "
                   f"(progress={progress}%)")
