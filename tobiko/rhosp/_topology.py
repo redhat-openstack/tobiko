@@ -59,8 +59,6 @@ class RhospTopology(topology.OpenStackTopology):
     has_containers = True
     container_runtime_cmd = 'podman'
 
-    background_tests_supported = True
-
     @property
     def ignore_containers_list(self):
         return None
