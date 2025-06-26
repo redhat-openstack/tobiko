@@ -30,6 +30,7 @@ LOG = log.getLogger(__name__)
 
 CONFIG_MODULES = ['tobiko.common._case',
                   'tobiko.openstack.glance.config',
+                  'tobiko.openstack.heat.config',
                   'tobiko.openstack.manila.config',
                   'tobiko.openstack.keystone.config',
                   'tobiko.openstack.neutron.config',

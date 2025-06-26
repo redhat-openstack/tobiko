@@ -18,6 +18,7 @@ import typing
 from heatclient.v1 import client as v1_client
 
 import tobiko
+from tobiko import config
 from tobiko.openstack import _client
 from tobiko.openstack import keystone
 
@@ -28,9 +29,10 @@ HeatClient = typing.Union[v1_client.Client]
 class HeatClientFixture(_client.OpenstackClientFixture):
 
     def init_client(self, session) -> HeatClient:
-        return v1_client.Client(session=session,
-                                endpoint_type='public',
-                                service_type='orchestration')
+        return v1_client.Client(
+            session=session,
+            endpoint_type=config.CONF.tobiko.heat.endpoint_type,
+            service_type='orchestration')
 
 
 class HeatClientManager(_client.OpenstackClientManager):
