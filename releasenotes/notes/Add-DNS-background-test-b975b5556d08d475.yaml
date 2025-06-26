@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    New background ``dns ping`` test was added. This new test runs simple bash
+    script in the guest VM and periodically tries to resolve hostname of the
+    other VM from the same stack to make sure that DNS service works properly.
+    The ``dns ping`` background test requires ``resolvectl`` to be installed in
+    the guest VM.

@@ -27,6 +27,7 @@ from oslo_log import log
 from packaging import version
 
 import tobiko
+from tobiko.shell import dns_ping
 from tobiko.shell import dhcp_ping
 from tobiko.shell import files
 from tobiko.shell import ip
@@ -686,6 +687,20 @@ class OpenStackTopology(tobiko.SharedFixture):
             stop_function=dhcp_ping.stop_dhcp_ping_process,
             liveness_function=dhcp_ping.dhcp_ping_process_alive,
             check_function=dhcp_ping.check_dhcp_ping_results,
+            ssh_client=ssh_client)
+
+    def check_or_start_background_dns_ping(
+            self,
+            ip_address: typing.Union[str, netaddr.IPAddress],
+            fqdn: str,
+            ssh_client: ssh.SSHClientType):
+        sh.check_or_start_external_process(
+            start_function=dns_ping.start_dns_ping_process,
+            stop_function=dns_ping.stop_dns_ping_process,
+            liveness_function=dns_ping.dns_ping_process_alive,
+            check_function=dns_ping.check_dns_ping_results,
+            ip_address=ip_address,
+            fqdn=fqdn,
             ssh_client=ssh_client)
 
 
