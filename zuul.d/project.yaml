@@ -16,6 +16,7 @@
       - openstack-python3-jobs
       - publish-to-pypi
       - tobiko-infrared
+      - tobiko-tox-py39
     vars:
         rtd_webhook_id: '84947'
     periodic:
