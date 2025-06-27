@@ -1,0 +1,18 @@
+---
+
+test_workflow_steps:
+  - tox_description: 'verify Octavia resources after overcloud reboot'
+    tox_envlist: octavia
+    tox_step_name: verify_octavia_resources_after_oc_reboot
+    tox_environment:
+      TOBIKO_PREVENT_CREATE: yes
+
+  - tox_description: 'run Octavia disruptive test cases'
+    tox_envlist: octavia_faults
+    tox_step_name: verify_octavia_faults
+
+  - tox_description: 'verify Octavia resources after faults'
+    tox_envlist: octavia
+    tox_step_name: verify_octavia_resources_after_faults
+    tox_environment:
+      TOBIKO_PREVENT_CREATE: yes
