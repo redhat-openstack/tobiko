@@ -13,7 +13,6 @@
 #    under the License.
 from __future__ import absolute_import
 
-import re
 import typing
 
 import metalsmith
@@ -337,11 +336,6 @@ def is_number(text: str):
 def setup_tripleo_topology():
     if _undercloud.has_undercloud() or _overcloud.has_overcloud():
         topology.set_default_openstack_topology_class(TripleoTopology)
-
-
-def str_is_not_ip(check_str):
-    letters = re.compile('[A-Za-z]')
-    return bool(letters.match(check_str))
 
 
 def actual_node_groups(groups):

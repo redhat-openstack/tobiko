@@ -127,14 +127,6 @@ IP_VERSIONS = {
 }
 
 
-def get_ip_version(family: AddressFamily) -> int:
-    try:
-        return IP_VERSIONS[family]
-    except KeyError:
-        pass
-    raise ValueError(f"{family!r} is an invalid value for getting IP version")
-
-
 def resolv_host_addresses(host: str,
                           port: typing.Union[int, str] = 0,
                           ip_version: typing.Optional[int] = None) -> \

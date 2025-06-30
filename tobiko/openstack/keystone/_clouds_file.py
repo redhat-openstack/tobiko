@@ -33,10 +33,6 @@ JSON_SUFFIXES = ('.json',)
 CLOUDS_FILE_SUFFIXES = JSON_SUFFIXES + YAML_SUFFIXES
 
 
-class CloudsFileNotFoundError(tobiko.TobikoException):
-    message = "No such clouds file(s): {clouds_files!s}"
-
-
 CloudsFileContentType = typing.Mapping[str, typing.Any]
 
 

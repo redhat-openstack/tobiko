@@ -16,7 +16,6 @@ from __future__ import absolute_import
 from tobiko.openstack.glance import _client
 from tobiko.openstack.glance import _image
 from tobiko.openstack.glance import _io
-from tobiko.openstack.glance import _lzma
 
 
 glance_client = _client.glance_client
@@ -33,5 +32,3 @@ HasImageMixin = _image.HasImageMixin
 UrlGlanceImageFixture = _image.UrlGlanceImageFixture
 
 open_image_file = _io.open_image_file
-
-has_lzma = _lzma.has_lzma

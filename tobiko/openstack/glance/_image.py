@@ -303,7 +303,6 @@ class UrlGlanceImageFixture(UploadGlanceImageFixture, ABC):
     image_url: str = ''
     image_dir: str = ''
     image_file: str = ''
-    compression_type: typing.Optional[str] = None
 
     def __init__(self,
                  image_url: str = None,
@@ -350,9 +349,7 @@ class UrlGlanceImageFixture(UploadGlanceImageFixture, ABC):
         image_size = os.path.getsize(image_file)
         LOG.debug('Uploading image %r data from file %r (%d bytes)',
                   self.image_name, image_file, image_size)
-        image_data = _io.open_image_file(
-            filename=image_file, mode='rb',
-            compression_type=self.compression_type)
+        image_data = _io.open_image_file(filename=image_file, mode='rb')
         return image_data, image_size
 
     def get_image_from_url(self, image_file: str):
@@ -416,11 +413,6 @@ class UrlGlanceImageFixture(UploadGlanceImageFixture, ABC):
 class InvalidGlanceImageStatus(tobiko.TobikoException):
     message = ("Invalid image {image_name!r} (id {image_id!r}) status: "
                "{actual_status!r} not in {expected_status!r}")
-
-
-class GlanceImageCreationFailed(tobiko.TobikoException):
-    message = ("Failed creating image {image_name!r}: status "
-               "({observed!r}) not in ({expected!r})")
 
 
 CHANGING_STATUS = {GlanceImageStatus.QUEUED,

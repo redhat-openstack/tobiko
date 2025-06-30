@@ -66,33 +66,6 @@ root    |     11|      2| 0.0|     0|00:00:05|migration/0    |[migration/0]
     return table
 
 
-def get_overcloud_nodes_running_process(process):
-    """
-    Check what nodes are running the specifies
-    process: exact str of a process name as seen in ps -axw -o "%c"
-    :return: list of overcloud nodes
-    """
-    oc_procs_df = overcloud.get_overcloud_nodes_dataframe(
-                                            get_overcloud_node_processes_table)
-    oc_nodes_running_process = oc_procs_df.query('PROCESS=="{}"'.format(
-        process))['overcloud_node'].unique()
-    return oc_nodes_running_process
-
-
-def check_if_process_running_on_overcloud(process):
-    """
-    Check what nodes are running the specifies
-    process: exact str of a process name as seen in ps -axw -o "%c"
-    :return: list of overcloud nodes
-    """
-    oc_procs_df = overcloud.get_overcloud_nodes_dataframe(
-                                          get_overcloud_node_processes_table)
-    if not oc_procs_df.query('PROCESS=="{}"'.format(process)).empty:
-        return True
-    else:
-        return False
-
-
 class OvercloudProcessesStatus(object):
     """
     class to handle processes checks,

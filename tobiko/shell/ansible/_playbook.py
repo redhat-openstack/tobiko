@@ -56,9 +56,6 @@ class AnsiblePlaybook(tobiko.SharedFixture):
         self._work_dir = work_dir
         self._work_files: typing.Dict[str, str] = {}
 
-    def get_inventory_file(self, inventory_filename: str):
-        pass
-
     @property
     def ssh_client(self) -> ssh.SSHClientType:
         return self._ssh_client

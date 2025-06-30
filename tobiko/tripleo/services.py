@@ -76,20 +76,6 @@ def get_overcloud_nodes_running_service(service):
     return oc_nodes_running_service.tolist()
 
 
-def check_if_process_running_on_overcloud(process):
-    """
-    Check what nodes are running the specifies
-    process: exact str of a process name as seen in ps -axw -o "%c"
-    :return: list of overcloud nodes
-    """
-    oc_services_df = overcloud.get_overcloud_nodes_dataframe(
-                                            get_overcloud_node_services_table)
-    if not oc_services_df.query('UNIT=="{}"'.format(process)).empty:
-        return True
-    else:
-        return False
-
-
 class OvercloudServicesStatus(tobiko.SharedFixture):
     """
     class to handle services checks,
