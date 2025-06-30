@@ -70,16 +70,18 @@ undisrupt_network_ipv6 = undisrupt_network.replace('iptables', 'ip6tables')
 # Now it is not possible because it is executed with
 # ssh_client.connect().exec_command and run_pcs_resource_operation only
 # supports sh.execute
-ovn_db_pcs_resource_restart = (f"sudo pcs resource restart "
+OVN_DB_PCS_RESOURCE_RESTART = (f"sudo pcs resource restart "
                                f"{pacemaker.OVN_DBS_RESOURCE}")
-kill_rabbit = "sudo pkill -9 beam.smp"
-remove_grastate = "sudo rm -rf /var/lib/mysql/grastate.dat"
-check_bootstrap = """ps -eo lstart,cmd | grep -v grep|
+KILL_RABBIT = "sudo pkill -9 beam.smp"
+REMOVE_GRASTATE = "sudo rm -rf /var/lib/mysql/grastate.dat"
+CHECK_BOOTSTRAP = """ps -eo lstart,cmd | grep -v grep|
 grep wsrep-cluster-address=gcomm://"""
-galera_sst_request = """sudo grep 'wsrep_sst_rsync.*'
+GALERA_SST_REQUEST = """sudo grep 'wsrep_sst_rsync.*'
 /var/log/containers/mysql/mysqld.log"""
-kill_mysqld = "sudo pkill -9 mysqld"
-kill_mariadbd = "sudo pkill -9 mariadbd"
+KILL_MYSQLD = "sudo pkill -9 mysqld"
+KILL_MARIADBD = "sudo pkill -9 mariadbd"
+STOP_TRIPLEO = "sudo systemctl stop 'tripleo_*'"
+PODMAN_PS = "sudo podman ps"
 
 
 class PcsDisableException(tobiko.TobikoException):
@@ -96,6 +98,10 @@ class GaleraBoostrapException(tobiko.TobikoException):
 
 class TimestampException(tobiko.TobikoException):
     message = "Timestamp mismatch: sst was requested before grastate removal"
+
+
+class PodmanContainersException(tobiko.TobikoException):
+    message = "Services are still running in podman"
 
 
 def network_disrupt_node(node_name, disrupt_method=network_disruption):
@@ -552,7 +558,7 @@ def reset_ovndb_pcs_master_resource():
     acting as Master"""
     node = pacemaker.get_overcloud_nodes_running_pcs_resource(
         resource_type='(ocf::ovn:ovndb-servers):', resource_state='Master')[0]
-    ovn_db_pcs_master_resource_restart = (ovn_db_pcs_resource_restart + ' ' +
+    ovn_db_pcs_master_resource_restart = (OVN_DB_PCS_RESOURCE_RESTART + ' ' +
                                           node)
     disrupt_node(node, disrupt_method=ovn_db_pcs_master_resource_restart)
 
@@ -562,7 +568,7 @@ def reset_ovndb_pcs_resource():
     this method restart the whole resource, i.e. on all the controller nodes"""
     node = pacemaker.get_overcloud_nodes_running_pcs_resource(
         resource_type='(ocf::ovn:ovndb-servers):', resource_state='Master')[0]
-    disrupt_node(node, disrupt_method=ovn_db_pcs_resource_restart)
+    disrupt_node(node, disrupt_method=OVN_DB_PCS_RESOURCE_RESTART)
 
 
 def reset_ovndb_master_container():
@@ -602,9 +608,9 @@ def kill_rabbitmq_service():
     else:
         nodes = topology.list_openstack_nodes(group='controller')
     node = random.choice(nodes)
-    sh.execute(kill_rabbit, ssh_client=node.ssh_client)
-    LOG.info('kill rabbit: {} on server: {}'.format(kill_rabbit,
-             node.name))
+    sh.execute(KILL_RABBIT, ssh_client=node.ssh_client)
+    LOG.info('kill rabbit: {} on server: {}'.format(KILL_RABBIT,
+                                                    node.name))
     retry = tobiko.retry(timeout=30, interval=5)
     for _ in retry:
         if not (pacemaker.PacemakerResourcesStatus().
@@ -621,12 +627,12 @@ def kill_all_galera_services():
         nodes = topology.list_openstack_nodes(group='controller')
     for node in nodes:
         if topology.verify_osp_version('17.0', lower=True):
-            sh.execute(kill_mysqld, ssh_client=node.ssh_client)
-            LOG.info('kill galera: {} on server: {}'.format(kill_mysqld,
+            sh.execute(KILL_MYSQLD, ssh_client=node.ssh_client)
+            LOG.info('kill galera: {} on server: {}'.format(KILL_MYSQLD,
                                                             node.name))
         else:
-            sh.execute(kill_mariadbd, ssh_client=node.ssh_client)
-            LOG.info('kill galera: {} on server: {}'.format(kill_mariadbd,
+            sh.execute(KILL_MARIADBD, ssh_client=node.ssh_client)
+            LOG.info('kill galera: {} on server: {}'.format(KILL_MARIADBD,
                                                             node.name))
     retry = tobiko.retry(timeout=30, interval=5)
     for _ in retry:
@@ -651,7 +657,7 @@ def remove_all_grastate_galera():
                 nodes[0].ssh_client):
         raise PcsDisableException()
     for node in nodes:
-        sh.execute(remove_grastate, ssh_client=node.ssh_client)
+        sh.execute(REMOVE_GRASTATE, ssh_client=node.ssh_client)
 
     LOG.info('enable back {} on all servers: {}'.format(
         pacemaker.GALERA_RESOURCE, nodes))
@@ -699,9 +705,9 @@ def remove_one_grastate_galera():
                 pacemaker.DISABLE,
                 node.ssh_client):
         raise PcsDisableException()
-    LOG.info('remove grastate: {} on server: {}'.format(remove_grastate,
+    LOG.info('remove grastate: {} on server: {}'.format(REMOVE_GRASTATE,
                                                         node.name))
-    sh.execute(remove_grastate, ssh_client=node.ssh_client)
+    sh.execute(REMOVE_GRASTATE, ssh_client=node.ssh_client)
 
     LOG.info('enable back {} on all servers: {}'.format(pcs_galera, nodes))
     if topology.verify_osp_version('17.0', lower=True):
@@ -725,7 +731,7 @@ def remove_one_grastate_galera():
         LOG.debug(f'With Ext LB setups, {pcs_haproxy} is not deployed')
 
     # gcomm:// without args means that bootstrap is done from this node
-    bootstrap = sh.execute(check_bootstrap, ssh_client=node.ssh_client).stdout
+    bootstrap = sh.execute(CHECK_BOOTSTRAP, ssh_client=node.ssh_client).stdout
     if re.search('wsrep-cluster-address=gcomm://', bootstrap) is None:
         raise GaleraBoostrapException()
     lastDate = re.findall(r"\w{,3}\s*\w{,3}\s*\d{,2}\s*\d{,2}:\d{,2}:\d{,2}\s*"
@@ -740,7 +746,7 @@ def request_galera_sst():
     bootstrapDate = datetime.strptime(date, '%a %b %d %H:%M:%S %Y')
     retry = tobiko.retry(timeout=30, interval=5)
     for _ in retry:
-        sst_req = sh.execute(galera_sst_request,
+        sst_req = sh.execute(GALERA_SST_REQUEST,
                              ssh_client=node.ssh_client).stdout
         if sst_req:
             break
@@ -767,6 +773,133 @@ def get_random_compute_with_vms():
         vm_list_per_compute = nova.list_servers(**param)
         if len(vm_list_per_compute) > 0:
             return compute.hypervisor_hostname
+
+
+def iha_maintenance():
+    """performing maintenance on overcloud with instanceha"""
+    controllers = topology.list_openstack_nodes(group='controller')
+    computes = topology.list_openstack_nodes(group='compute')
+    servers = create_shutoff_vms()
+    computes_stonith = disable_computes(computes)
+    power_off_nodes(computes)
+    podman_not_empty = stop_cluster(controllers)
+    power_off_nodes(controllers)
+    power_on_nodes(controllers)
+    power_on_nodes(computes)
+    enable_computes(computes, computes_stonith)
+    cleanup()
+    ping_delete_servers(servers)
+    if podman_not_empty:
+        raise PodmanContainersException
+
+
+def create_shutoff_vms():
+    LOG.info('create 2 vms')
+    servers = tests.test_servers_creation(number_of_servers=2)
+    nova.action_on_all_instances('shutoff')
+    return servers
+
+
+def disable_computes(computes):
+    for compute in computes:
+        LOG.info(f"disable {compute.name}")
+        pacemaker.run_pcs_resource_operation(compute.name, pacemaker.DISABLE)
+    stonith_status = pacemaker.execute_pcs(['stonith', 'status'], sudo=True)
+    computes_stonith = pair_compute_stonith(stonith_status)
+    for stonith in computes_stonith:
+        LOG.info(f"pcs stonith disable {stonith}")
+        pacemaker.execute_pcs(['stonith', 'disable', stonith], sudo=True)
+    return computes_stonith
+
+
+def power_off_nodes(nodes):
+    for node in nodes:
+        LOG.info(f"power off {node}")
+        node.power_off_node()
+
+
+def power_on_nodes(nodes):
+    for node in nodes:
+        LOG.info(f"power on {node}")
+        node.power_on_node()
+
+
+def stop_cluster(controllers):
+    podman_not_empty = False
+    LOG.info("pcs cluster stop --all")
+    pacemaker.execute_pcs(['cluster', 'stop', '--all'],
+                          sudo=True, timeout=70)
+    for controller in controllers:
+        LOG.info(f"sudo systemctl stop 'tripleo_*' {controller}")
+        sh.execute(STOP_TRIPLEO, ssh_client=controller.ssh_client)
+        # checks podman doesn't run anything
+        # (stdout = headlines = 80 characters)
+        if len(sh.execute(PODMAN_PS, ssh_client=controller.ssh_client).stdout
+               ) > 100:
+            podman_not_empty = True
+    return podman_not_empty
+
+
+def enable_computes(computes, computes_stonith):
+    for compute in computes:
+        LOG.info(f"execute pcs stonith confirm {compute.name} --force")
+        pacemaker.execute_pcs(['stonith', 'confirm', compute.name,
+                               '--force'], sudo=True)
+    for stonith in computes_stonith:
+        LOG.info(f"execute pcs stonith enable {stonith}")
+        pacemaker.execute_pcs(['stonith', 'enable', stonith], sudo=True)
+    for compute in computes:
+        LOG.info(f"enable {compute.name}")
+        pacemaker.run_pcs_resource_operation(compute.name, pacemaker.ENABLE,
+                                             operation_wait=800)
+
+
+def cleanup():
+    LOG.info("execute pcs resource cleanup")
+    pacemaker.execute_pcs(['resource', 'cleanup'], sudo=True)
+
+
+def ping_delete_servers(servers):
+    nova.action_on_all_instances('active')
+    LOG.info("ping servers and delete")
+    for server in servers:
+        server.assert_is_reachable()
+        server.delete_stack()
+
+
+def pair_compute_stonith(stonith_status):
+    """ From the following input, it ouputs only computes fence:
+  * stonith-fence_ipmilan-525400793eae	(stonith:fence_ipmilan):
+  * stonith-fence_compute-fence-nova	(stonith:fence_compute):
+  * stonith-fence_ipmilan-5254000a18c9	(stonith:fence_ipmilan):
+  * stonith-fence_ipmilan-525400fa6fc8	(stonith:fence_ipmilan):
+Fencing Levels:
+ Target: compute-0
+   Level1- stonith-fence_ipmilan-525400fa6fc8,stonith-fence_compute-fence-nova
+ Target: compute-1
+   Level1- stonith-fence_ipmilan-5254000a18c9,stonith-fence_compute-fence-nova
+ Target: controller-0
+   Level1- stonith-fence_ipmilan-525400793eae
+leads to
+['stonith-fence_ipmilan-525400fa6fc8', 'stonith-fence_ipmilan-5254000a18c9']
+"""
+    lines = stonith_status.splitlines()
+    compute_stonith = []
+    current_target = None
+    for line in lines:
+        target_match = re.match(r"^\s*Target:\s+(compute-\d+)", line)
+        if target_match:
+            current_target = target_match.group(1)
+            continue
+        elif re.match(r"^\s*Target:\s+(controller-\d+)", line):
+            current_target = None
+            continue
+        if current_target:
+            stonith_matches = re.findall(r"stonith-fence_ipmilan-[\da-f]+",
+                                         line)
+            if stonith_matches:
+                compute_stonith.extend(stonith_matches)
+    return compute_stonith
 
 
 def check_iha_evacuation(failover_type=None, vm_type=None):
