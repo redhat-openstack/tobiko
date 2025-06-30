@@ -30,7 +30,6 @@ Tobiko package
    :maxdepth: 4
 
    modules/tobiko
-   modules/docker
    modules/http
    modules/openstack/index
    modules/podman

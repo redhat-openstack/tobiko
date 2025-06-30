@@ -123,7 +123,7 @@ class BaseSecurityGroupTest(testtools.TestCase):
                 self._container_runtime_name = (
                     podified.get_container_runtime_name())
             else:
-                self._container_runtime_name = 'docker'
+                self._container_runtime_name = 'podman'
         return self._container_runtime_name
 
     @property

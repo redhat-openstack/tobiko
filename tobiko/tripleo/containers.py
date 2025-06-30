@@ -41,7 +41,7 @@ class ContainerRuntimeFixture(tobiko.SharedFixture):
         # TODO THIS LOCKS SSH CLIENT TO CONTROLLER
         for node in topology.list_openstack_nodes(group='controller'):
             try:
-                result = sh.execute('podman --version || docker --version',
+                result = sh.execute('podman --version',
                                     ssh_client=node.ssh_client)
             except sh.ShellCommandFailed:
                 continue
@@ -61,10 +61,6 @@ def get_container_runtime() -> rhosp_containers.ContainerRuntime:
 
 def get_container_runtime_name() -> str:
     return get_container_runtime().runtime_name
-
-
-def is_docker() -> bool:
-    return get_container_runtime().runtime_name == 'docker'
 
 
 def is_podman() -> bool:
@@ -135,11 +131,6 @@ def assert_containers_running(group, expected_containers, full_name=True,
     """assert that all containers specified in the list are running
     on the specified openstack group(controller or compute etc..)
     if bool_check is True then return only True or false without failing"""
-
-    if is_docker():
-        LOG.info('not checking common containers since we are on docker')
-        return
-
     failures = []
 
     openstack_nodes = topology.list_openstack_nodes(group=group,
@@ -392,34 +383,18 @@ def comparable_container_keys(container, include_container_objects=False):
     'container_state, container object if specified'
      """
     # Differenciate between podman_ver3 with podman-py from earlier api
-    if is_podman():
-        con_host_name_stat_obj_tuple = (rhosp_topology.ip_to_hostname(
-            container.client.base_url.netloc.rsplit('_')[1]),
-                                        container.attrs[
-            'Names'][0], container.attrs['State'], container)
+    con_host_name_stat_obj_tuple = (rhosp_topology.ip_to_hostname(
+        container.client.base_url.netloc.rsplit('_')[1]),
+        container.attrs['Names'][0], container.attrs['State'], container)
 
-        con_host_name_stat_tuple = (rhosp_topology.ip_to_hostname(
-            container.client.base_url.netloc.rsplit('_')[1]),
-                                    container.attrs[
-            'Names'][0], container.attrs['State'])
+    con_host_name_stat_tuple = (rhosp_topology.ip_to_hostname(
+        container.client.base_url.netloc.rsplit('_')[1]),
+        container.attrs['Names'][0], container.attrs['State'])
 
-        if include_container_objects:
-            return con_host_name_stat_obj_tuple
-        else:
-            return con_host_name_stat_tuple
-
-    elif is_docker():
-        if include_container_objects:
-            return (container.client.api.ssh_client.hostname,
-                    osp13_container_name_short_format(container.attrs[
-                                                          'Labels']['name']),
-                    container.attrs['State'],
-                    container)
-        else:
-            return (container.client.api.ssh_client.hostname,
-                    osp13_container_name_short_format(container.attrs[
-                                                          'Labels']['name']),
-                    container.attrs['State'])
+    if include_container_objects:
+        return con_host_name_stat_obj_tuple
+    else:
+        return con_host_name_stat_tuple
 
 
 @functools.lru_cache()

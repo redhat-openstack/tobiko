@@ -24,7 +24,7 @@ from tobiko.tests.faults.containers import container_ops
 LOG = log.getLogger(__name__)
 
 
-@container_ops.skip_unless_has_docker
+@container_ops.skip_unless_has_podman
 class ConfigurationFilesTest(testtools.TestCase):
 
     def check_config(self, node, containers, file_list, service):
@@ -66,11 +66,8 @@ class ConfigurationFilesTest(testtools.TestCase):
                         skip_this_container = True
                 if skip_this_container:
                     continue
-                # 'docker' is used here in order to be compatible with old OSP
-                # versions. On versions with podman, 'docker' command is
-                # linked to 'podman'
                 result = sh.execute(
-                        f"sudo docker exec -u root {container} md5sum "
+                        f"sudo podman exec -u root {container} md5sum "
                         f"{fname} | awk '{{print $1}}'",
                         ssh_client=node.ssh_client)
                 container_md5 = result.stdout.strip()

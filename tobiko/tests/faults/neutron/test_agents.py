@@ -189,7 +189,7 @@ class BaseAgentTest(testtools.TestCase):
             self, hosts: typing.Optional[typing.List[str]] = None):
         '''Restart network agent containers on hosts
 
-        Restart docker or podman containers and check network agents are up and
+        Restart podman containers and check network agents are up and
         running after it
 
         :parm hosts: List of hostnames to start agent on
@@ -637,7 +637,7 @@ class OvnControllerTest(BaseAgentTest):
         '''Stop OVN controller container by killing ovn-controller process
         running into it
 
-        Docker/Podman service should restart it automatically
+        Podman service should restart it automatically
 
         :parm hosts: List of hostnames to stop agent on
         :type hosts: list of strings

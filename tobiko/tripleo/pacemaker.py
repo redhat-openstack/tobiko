@@ -35,7 +35,7 @@ def get_pcs_resources_table(timeout=720, interval=2) -> pandas.DataFrame:
        rabbitmq-bundle-0    (ocf::heartbeat:rabbitmq-cluster):      Started con
        troller-0
      ip-10.0.0.101  (ocf::heartbeat:IPaddr2):       Started controller-1
-       openstack-cinder-volume-docker-0     (ocf::heartbeat:docker):        Sta
+       openstack-cinder-volume-podman-0     (ocf::heartbeat:podman):        Sta
        rted controller-0
 
     :return: dataframe of pcs resources stats table
@@ -87,9 +87,6 @@ class PacemakerResourcesStatus(object):
 
     def container_runtime(self):
 
-        if not self.pcs_df[(self.pcs_df['resource_type'] ==
-                            f"({self.ocf_prefix}heartbeat:docker):")].empty:
-            return 'docker'
         if not self.pcs_df[(self.pcs_df['resource_type'] ==
                             f"({self.ocf_prefix}heartbeat:podman):")].empty:
             return 'podman'

@@ -77,7 +77,6 @@ django-pymemcache===1.0.0
 django-pyscss===2.0.2
 dnspython===2.1.0
 doc8===0.10.1
-docker===5.0.3
 docutils===0.17.1
 dogpile.cache===1.1.5
 dogtag-pki===10.7.4.1

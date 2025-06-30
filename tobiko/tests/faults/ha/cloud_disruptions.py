@@ -574,7 +574,7 @@ def reset_ovndb_pcs_resource():
 def reset_ovndb_master_container():
     """get and restart the ovndb master container
     use of partial name :  resource: ovn-dbs-bundle-0 =>
-    container: ovn-dbs-bundle-podman-0 or ovn-dbs-bundle-docker-0"""
+    container: ovn-dbs-bundle-podman-0"""
     node = pacemaker.get_overcloud_nodes_running_pcs_resource(
         resource_type='(ocf::ovn:ovndb-servers):', resource_state='Master')[0]
     resource = pacemaker.get_overcloud_resource(

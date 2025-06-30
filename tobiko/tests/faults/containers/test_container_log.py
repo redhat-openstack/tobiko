@@ -23,7 +23,7 @@ from tobiko.tests.faults.containers import container_ops
 LOG = log.getLogger(__name__)
 
 
-@container_ops.skip_unless_has_docker
+@container_ops.skip_unless_has_podman
 class LogFilesTest(testtools.TestCase):
 
     def test_neutron_logs_exist(self):

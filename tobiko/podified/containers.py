@@ -45,10 +45,6 @@ def get_container_runtime_name() -> str:
     return get_container_runtime().runtime_name
 
 
-def is_docker() -> bool:
-    return False
-
-
 def is_podman() -> bool:
     return True
 
@@ -103,10 +99,6 @@ def assert_containers_running(group, expected_containers, full_name=True,
     """assert that all containers specified in the list are running
     on the specified openstack group(controller or compute etc..)
     if bool_check is True then return only True or false without failing"""
-
-    if is_docker():
-        LOG.info('not checking common containers since we are on docker')
-        return
 
     failures = []
 

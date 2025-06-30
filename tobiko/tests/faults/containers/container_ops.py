@@ -39,10 +39,8 @@ def get_filtered_node_containers(node, containers_regex):
     :rtype: list of strings
     """
     filtered_containers = []
-    # 'docker' is used here in order to be compatible with old OSP versions.
-    # On versions with podman, 'docker' command is linked to 'podman'
     result = sh.execute(
-            'docker ps --format "{{.Names}}"',
+            'podman ps --format "{{.Names}}"',
             ssh_client=node.ssh_client, sudo=True)
     all_node_containers = result.stdout.strip().split('\n')
     for container in all_node_containers:
@@ -143,7 +141,7 @@ def get_node_ovn_containers(node):
     """
     neutron_containers = [
             'ovn_(controller|metadata_agent)',
-            r'ovn-dbs-bundle-(podman|docker)-\d*']
+            r'ovn-dbs-bundle-podman-\d*']
     return get_filtered_node_containers(node, neutron_containers)
 
 
@@ -183,7 +181,7 @@ def get_pacemaker_resource_from_container(container):
     :rtype: string
     """
     pcs_resource = None
-    resource_candidate = re.search(r'(.*)-(docker|podman)-\d', container)
+    resource_candidate = re.search(r'(.*)-podman-\d', container)
     if resource_candidate:
         pcs_resource = resource_candidate.group(1)
     return pcs_resource
@@ -238,7 +236,7 @@ def get_pacemaker_resource_logfiles(node, container):
                       ssh_client=node.ssh_client,
                       sudo=True).stdout.splitlines()
     for pid in pids:
-        cmd_stdout = sh.execute(f'docker exec -u root {container} '
+        cmd_stdout = sh.execute(f'podman exec -u root {container} '
                                 f'cat /proc/{pid}/cmdline',
                                 ssh_client=node.ssh_client,
                                 sudo=True).stdout
@@ -268,14 +266,14 @@ def get_container_logfiles(node, container):
     :rtype: list
     """
     cmd = sh.execute(
-            f'docker exec -u root {container} cat /run_command',
+            f'podman exec -u root {container} cat /run_command',
             ssh_client=node.ssh_client, sudo=True)
     cmd_stdout = cmd.stdout.strip()
     if 'pacemaker_remoted' in cmd_stdout:
         return get_pacemaker_resource_logfiles(node, container)
     if ' ' not in cmd_stdout:  # probably script as no space in the command
         cmd = sh.execute(
-                f'docker exec -u root {container} cat {cmd_stdout}',
+                f'podman exec -u root {container} cat {cmd_stdout}',
                 ssh_client=node.ssh_client, sudo=True)
         cmd_stdout = cmd.stdout.strip()
     LOG.debug(f'The following command is executed in {container} container '
@@ -327,7 +325,7 @@ def log_msg(node, container, logfile, msg):
     :type msg: string
     """
     cmd = f"sh -c 'echo {msg} >> {logfile}'"
-    sh.execute(f'docker exec -u root {container} {cmd}',
+    sh.execute(f'podman exec -u root {container} {cmd}',
                ssh_client=node.ssh_client, sudo=True)
 
 
@@ -373,35 +371,35 @@ def rotate_logs(node):
     if not containers:
         tobiko.skip_test('No logrotate container has been found')
     container = containers[0]
-    sh.execute(f'docker exec -u root {container} logrotate '
+    sh.execute(f'podman exec -u root {container} logrotate '
                '-f /etc/logrotate-crond.conf',
                ssh_client=node.ssh_client, sudo=True)
 
 
-def has_docker():
-    return get_docker_version() is not None
+def has_podman():
+    return get_podman_version() is not None
 
 
-skip_unless_has_docker = tobiko.skip_unless(
-    "requires docker on controller nodes", has_docker)
+skip_unless_has_podman = tobiko.skip_unless(
+    "requires podman on controller nodes", has_podman)
 
 
-def get_docker_version():
+def get_podman_version():
     # use a fixture to save the result
     return tobiko.setup_fixture(
-        DockerVersionFixture).docker_version
+        PodmanVersionFixture).podman_version
 
 
-class DockerVersionFixture(tobiko.SharedFixture):
+class PodmanVersionFixture(tobiko.SharedFixture):
 
-    docker_version = None
+    podman_version = None
 
     def setup_fixture(self):
         controller = topology.find_openstack_node(group='controller')
         try:
-            result = sh.execute('docker --version',
+            result = sh.execute('podman --version',
                                 ssh_client=controller.ssh_client)
         except sh.ShellCommandFailed:
             pass
         else:
-            self.docker_version = result.stdout
+            self.podman_version = result.stdout

@@ -213,7 +213,6 @@ class UnknownOpenStackConfigurationFile(tobiko.TobikoException):
 
 class OpenStackTopologyNode:
 
-    _docker_client = None
     _podman_client = None
 
     def __init__(self,
@@ -252,15 +251,6 @@ class OpenStackTopologyNode:
     @property
     def ssh_parameters(self):
         return self.ssh_client.setup_connect_parameters()
-
-    @property
-    def docker_client(self):
-        docker_client = self._docker_client
-        if not docker_client:
-            from tobiko import docker
-            self._docker_client = docker_client = docker.get_docker_client(
-                ssh_client=self.ssh_client)
-        return docker_client
 
     @property
     def podman_client(self):
@@ -312,8 +302,6 @@ class OpenStackTopology(tobiko.SharedFixture):
     agent_to_container_name_mappings: typing.Dict[str, str] = {}
 
     has_containers = False
-
-    container_runtime_cmd = 'docker'
 
     config_file_mappings = {
         'ml2_conf.ini': '/etc/neutron/plugins/ml2/ml2_conf.ini',
@@ -764,15 +752,15 @@ def get_rhosp_version():
 
 def get_nova_version_from_container():
     ssh_client = list_openstack_nodes(group='controller')[0].ssh_client
-    for container_runtime_cmd in ('docker', 'podman'):
-        try:
-            cmd = (container_runtime_cmd +
-                   ' exec -uroot nova_conductor nova-manage --version')
-            return sh.execute(cmd,
-                              ssh_client=ssh_client,
-                              sudo=True).stdout
-        except sh.ShellCommandFailed:
-            pass
+    container_runtime_cmd = 'podman'
+    try:
+        cmd = (container_runtime_cmd +
+               ' exec -uroot nova_conductor nova-manage --version')
+        return sh.execute(cmd,
+                          ssh_client=ssh_client,
+                          sudo=True).stdout
+    except sh.ShellCommandFailed:
+        pass
 
 
 # During a execution of tobiko, openstack version does not change, so let's

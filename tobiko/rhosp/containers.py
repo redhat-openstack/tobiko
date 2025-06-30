@@ -10,7 +10,6 @@ from oslo_log import log
 import tobiko
 from tobiko.openstack import topology
 from tobiko import podman
-from tobiko import docker
 from tobiko.shell import ssh
 
 
@@ -41,7 +40,7 @@ class ContainerRuntime(abc.ABC):
             except Exception:
                 if attempt.is_last:
                     raise
-                LOG.debug('Unable to connect to docker server',
+                LOG.debug(f'Unable to connect to {self.runtime_name} server',
                           exc_info=1)
                 ssh.reset_default_ssh_port_forward_manager()
         else:
@@ -55,19 +54,9 @@ class ContainerRuntime(abc.ABC):
         raise NotImplementedError
 
 
-class DockerContainerRuntime(ContainerRuntime):
-    runtime_name = 'docker'
-    version_pattern = re.compile('Docker version .*', re.IGNORECASE)
-
-    def _get_client(self, ssh_client):
-        return docker.get_docker_client(ssh_client=ssh_client,
-                                        sudo=True).connect()
-
-    def list_containers(self, ssh_client):
-        client = self.get_client(ssh_client=ssh_client)
-        return docker.list_docker_containers(client=client)
-
-
+# NOTE: only podman is supported, but we still maintian the base abstract class
+# ContainerRuntime in case a different container runtime is supported in the
+# future
 class PodmanContainerRuntime(ContainerRuntime):
     runtime_name = 'podman'
     version_pattern = re.compile('Podman version .*', re.IGNORECASE)
@@ -80,9 +69,8 @@ class PodmanContainerRuntime(ContainerRuntime):
         return podman.list_podman_containers(client=client)
 
 
-DOCKER_RUNTIME = DockerContainerRuntime()
 PODMAN_RUNTIME = PodmanContainerRuntime()
-CONTAINER_RUNTIMES = [PODMAN_RUNTIME, DOCKER_RUNTIME]
+CONTAINER_RUNTIMES = [PODMAN_RUNTIME]
 
 
 class ContainerMismatchException(tobiko.TobikoException):
