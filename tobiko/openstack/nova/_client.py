@@ -38,7 +38,10 @@ NovaHypervisor = typing.Union[novaclient.v2.hypervisors.Hypervisor]
 class NovaClientFixture(_client.OpenstackClientFixture):
 
     def init_client(self, session) -> NovaClient:
-        return novaclient.client.Client('2.56', session=session)
+        return novaclient.client.Client(
+            '2.56',
+            session=session,
+            additional_headers={'Connection': 'close'})
 
 
 class NovaClientManager(_client.OpenstackClientManager):

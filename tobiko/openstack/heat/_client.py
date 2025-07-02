@@ -32,7 +32,8 @@ class HeatClientFixture(_client.OpenstackClientFixture):
         return v1_client.Client(
             session=session,
             endpoint_type=config.CONF.tobiko.heat.endpoint_type,
-            service_type='orchestration')
+            service_type='orchestration',
+            additional_headers={'Connection': 'close'})
 
 
 class HeatClientManager(_client.OpenstackClientManager):

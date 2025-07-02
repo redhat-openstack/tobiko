@@ -29,7 +29,8 @@ ServiceUnavailable = neutronclient.exceptions.ServiceUnavailable
 class NeutronClientFixture(_client.OpenstackClientFixture):
 
     def init_client(self, session):
-        return neutronclient.Client(session=session)
+        return neutronclient.Client(session=session,
+                                    additional_headers={'Connection': 'close'})
 
 
 class NeutronClientManager(_client.OpenstackClientManager):

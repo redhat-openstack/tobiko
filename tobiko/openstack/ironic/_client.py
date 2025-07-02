@@ -32,7 +32,8 @@ IronicClient = typing.Union[ironicclient.v1.client.Client]
 class IronicClientFixture(_client.OpenstackClientFixture):
 
     def init_client(self, session) -> IronicClient:
-        return ironicclient.client.get_client(1, session=session)
+        return ironicclient.client.get_client(
+            1, session=session, additional_headers={'Connection': 'close'})
 
 
 class IronicClientManager(_client.OpenstackClientManager):

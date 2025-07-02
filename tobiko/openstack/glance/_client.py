@@ -26,7 +26,8 @@ LOG = log.getLogger(__name__)
 class GlanceClientFixture(_client.OpenstackClientFixture):
 
     def init_client(self, session):
-        return glanceclient.Client(session=session)
+        return glanceclient.Client(session=session,
+                                   additional_headers={'Connection': 'close'})
 
 
 class GlanceClientManager(_client.OpenstackClientManager):
