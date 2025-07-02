@@ -11,7 +11,6 @@ import pandas
 
 import tobiko
 from tobiko import config
-from tobiko import podman
 from tobiko.openstack import neutron
 from tobiko.openstack import topology
 from tobiko import rhosp as rhosp_topology
@@ -394,25 +393,15 @@ def comparable_container_keys(container, include_container_objects=False):
      """
     # Differenciate between podman_ver3 with podman-py from earlier api
     if is_podman():
-        if podman.Podman_Version_3():
-            con_host_name_stat_obj_tuple = (rhosp_topology.ip_to_hostname(
-                container.client.base_url.netloc.rsplit('_')[1]),
-                                            container.attrs[
-                'Names'][0], container.attrs['State'], container)
-
-            con_host_name_stat_tuple = (rhosp_topology.ip_to_hostname(
-                container.client.base_url.netloc.rsplit('_')[1]),
+        con_host_name_stat_obj_tuple = (rhosp_topology.ip_to_hostname(
+            container.client.base_url.netloc.rsplit('_')[1]),
                                         container.attrs[
-                'Names'][0], container.attrs['State'])
-        else:
+            'Names'][0], container.attrs['State'], container)
 
-            con_host_name_stat_obj_tuple = (rhosp_topology.ip_to_hostname(
-                container._client._context.hostname),  # pylint: disable=W0212
-                container.data['names'], container.data['status'], container)
-
-            con_host_name_stat_tuple = (rhosp_topology.ip_to_hostname(
-                container._client._context.hostname),  # pylint: disable=W0212
-                container.data['names'], container.data['status'])
+        con_host_name_stat_tuple = (rhosp_topology.ip_to_hostname(
+            container.client.base_url.netloc.rsplit('_')[1]),
+                                    container.attrs[
+            'Names'][0], container.attrs['State'])
 
         if include_container_objects:
             return con_host_name_stat_obj_tuple

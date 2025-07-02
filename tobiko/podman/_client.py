@@ -16,7 +16,6 @@ import podman
 
 import tobiko
 from tobiko.podman import _exception
-from tobiko.podman import _podman1
 from tobiko.podman import _shell
 from tobiko.shell import ssh
 from tobiko.shell import sh
@@ -37,8 +36,7 @@ def list_podman_containers(client=None, **kwargs):
         return tobiko.select(containers)
 
 
-PODMAN_CLIENT_CLASSES = \
-    _podman1.Client, podman.PodmanClient  # pylint: disable=E1101
+PODMAN_CLIENT_CLASSES = podman.PodmanClient
 
 
 def podman_client(obj=None):
@@ -79,6 +77,8 @@ class PodmanClientFixture(tobiko.SharedFixture):
             self.ssh_client = ssh_client
 
     def setup_fixture(self):
+        if not podman_version_3():
+            raise ValueError('Unsupported podman version lower than 3')
         self.setup_ssh_client()
         self.setup_client()
 
@@ -91,13 +91,8 @@ class PodmanClientFixture(tobiko.SharedFixture):
         return ssh_client
 
     def setup_client(self):
-        # podman ver3 (osp>=16.2) has different service / socket paths
-        if podman_version_3():
-            podman_service = 'podman.socket'
-            podman_socket_file = '/run/podman/podman.sock'
-        else:
-            podman_service = 'io.podman.socket'
-            podman_socket_file = '/run/podman/io.podman'
+        podman_service = 'podman.socket'
+        podman_socket_file = '/run/podman/podman.sock'
 
         username = self.ssh_client.get_connect_parameters()['username']
         podman_client_check_status_cmds = (
@@ -146,50 +141,38 @@ class PodmanClientFixture(tobiko.SharedFixture):
     def create_client(self):  # noqa: C901
         for _ in tobiko.retry(timeout=60., interval=5.):
             try:
-                podman_remote_socket = self.discover_podman_socket()
                 username = self.ssh_client.connect_parameters['username']
                 host = self.ssh_client.connect_parameters["hostname"]
                 key_files = self.ssh_client.connect_parameters.get(
                     'key_filename', [])
                 key_file = key_files[0] if len(key_files) > 0 else None
-                socket = podman_remote_socket
                 # replace : with . in case of IPv6 addresses
                 podman_socket_file = (
                     f'/tmp/podman.sock_{host.replace(":", ".")}')
                 podman_remote_socket_uri = f'unix:{podman_socket_file}'
 
-                remote_uri = f'ssh://{username}@{host}{socket}'
-
-                if podman_version_3():
-                    # check if a ssh tunnel exists, if not create one
-                    psall = str(subprocess.check_output(('ps', '-ef')))
-                    if f'ssh -L {podman_socket_file}' not in psall:
+                # check if a ssh tunnel exists, if not create one
+                psall = str(subprocess.check_output(('ps', '-ef')))
+                if f'ssh -L {podman_socket_file}' not in psall:
+                    if os.path.exists(podman_socket_file):
+                        subprocess.call(
+                            ['rm', '-f', podman_socket_file])
+                    # start a background  ssh tunnel with the remote host
+                    command = [
+                        'ssh', '-o', 'strictHostKeyChecking=no', '-L',
+                        f'{podman_socket_file}:/run/podman/podman.sock',
+                        '-l', username, host, '-N', '-f']
+                    if key_file:
+                        command += ['-i', key_file]
+                    subprocess.call(command)
+                    for _ in tobiko.retry(timeout=60., interval=1.):
                         if os.path.exists(podman_socket_file):
-                            subprocess.call(
-                                ['rm', '-f', podman_socket_file])
-                        # start a background  ssh tunnel with the remote host
-                        command = [
-                            'ssh', '-o', 'strictHostKeyChecking=no', '-L',
-                            f'{podman_socket_file}:/run/podman/podman.sock',
-                            '-l', username, host, '-N', '-f']
-                        if key_file:
-                            command += ['-i', key_file]
-                        subprocess.call(command)
-                        for _ in tobiko.retry(timeout=60., interval=1.):
-                            if os.path.exists(podman_socket_file):
-                                break
-                    client = podman.PodmanClient(
-                        base_url=podman_remote_socket_uri)
-                    if client.ping():
-                        LOG.info('container_client is online')
+                            break
+                client = podman.PodmanClient(
+                    base_url=podman_remote_socket_uri)
+                if client.ping():
+                    LOG.info('container_client is online')
 
-                else:
-                    client = _podman1.Client(  # pylint: disable=E1101
-                        uri=podman_remote_socket_uri,
-                        remote_uri=remote_uri,
-                        identity_file='~/.ssh/id_rsa')
-                    if client.system.ping():
-                        LOG.info('container_client is online')
                 return client
             except (ConnectionRefusedError, ConnectionResetError):
                 # retry
