@@ -132,8 +132,8 @@ class PodifiedTopology(rhosp.RhospTopology):
     def create_node(self, name, ssh_client, **kwargs):
         node_type = kwargs.pop('node_type')
         if node_type == OCP_WORKER:
-            return OcpWorkerNode(topology=self, name=name, ssh_client=None,
-                                 **kwargs)
+            return OcpNode(topology=self, name=name, ssh_client=None,
+                           **kwargs)
         else:
             return EdpmNode(topology=self, name=name, ssh_client=ssh_client,
                             **kwargs)
@@ -258,8 +258,25 @@ class EdpmNode(rhosp.RhospNode):
         LOG.debug(f"EDPM node {self.name} power is off.")
 
 
-class OcpWorkerNode(rhosp.RhospNode):
-    pass
+class OcpNode(rhosp.RhospNode):
+    def reboot_node(self, reactivate_servers=True):
+        start_time = tobiko.time()
+        _openshift.reboot_ocp_node(self.name)
+        for _ in tobiko.retry(timeout=600, interval=10):
+            try:
+                uptime = _openshift.get_ocp_node_uptime(self.name)
+            except Exception:
+                LOG.warning(f"Unable to get uptime from node {self.name}")
+            else:
+                elapsed_time = tobiko.time() - start_time
+                if uptime < elapsed_time:
+                    LOG.debug(f"OCP node {self.name} rebooted in "
+                              f"{elapsed_time} seconds.")
+                    break
+                else:
+                    LOG.debug(f"OCP node {self.name} still not rebooted "
+                              f"{elapsed_time} seconds after reboot operation "
+                              f"(uptime={uptime})")
 
 
 def setup_podified_topology():

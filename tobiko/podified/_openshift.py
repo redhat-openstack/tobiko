@@ -557,3 +557,18 @@ def check_or_start_tobiko_http_ping_command(
     pod_name = _get_http_ping_pod_name(server_ip)
     return check_or_start_tobiko_command(
         cmd_args, pod_name, _check_http_ping_results_from_pod)
+
+
+def get_ocp_node_uptime(node_name: str):
+    # timeout is needed to avoid that the `oc debug` command gets stuck forever
+    output = sh.execute(f"timeout 10 oc debug node/{node_name} -- "
+                        "chroot /host cat /proc/uptime").stdout
+    uptime_line = output.splitlines()[0]
+    uptime_string = uptime_line.split()[0]
+    return float(uptime_string)
+
+
+def reboot_ocp_node(node_name: str):
+    LOG.debug(f"Rebooting OCP node {node_name}...")
+    sh.execute(f"oc debug node/{node_name} -- chroot /host reboot")
+    LOG.debug(f"Reboot command sent to OCP node {node_name}.")
