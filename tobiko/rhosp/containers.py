@@ -17,7 +17,7 @@ LOG = log.getLogger(__name__)
 
 
 expected_containers_file = os.path.expanduser(
-    '~/expected_containers_list_df.csv')
+    '~/expected_containers_list_td.csv')
 
 
 class ContainerRuntime(abc.ABC):
@@ -77,40 +77,83 @@ class ContainerMismatchException(tobiko.TobikoException):
     pass
 
 
-def remove_containers_from_comparison(comparable_containers_df):
+def remove_containers_from_comparison(comparable_containers_td):
     """remove any containers if comparing them with previous status is not
     necessary or makes no sense
     """
+    final_td = tobiko.TableData()
     os_topology = topology.get_openstack_topology()
-    for row in comparable_containers_df.iterrows():
+
+    for item in comparable_containers_td.data:
+        add_this_item = True
         for ignore_container in os_topology.ignore_containers_list:
-            if ignore_container in str(row):
+            if ignore_container in item['container_name']:
                 LOG.info(f'container {ignore_container} has changed state, '
                          'but that\'s ok - it will be ignored and the test '
-                         f'will not fail due to this: {str(row)}')
+                         f'will not fail due to this: {item}')
                 # if a pcs resource is found , we drop that row
-                comparable_containers_df.drop(row[0], inplace=True)
+                add_this_item = False
                 # this row was already dropped, go to next row
                 break
+        if add_this_item:
+            final_td.append(item)
+    return final_td
 
 
-def dataframe_difference(df1, df2, which=None):
-    """Find rows which are different between two DataFrames."""
-    comparison_df = df1.merge(df2,
-                              indicator='same_state',
-                              how='outer')
-    # return only non identical rows
+def tabledata_difference(td1, td2, which=None):
+    """Find rows which are different between two TableData objects."""
+    # Check if schemas match
+    if td1.schema != td2.schema:
+        raise ValueError("TableData objects must have the same schema")
+
+    # Convert rows to hashable format for comparison
+    def row_to_hashable(row):
+        return tuple(sorted(row.items()))
+
+    # Create sets of hashable rows
+    td1_rows = {row_to_hashable(row): row for row in td1.data}
+    td2_rows = {row_to_hashable(row): row for row in td2.data}
+
+    # Find common rows, left-only rows, and right-only rows
+    common_keys = set(td1_rows.keys()) & set(td2_rows.keys())
+    left_only_keys = set(td1_rows.keys()) - set(td2_rows.keys())
+    right_only_keys = set(td2_rows.keys()) - set(td1_rows.keys())
+
+    # Create result rows with indicator column
+    result_rows = []
+
+    # Add common rows
+    for key in common_keys:
+        row = td1_rows[key].copy()
+        row['same_state'] = 'both'
+        result_rows.append(row)
+
+    # Add left-only rows
+    for key in left_only_keys:
+        row = td1_rows[key].copy()
+        row['same_state'] = 'left_only'
+        result_rows.append(row)
+
+    # Add right-only rows
+    for key in right_only_keys:
+        row = td2_rows[key].copy()
+        row['same_state'] = 'right_only'
+        result_rows.append(row)
+
+    # Create result TableData
+    comparison_td = tobiko.TableData(result_rows)
+
+    # Filter based on which parameter (similar to original function)
     if which is None:
-        diff_df = comparison_df[comparison_df['same_state'] != 'both']
-
+        # Return only non-identical rows
+        diff_td = tobiko.TableData([row for row in comparison_td.data
+                                    if row['same_state'] != 'both'])
     else:
-        diff_df = comparison_df[comparison_df['same_state'] == which]
+        # Return only rows with specified state
+        diff_td = tobiko.TableData([row for row in comparison_td.data
+                                    if row['same_state'] == which])
 
-    # if the list of different state containers includes sidecar containers,
-    # ignore them because the existence of these containers depends on the
-    # created resources
-    # if the list of different state containers includes pacemaker resources,
-    # ignore them since the sanity and fault tests check pacemaker status too
-    remove_containers_from_comparison(diff_df)
+    # Apply the same filtering logic as the original function
+    final_diff_td = remove_containers_from_comparison(diff_td)
 
-    return diff_df
+    return final_diff_td

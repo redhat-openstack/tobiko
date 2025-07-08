@@ -105,8 +105,8 @@ class PodifiedTopology(rhosp.RhospTopology):
             bool_check=bool_check,
             nodenames=nodenames)
 
-    def list_containers_df(self, group=None):
-        return containers.list_containers_df(group)
+    def list_containers_td(self, group=None):
+        return containers.list_containers_td(group)
 
     def add_node(self,
                  hostname: typing.Optional[str] = None,

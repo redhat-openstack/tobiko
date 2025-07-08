@@ -3,11 +3,9 @@ from __future__ import absolute_import
 import functools
 import os
 import re
-import time
 import typing
 
 from oslo_log import log
-import pandas
 
 import tobiko
 from tobiko import config
@@ -64,7 +62,7 @@ def get_container_runtime_name() -> str:
 
 
 def is_podman() -> bool:
-    return get_container_runtime().runtime_name == 'podman'
+    return get_container_runtime_name() == 'podman'
 
 
 def has_container_runtime() -> bool:
@@ -87,9 +85,9 @@ def get_container_client(ssh_client=None):
     return get_container_runtime().get_client(ssh_client=ssh_client)
 
 
-def list_containers_df(group=None):
+def list_containers_td(group=None):
     actual_containers_list = list_containers(group)
-    return pandas.DataFrame(
+    return tobiko.TableData(
         get_container_states_list(actual_containers_list),
         columns=['container_host', 'container_name', 'container_state'])
 
@@ -117,10 +115,10 @@ def list_containers(group=None):
 
 
 def save_containers_state_to_file(expected_containers_list,):
-    expected_containers_list_df = pandas.DataFrame(
+    expected_containers_td = tobiko.TableData(
         get_container_states_list(expected_containers_list),
         columns=['container_host', 'container_name', 'container_state'])
-    expected_containers_list_df.to_csv(
+    expected_containers_td.to_csv(
         rhosp_containers.expected_containers_file)
     return rhosp_containers.expected_containers_file
 
@@ -137,21 +135,23 @@ def assert_containers_running(group, expected_containers, full_name=True,
                                                     hostnames=nodenames)
     for node in openstack_nodes:
         node_containers = list_node_containers(ssh_client=node.ssh_client)
-        containers_list_df = pandas.DataFrame(
+        containers_list_td = tobiko.TableData(
             get_container_states_list(node_containers),
             columns=['container_host', 'container_name', 'container_state'])
         # check that the containers are present
         LOG.info('node: {} containers list : {}'.format(
-            node.name, containers_list_df.to_string(index=False)))
+            node.name, containers_list_td.to_string()))
         for container in expected_containers:
-            # get container attrs dataframe
+            # get container attrs tabledata
             if full_name:
-                container_attrs = containers_list_df.query(
+                container_attrs = containers_list_td.query(
                     'container_name == "{}"'.format(container))
             else:
-                container_attrs = containers_list_df[
-                    containers_list_df['container_name'].
-                    str.contains(container)]
+                container_attrs_rows = []
+                for row in containers_list_td:
+                    if container in row['container_name']:
+                        container_attrs_rows.append(row)
+                container_attrs = tobiko.TableData(container_attrs_rows)
             # check if the container exists
             LOG.info('checking container: {}'.format(container))
             if container_attrs.empty:
@@ -168,7 +168,7 @@ def assert_containers_running(group, expected_containers, full_name=True,
                         'expected container {} is not running on node {} , '
                         'its state is {}! : \n\n'.format(
                             container, node.name,
-                            container_attrs.container_state.values.item()))
+                            container_attrs['container_state'].values.item()))
                 elif len(container_running_attrs) > 1:
                     failures.append(
                         'only one running container {} was expected on '
@@ -398,37 +398,37 @@ def comparable_container_keys(container, include_container_objects=False):
 
 
 @functools.lru_cache()
-def list_containers_objects_df():
+def list_containers_objects_td():
     containers_list = list_containers()
-    containers_objects_list_df = pandas.DataFrame(
+    containers_objects_list_td = tobiko.TableData(
         get_container_states_list(
             containers_list, include_container_objects=True),
         columns=['container_host', 'container_name',
                  'container_state', 'container_object'])
-    return containers_objects_list_df
+    return containers_objects_list_td
 
 
 def get_overcloud_container(container_name=None, container_host=None,
                             partial_container_name=None):
     """gets an container object by name on specified host
     container"""
-    con_obj_df = list_containers_objects_df()
+    con_obj_td = list_containers_objects_td()
     if partial_container_name and container_host:
-        con_obj_df = con_obj_df[con_obj_df['container_name'].str.contains(
+        con_obj_td = con_obj_td[con_obj_td['container_name'].str.contains(
             partial_container_name)]
-        contaniner_obj = con_obj_df.query(
+        contaniner_obj = con_obj_td.query(
             'container_host == "{container_host}"'.format(
                 container_host=container_host))['container_object']
     elif container_host:
-        contaniner_obj = con_obj_df.query(
+        contaniner_obj = con_obj_td.query(
             'container_name == "{container_name}"'
             ' and container_host == "{container_host}"'.
             format(container_host=container_host,
-                   container_name=container_name)).container_object
+                   container_name=container_name))['container_object']
     else:
-        contaniner_obj = con_obj_df.query(
+        contaniner_obj = con_obj_td.query(
             'container_name == "{container_name}"'.
-            format(container_name=container_name)).container_object
+            format(container_name=container_name))['container_object']
     if not contaniner_obj.empty:
         return contaniner_obj.values[0]
     else:
@@ -481,11 +481,11 @@ def assert_equal_containers_state(expected_containers_list=None,
     """compare all overcloud container states with using two lists:
     one is current , the other some past list
     first time this method runs it creates a file holding overcloud
-    containers' states: ~/expected_containers_list_df.csv'
+    containers' states: ~/expected_containers_td.csv'
     second time it creates a current containers states list and
     compares them, they must be identical"""
 
-    expected_containers_list_df = []
+    expected_containers_td = []
     # if we have a file or an explicit variable use that , otherwise  create
     # and return
     if recreate_expected or (
@@ -495,49 +495,41 @@ def assert_equal_containers_state(expected_containers_list=None,
         return
 
     elif expected_containers_list:
-        expected_containers_list_df = pandas.DataFrame(
+        expected_containers_td = tobiko.TableData(
             get_container_states_list(expected_containers_list),
             columns=['container_host', 'container_name', 'container_state'])
 
     elif os.path.exists(rhosp_containers.expected_containers_file):
-        expected_containers_list_df = pandas.read_csv(
-            rhosp_containers.expected_containers_file)
+        with open(rhosp_containers.expected_containers_file, 'r') as f:
+            expected_containers_td = tobiko.TableData.read_csv(f, header=0)
 
-    failures = []
-    start = time.time()
     error_info = 'Output explanation: left_only is the original state, ' \
                  'right_only is the new state'
 
-    while time.time() - start < timeout:
+    for attempt in tobiko.retry(timeout=timeout, interval=interval):
 
-        failures = []
-        actual_containers_list_df = list_containers_df()
+        actual_containers_td = list_containers_td()
 
-        LOG.info('expected_containers_list_df: {} '.format(
-            expected_containers_list_df.to_string(index=False)))
-        LOG.info('actual_containers_list_df: {} '.format(
-            actual_containers_list_df.to_string(index=False)))
+        LOG.info(f'expected_containers_td: {expected_containers_td}')
+        LOG.info(f'actual_containers_td: {actual_containers_td}')
 
-        # execute a `dataframe` diff between the expected and actual containers
+        # execute a `tabledata` diff between the expected and actual containers
         expected_containers_state_changed = \
-            rhosp_containers.dataframe_difference(
-                    expected_containers_list_df,
-                    actual_containers_list_df)
+            rhosp_containers.tabledata_difference(expected_containers_td,
+                                                  actual_containers_td)
         # check for changed state containerstopology
-        if not expected_containers_state_changed.empty:
-            failures.append('expected containers changed state ! : '
-                            '\n\n{}\n{}'.format(
-                             expected_containers_state_changed.
-                             to_string(index=False), error_info))
-            LOG.info('container states mismatched:\n{}\n'.format(failures))
-            time.sleep(interval)
-            # clear cache to obtain new data
-            list_node_containers.cache_clear()
-        else:
+        if expected_containers_state_changed.empty:
             LOG.info("assert_equal_containers_state :"
                      " OK, all containers are on the same state")
             return
-    if failures:
-        tobiko.fail(
-            'container states mismatched:\n{!s}'.format('\n'.join(failures)),
-            rhosp_containers.ContainerMismatchException)
+
+        if attempt.is_last:
+            tobiko.fail('expected containers changed state ! :\n'
+                        f'{expected_containers_state_changed}\n'
+                        f'{error_info}')
+
+        LOG.info('container states mismatched:\n'
+                 f'{expected_containers_state_changed}')
+
+        # clear cache to obtain new data
+        list_node_containers.cache_clear()

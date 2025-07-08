@@ -17,7 +17,6 @@ import os
 import unittest
 
 import netaddr
-import pandas as pd
 import testtools
 
 from tobiko import config
@@ -120,7 +119,7 @@ class OvercloudPacemakerTest(testtools.TestCase):
 
     def test_get_pacemaker_resource_table(self):
         resource_table = pacemaker.get_pcs_resources_table()
-        self.assertIsInstance(resource_table, pd.DataFrame)
+        self.assertIsInstance(resource_table, tobiko.TableData)
 
     def test_pacemaker_resources_health(self):
         pcs_health = pacemaker.PacemakerResourcesStatus()
@@ -138,8 +137,8 @@ class OvercloudServicesTest(testtools.TestCase):
         services.OvercloudServicesStatus)
 
     def test_get_services_resource_table(self):
-        self.assertIsInstance(self.services_status.oc_services_df,
-                              pd.DataFrame)
+        self.assertIsInstance(self.services_status.oc_services_td,
+                              tobiko.TableData)
 
     def test_overcloud_services(self):
         self.assertTrue(self.services_status.basic_overcloud_services_running)
@@ -160,8 +159,8 @@ class OvercloudProcessesTest(testtools.TestCase):
 
     def test_get_processes_resource_table(self):
         ops = processes.OvercloudProcessesStatus()
-        self.assertIsInstance(ops.oc_procs_df,
-                              pd.DataFrame)
+        self.assertIsInstance(ops.oc_procs_td,
+                              tobiko.TableData)
 
     def test_overcloud_processes(self):
         ops = processes.OvercloudProcessesStatus()

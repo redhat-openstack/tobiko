@@ -2,8 +2,6 @@
 
 dpkt                     # BSD
 openshift-client         # Apache-2.0
-pandas==2.0.3;python_version<'3.9'             # BSD
-pandas==2.1.1;python_version>='3.9'            # BSD
 podman==4.7.0            # Apache-2.0
 pytest-cov               # MIT
 pytest-reportportal      # Apache-2.0

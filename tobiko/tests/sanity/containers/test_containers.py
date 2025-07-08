@@ -17,12 +17,10 @@ from __future__ import absolute_import
 
 import functools
 import os
-import time
 
+import pytest
 import testtools
 from oslo_log import log
-import pandas
-import pytest
 
 import tobiko
 from tobiko.openstack import neutron
@@ -215,11 +213,11 @@ class TripleoContainersHealthTest(BaseContainersHealtTest):
         """compare all overcloud container states with using two lists:
         one is current , the other some past list
         first time this method runs it creates a file holding overcloud
-        containers' states: ~/expected_containers_list_df.csv'
+        containers' states: ~/expected_containers_td.csv'
         second time it creates a current containers states list and
         compares them, they must be identical"""
 
-        expected_containers_list_df = []
+        expected_containers_td = []
         # if we have a file or an explicit variable use that ,
         # otherwise  create and return
         if recreate_expected or (not (expected_containers_list or
@@ -230,46 +228,42 @@ class TripleoContainersHealthTest(BaseContainersHealtTest):
                 tripleo_containers.list_containers())
             return
         elif expected_containers_list:
-            expected_containers_list_df = pandas.DataFrame(
+            expected_containers_td = tobiko.TableData(
                 tripleo_containers.get_container_states_list(
                     expected_containers_list),
                 columns=['container_host', 'container_name',
                          'container_state'])
         elif os.path.exists(rhosp_containers.expected_containers_file):
-            expected_containers_list_df = pandas.read_csv(
-                rhosp_containers.expected_containers_file)
-        failures = []
+            with open(rhosp_containers.expected_containers_file, 'r') as f:
+                expected_containers_td = tobiko.TableData.read_csv(f, header=0)
+
         error_info = 'Output explanation: left_only is the original state, ' \
                      'right_only is the new state'
-        for _ in tobiko.retry(timeout=timeout):
-            failures = []
-            actual_containers_list_df = tripleo_containers.list_containers_df()
-            LOG.info('expected_containers_list_df: {} '.format(
-                expected_containers_list_df.to_string(index=False)))
-            LOG.info('actual_containers_list_df: {} '.format(
-                actual_containers_list_df.to_string(index=False)))
-            # execute a `dataframe` diff between the expected
+        for attempt in tobiko.retry(timeout=timeout, interval=interval):
+            actual_containers_td = tripleo_containers.list_containers_td()
+            LOG.info('expected_containers_td: '
+                     f'{expected_containers_td}')
+            LOG.info(f'actual_containers_td: {actual_containers_td}')
+            # execute a `tabledata` diff between the expected
             # and actual containers
             expected_containers_state_changed = \
-                rhosp_containers.dataframe_difference(
-                    expected_containers_list_df, actual_containers_list_df)
+                rhosp_containers.tabledata_difference(
+                    expected_containers_td, actual_containers_td)
             # check for changed state containerstopology
-            if not expected_containers_state_changed.empty:
-                failures.append('expected containers changed state ! : '
-                                '\n\n{}\n{}'.format(
-                                 expected_containers_state_changed.
-                                 to_string(index=False), error_info))
-                LOG.info('container states mismatched:\n{}\n'.format(failures))
-                time.sleep(interval)
-                # clear cache to obtain new data
-                tripleo_containers.list_node_containers.cache_clear()
-            else:
+            if expected_containers_state_changed.empty:
                 LOG.info("assert_equal_containers_state :"
                          " OK, all containers are on the same state")
                 return
-        if failures:
-            tobiko.fail('container states mismatched:\n{!s}', '\n'.join(
-                failures))
+
+            if attempt.is_last:
+                tobiko.fail('expected containers changed state ! :\n'
+                            f'{expected_containers_state_changed}\n'
+                            f'{error_info}')
+
+            LOG.info('container states mismatched:\n'
+                     f'{expected_containers_state_changed}')
+            # clear cache to obtain new data
+            tripleo_containers.list_node_containers.cache_clear()
 
     def config_validation(self, config_checkings):
         container_runtime_name = tripleo_containers.\
@@ -353,11 +347,11 @@ class PodifiedContainersHealthTest(BaseContainersHealtTest):
         """compare all overcloud container states with using two lists:
         one is current , the other some past list
         first time this method runs it creates a file holding overcloud
-        containers' states: ~/expected_containers_list_df.csv'
+        containers' states: ~/expected_containers_td.csv'
         second time it creates a current containers states list and
         compares them, they must be identical"""
 
-        expected_containers_list_df = []
+        expected_containers_td = []
         # if we have a file or an explicit variable use that ,
         # otherwise  create and return
         if recreate_expected or (not (expected_containers_list or
@@ -368,44 +362,40 @@ class PodifiedContainersHealthTest(BaseContainersHealtTest):
                 podified_containers.list_containers())
             return
         elif expected_containers_list:
-            expected_containers_list_df = pandas.DataFrame(
+            expected_containers_td = tobiko.TableData(
                 podified_containers.get_container_states_list(
                     expected_containers_list),
                 columns=['container_host', 'container_name',
                          'container_state'])
         elif os.path.exists(rhosp_containers.expected_containers_file):
-            expected_containers_list_df = pandas.read_csv(
-                rhosp_containers.expected_containers_file)
-        failures = []
+            with open(rhosp_containers.expected_containers_file, 'r') as f:
+                expected_containers_td = tobiko.TableData.read_csv(f, header=0)
         error_info = 'Output explanation: left_only is the original state, ' \
                      'right_only is the new state'
-        for _ in tobiko.retry(timeout=timeout):
-            failures = []
-            actual_containers_list_df = \
-                podified_containers.list_containers_df()
-            LOG.info('expected_containers_list_df: {} '.format(
-                expected_containers_list_df.to_string(index=False)))
-            LOG.info('actual_containers_list_df: {} '.format(
-                actual_containers_list_df.to_string(index=False)))
-            # execute a `dataframe` diff between the expected
+        for attempt in tobiko.retry(timeout=timeout, interval=interval):
+            actual_containers_td = \
+                podified_containers.list_containers_td()
+            LOG.info('expected_containers_td: {} '.format(
+                expected_containers_td.to_string()))
+            LOG.info('actual_containers_td: {} '.format(
+                actual_containers_td.to_string()))
+            # execute a `tabledata` diff between the expected
             # and actual containers
             expected_containers_state_changed = \
-                rhosp_containers.dataframe_difference(
-                    expected_containers_list_df, actual_containers_list_df)
+                rhosp_containers.tabledata_difference(
+                    expected_containers_td, actual_containers_td)
             # check for changed state containerstopology
-            if not expected_containers_state_changed.empty:
-                failures.append('expected containers changed state ! : '
-                                '\n\n{}\n{}'.format(
-                                 expected_containers_state_changed.
-                                 to_string(index=False), error_info))
-                LOG.info('container states mismatched:\n{}\n'.format(failures))
-                time.sleep(interval)
-                # clear cache to obtain new data
-                podified_containers.list_node_containers.cache_clear()
-            else:
+            if expected_containers_state_changed.empty:
                 LOG.info("assert_equal_containers_state :"
                          " OK, all containers are on the same state")
                 return
-        if failures:
-            tobiko.fail('container states mismatched:\n{!s}', '\n'.join(
-                failures))
+
+            if attempt.is_last:
+                tobiko.fail('expected containers changed state ! :\n'
+                            f'{expected_containers_state_changed}\n'
+                            f'{error_info}')
+
+            LOG.info('container states mismatched:\n'
+                     f'{expected_containers_state_changed}')
+            # clear cache to obtain new data
+            podified_containers.list_node_containers.cache_clear()

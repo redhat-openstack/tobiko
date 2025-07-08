@@ -4,7 +4,6 @@ import io
 import re
 
 from oslo_log import log
-import pandas
 
 import tobiko
 from tobiko.openstack import neutron
@@ -19,14 +18,15 @@ LOG = log.getLogger(__name__)
 
 class OvercloudProcessesException(tobiko.TobikoException):
     message = "not all overcloud processes are in running state, " \
-              "{process_error}"
+              "it is possible that some openstack" \
+              " processes are restarting"
 
 
 def get_overcloud_node_processes_table(ssh_client: ssh.SSHClientType):
     """
-    get processes tables from overcloud node
+    get processes table from overcloud node
 
-       returns :
+    returns :
 [root@controller-0 ~]# ps -axw -o "%U" -o "|%p" -o "|%P" -o "|%C" -o "|%z" -o
 "|%x" -o "|%c" -o "|%a" |grep -v 'ps -aux'|head
 USER    |    PID|   PPID|%CPU|   VSZ|    TIME|COMMAND        |COMMAND
@@ -44,7 +44,7 @@ root    |      9|      2| 0.0|     0|00:00:06|ksoftirqd/0    |[ksoftirqd/0]
 root    |     10|      2| 0.0|     0|00:04:28|rcu_sched      |[rcu_sched]
 root    |     11|      2| 0.0|     0|00:00:05|migration/0    |[migration/0]
 
-    :return: dataframe of overcloud node processes dataframe
+    :return: TableData of overcloud node processes
     """
 
     output = sh.execute(
@@ -53,14 +53,15 @@ root    |     11|      2| 0.0|     0|00:00:05|migration/0    |[migration/0]
         "'ps -axw' |sed 's/\"/''/g'",
         ssh_client=ssh_client).stdout
     stream = io.StringIO(output)
-    table: pandas.DataFrame = pandas.read_csv(
+    table = tobiko.TableData.read_csv(
         stream, sep='DELIM', header=None, skiprows=1)
     table.replace(to_replace=' ', value="", regex=True, inplace=True)
     table.columns = ['USER', 'PID', 'PPID', 'CPU', 'VSZ', 'TIME', 'PROCESS',
                      'PROCESS_ARGS']
-    # pylint: disable=unsupported-assignment-operation
+    # Add hostname to each row
     hostname = sh.get_hostname(ssh_client=ssh_client)
-    table['overcloud_node'] = hostname
+    for row in table:
+        row['overcloud_node'] = hostname
 
     LOG.debug("Successfully got overcloud nodes processes status table")
     return table
@@ -92,18 +93,18 @@ class OvercloudProcessesStatus(object):
                                                  'node_group': 'controller',
                                                  'number': num_northd_proc}]
 
-        self.oc_procs_df = overcloud.get_overcloud_nodes_dataframe(
+        self.oc_procs_td = overcloud.get_overcloud_nodes_tabledata(
                                             get_overcloud_node_processes_table)
 
     def _basic_overcloud_process_running(self, process_name):
         # osp16/python3 process is "neutron-server:"
         if process_name == 'neutron-server' and \
-                self.oc_procs_df.query('PROCESS=="{}"'.format(
+                self.oc_procs_td.query('PROCESS=="{}"'.format(
                 process_name)).empty:
             process_name = 'neutron-server:'
         # osp17 mysqld process name is mysqld_safe
         if process_name == 'mysqld' and \
-                self.oc_procs_df.query('PROCESS=="{}"'.format(
+                self.oc_procs_td.query('PROCESS=="{}"'.format(
                 process_name)).empty:
             process_name = 'mysqld_safe'
         # redis not deployed on osp17 by default, only if some
@@ -112,7 +113,7 @@ class OvercloudProcessesStatus(object):
                 not overcloud.is_redis_expected()):
             redis_message = ("redis-server not expected on OSP 17 "
                              "and later releases by default")
-            if self.oc_procs_df.query(
+            if self.oc_procs_td.query(
                     f'PROCESS=="{process_name}"').empty:
                 LOG.info(redis_message)
                 return
@@ -120,7 +121,7 @@ class OvercloudProcessesStatus(object):
                 raise OvercloudProcessesException(
                     process_error=redis_message)
 
-        if not self.oc_procs_df.query('PROCESS=="{}"'.format(
+        if not self.oc_procs_td.query('PROCESS=="{}"'.format(
                 process_name)).empty:
             LOG.info("overcloud processes status checks: "
                      "process {} is  "
@@ -137,7 +138,7 @@ class OvercloudProcessesStatus(object):
     @property
     def basic_overcloud_processes_running(self):
         """
-        Checks that the oc_procs_df dataframe has all of the list procs
+        Checks that the oc_procs_td tabledata has all of the list procs
         :return: Bool
         """
         for attempt in tobiko.retry(timeout=300., interval=1.):
@@ -149,20 +150,20 @@ class OvercloudProcessesStatus(object):
                     LOG.error('Not all overcloud processes are running')
                     raise
                 LOG.info('Retrying overcloud processes: %s', attempt.details)
-                self.oc_procs_df = overcloud.get_overcloud_nodes_dataframe(
+                self.oc_procs_td = overcloud.get_overcloud_nodes_tabledata(
                     get_overcloud_node_processes_table)
 
             # if all procs are running we can return true
             return True
 
     def _ovn_overcloud_process_validations(self, process_dict):
-        if not self.oc_procs_df.query('PROCESS=="{}"'.format(
+        if not self.oc_procs_td.query('PROCESS=="{}"'.format(
                 process_dict['name'])).empty:
             LOG.info("overcloud processes status checks: "
                      f"process {process_dict['name']} is  "
                      "in running state")
 
-            ovn_proc_filtered_df = self.oc_procs_df.query(
+            ovn_proc_filtered_td = self.oc_procs_td.query(
                 'PROCESS=="{}"'.format(process_dict['name']))
 
             if (process_dict['node_group'] not in
@@ -176,12 +177,15 @@ class OvercloudProcessesStatus(object):
                          topology.list_openstack_nodes(
                             group=process_dict['node_group'])]
             node_names_re = re.compile(r'|'.join(node_list))
-            node_filter = (ovn_proc_filtered_df.overcloud_node.
-                           str.match(node_names_re))
-            # get the processes running on a specific type of nodes
-            ovn_proc_filtered_per_node_df = \
-                ovn_proc_filtered_df[node_filter]
-            total_num_processes = len(ovn_proc_filtered_per_node_df)
+
+            # Filter based on node names using regex matching
+            filtered_rows = []
+            for row in ovn_proc_filtered_td:
+                if node_names_re.match(row['overcloud_node']):
+                    filtered_rows.append(row)
+
+            ovn_proc_filtered_per_node_td = tobiko.TableData(filtered_rows)
+            total_num_processes = len(ovn_proc_filtered_per_node_td)
 
             if isinstance(process_dict['number'], int):
                 expected_num_processes = process_dict['number']
@@ -203,7 +207,7 @@ class OvercloudProcessesStatus(object):
     @property
     def ovn_overcloud_processes_validations(self):
         """
-        Checks that the oc_procs_df dataframe has OVN processes running on the
+        Checks that the oc_procs_td tabledata has OVN processes running on the
         expected overcloud node or nodes
         :return: Bool
         """
@@ -221,8 +225,34 @@ class OvercloudProcessesStatus(object):
                     raise
                 LOG.info('Retrying OVN overcloud processes: %s',
                          attempt.details)
-                self.oc_procs_df = overcloud.get_overcloud_nodes_dataframe(
+                self.oc_procs_td = overcloud.get_overcloud_nodes_tabledata(
                     get_overcloud_node_processes_table)
 
             # if all procs are running we can return true
             return True
+
+
+def get_overcloud_nodes_running_process(process):
+    """
+    Check what nodes are running the specified process
+    process: exact str of a process name as seen in ps output
+    :return: list of overcloud nodes
+    """
+    oc_procs_td = overcloud.get_overcloud_nodes_tabledata(
+                                            get_overcloud_node_processes_table)
+    oc_nodes_running_process = oc_procs_td.query(
+        'PROCESS=="{}"'.format(process))['overcloud_node'].unique()
+    return oc_nodes_running_process
+
+
+def check_if_process_running_on_overcloud(process):
+    """
+    check if there is a running process on any of the overcloud nodes
+    process: exact str of a process name as seen in ps output
+    :return: Bool
+    """
+    oc_nodes_running_process = get_overcloud_nodes_running_process(process)
+    if oc_nodes_running_process:
+        return True
+    else:
+        return False
