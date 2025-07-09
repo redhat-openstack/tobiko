@@ -120,10 +120,8 @@ class TestRunnerTimeoutManager(tobiko.SharedFixture):
         if self.deadline is not None:
             time_left = self.deadline - tobiko.time()
             if time_left <= 0.:
-                pytest.skip(
-                    f"Test runner execution timed out after {self.timeout} "
-                    f"seconds",
-                    allow_module_level=True)
+                tobiko.fail('Test runner execution timed out after '
+                            f'{self.timeout} seconds')
             else:
                 LOG.debug('Test runner timeout is enabled: '
                           f'{time_left} seconds left')
