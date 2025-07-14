@@ -413,10 +413,18 @@ def _start_pod(cmd, args, pod_name, pod_image):
     with tobiko_project_context():
         pod_sel = oc.create(pod_def)
         with oc.timeout(CONF.tobiko.podified.tobiko_start_pod_timeout):
-            success, pod_objs, _ = pod_sel.until_all(
-                success_func=lambda pod:
-                    pod.as_dict()['status']['phase'] == 'Running'
-            )
+            try:
+                success, pod_objs, _ = pod_sel.until_all(
+                    success_func=lambda pod:
+                        pod.as_dict()['status']['phase'] == 'Running'
+                )
+            except oc.OpenShiftPythonException:
+                LOG.error(f'Pod {pod_name} creation failed')
+                pod_describe = oc.selector(
+                    f'pod/{pod_name}').object().describe()
+                LOG.error(f'{pod_describe}')
+                raise
+
     if success:
         return pod_objs[0]
 

@@ -53,7 +53,7 @@ OPTIONS = [
                     'this version supports "--json-stream" option required '
                     'by Tobiko.'),
     cfg.IntOpt('tobiko_start_pod_timeout',
-               default=100,
+               default=300,
                help='Defines how long Tobiko will wait until POD with the '
                     'background command (like tobiko ping) will be `Running`. '
                     'In most cases, if tobiko image is already in the local '
