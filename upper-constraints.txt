@@ -58,7 +58,6 @@ daiquiri===3.0.1
 DateTimeRange===1.2.0
 ddt===1.4.4
 debtcollector===2.5.0
-decorator===5.1.1;python_version=='3.8'
 defusedxml===0.7.1
 Deprecated===1.2.13
 dfs-sdk===1.2.27
@@ -148,7 +147,6 @@ iso8601===1.0.2
 itsdangerous===2.1.0;python_version=='3.8'
 jaeger-client===4.8.0;python_version=='3.8'
 jeepney===0.7.1
-Jinja2===3.0.3
 jira===3.1.1
 jmespath===0.10.0
 joblib===1.1.0

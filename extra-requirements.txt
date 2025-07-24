@@ -1,6 +1,5 @@
 # Additional requirements not in openstack/requirements project
 
-ansi2html                # LGPLv3+
 dpkt                     # BSD
 openshift-client         # Apache-2.0
 pandas==2.0.3;python_version<'3.9'             # BSD
