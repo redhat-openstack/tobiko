@@ -64,6 +64,7 @@ class PodifiedTopology(rhosp.RhospTopology):
         neutron.METADATA_AGENT: 'edpm_neutron_metadata_agent',
         neutron.OVN_METADATA_AGENT: 'edpm_ovn_metadata_agent',
         neutron.NEUTRON_OVN_METADATA_AGENT: 'edpm_ovn_metadata_agent',
+        neutron.NEUTRON_OVN_AGENT: 'edpm_ovn_agent',
         neutron.OVN_CONTROLLER: 'edpm_ovn_controller',
         neutron.OVN_BGP_AGENT: 'edpm_ovn_bgp_agent',
         neutron.FRR: 'edpm_frr'
@@ -77,6 +78,7 @@ class PodifiedTopology(rhosp.RhospTopology):
         neutron.METADATA_AGENT: 'neutron_metadata_agent',
         neutron.OVN_METADATA_AGENT: 'ovn_metadata_agent',
         neutron.NEUTRON_OVN_METADATA_AGENT: 'ovn_metadata_agent',
+        neutron.NEUTRON_OVN_AGENT: 'ovn_agent',
         neutron.OVN_CONTROLLER: 'ovn_controller',
         neutron.OVN_BGP_AGENT: 'ovn_bgp_agent',
         neutron.FRR: 'frr'

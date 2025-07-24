@@ -63,7 +63,7 @@ download_images_default:
   advanced_vm:
     username: fedora
     type: advanced_vm
-    url: "https://download.fedoraproject.org/pub/fedora/linux/releases/40/Cloud/x86_64/images/Fedora-Cloud-Base-Generic.x86_64-40-1.14.qcow2"
+    url: "https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2"
     customized: false
     copy_in_files:
       - nginx_id.conf

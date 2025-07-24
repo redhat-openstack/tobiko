@@ -294,6 +294,7 @@ class OpenStackTopology(tobiko.SharedFixture):
         neutron.METADATA_AGENT: 'devstack@q-meta',
         neutron.OVN_METADATA_AGENT: 'devstack@q-ovn-metadata-agent',
         neutron.NEUTRON_OVN_METADATA_AGENT: 'devstack@q-ovn-metadata-agent',
+        neutron.NEUTRON_OVN_AGENT: 'devstack@q-ovn-agent',
         neutron.OVN_CONTROLLER: 'ovn-controller',
         neutron.OVN_BGP_AGENT: 'ovn-bgp-agent',
         neutron.FRR: 'frr',

@@ -48,14 +48,38 @@ RESTART = "restart"
 
 class BaseAgentTest(testtools.TestCase):
 
-    agent_name: str = '<undefined agent name>'
+    _agent_name: typing.Union[str, typing.List[str]] = '<undefined agent name>'
 
     @classmethod
     def setUpClass(cls):
+        cls.agent_name: str = cls._get_agent_name()
         cls.service_name: str = topology.get_agent_service_name(cls.agent_name)
         cls.container_name: str = ''
         cls.agents: AgentListType = \
             neutron.list_networking_agents(binary=cls.agent_name)
+
+    @classmethod
+    def _get_agent_name(cls) -> str:
+        """Return the valid class agent
+
+        In case of defining more than one possible agent (OVN Metadata agent,
+        OVN agent), this class first retrieves the agent list and determines
+        which one applies. Some agents, like the ones provided in the example,
+        are interchangeable but only one can be running.
+
+        If no agent is listed, the returned name will be first one provided;
+        the class logic will skip the test later.
+        """
+        if isinstance(cls._agent_name, str):
+            return cls._agent_name
+
+        for _agent_name in cls._agent_name:
+            if neutron.has_networking_agents(binary=_agent_name):
+                return _agent_name
+
+        # Default the agent name to the first one in the list, but none of the
+        # provided agent names are present in the system.
+        return cls._agent_name[0]
 
     def setUp(self):
         super(BaseAgentTest, self).setUp()
@@ -385,7 +409,7 @@ class BaseAgentTest(testtools.TestCase):
 
 class DHCPAgentTest(BaseAgentTest):
 
-    agent_name = neutron.DHCP_AGENT
+    _agent_name = neutron.DHCP_AGENT
 
     #: Resources stack with Nova server to send messages to
     stack = tobiko.required_fixture(stacks.CirrosServerStackFixture)
@@ -438,7 +462,7 @@ class DHCPAgentTest(BaseAgentTest):
 
 class L3AgentTest(BaseAgentTest):
 
-    agent_name = neutron.L3_AGENT
+    _agent_name = neutron.L3_AGENT
 
     #: Resources stack with Nova server to send messages to
     stack = tobiko.required_fixture(stacks.CirrosPeerServerStackFixture)
@@ -581,7 +605,7 @@ class L3AgentTest(BaseAgentTest):
 
 class OpenVSwitchAgentTest(BaseAgentTest):
 
-    agent_name = neutron.OPENVSWITCH_AGENT
+    _agent_name = neutron.OPENVSWITCH_AGENT
 
     #: Resources stack with Nova server to send messages to
     stack = tobiko.required_fixture(stacks.CirrosServerStackFixture)
@@ -607,7 +631,7 @@ class OpenVSwitchAgentTest(BaseAgentTest):
 
 class OvnControllerTest(BaseAgentTest):
 
-    agent_name = neutron.OVN_CONTROLLER
+    _agent_name = neutron.OVN_CONTROLLER
 
     #: Resources stack with Nova server to send messages to
     stack = tobiko.required_fixture(stacks.CirrosServerStackFixture)
@@ -820,7 +844,7 @@ class MetadataAgentTest(BaseAgentTest):
     #: Resources stack with Nova server to send messages to
     stack = tobiko.required_fixture(stacks.CirrosServerStackFixture)
 
-    agent_name = neutron.METADATA_AGENT
+    _agent_name: typing.Union[str, typing.List[str]] = neutron.METADATA_AGENT
 
     def wait_for_metadata_status(self, count=None, timeout=60., interval=2.,
                                  is_reachable: typing.Optional[bool] = None):
@@ -911,7 +935,10 @@ class MetadataAgentTest(BaseAgentTest):
 # Search for the corresponding container instead of the networking agent
 class OvnMetadataAgentTest(MetadataAgentTest):
 
-    agent_name = neutron.NEUTRON_OVN_METADATA_AGENT
+    _agent_name = [
+        neutron.NEUTRON_OVN_METADATA_AGENT,
+        neutron.NEUTRON_OVN_AGENT,
+    ]
 
     def setUp(self):
         self.get_ovn_agents_from_containers()

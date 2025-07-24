@@ -6,8 +6,8 @@ Ansible role but if Tobiko tests are executed locally it may be needed to
 prepare such image and upload it to Glance.
 This can be done with simple script::
 
-    $ wget https://download.fedoraproject.org/pub/fedora/linux/releases/40/Cloud/x86_64/images/Fedora-Cloud-Base-Generic.x86_64-40-1.14.qcow2 \
-        -O /tmp/Fedora-Cloud-Base-Generic.x86_64-40-1.14.qcow2
+    $ wget https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2 \
+        -O /tmp/Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2
 
     $ cat << EOF > /tmp/iperf3-server.service
     [Unit]
@@ -35,7 +35,7 @@ This can be done with simple script::
     EOF
 
     $ TMPPATH=$(mktemp)
-    $ cp /tmp/Fedora-Cloud-Base-Generic.x86_64-40-1.14.qcow2 $TMPPATH
+    $ cp /tmp/Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2 $TMPPATH
     $ LIBGUESTFS_BACKEND=direct
     $ virt-customize -a $TMPPATH \
           --copy-in /tmp/config:/etc/selinux \
