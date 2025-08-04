@@ -878,7 +878,6 @@ class MetadataAgentTest(BaseAgentTest):
                     "Metadata server reached from Nova server:\n"
                     f"{curl_output}")
 
-    @tobiko.skip("Bug https://bugs.launchpad.net/neutron/+bug/2118398")
     def test_metadata_service_restart(self):
         # Ensure service is up
         self.start_agent()
@@ -892,7 +891,6 @@ class MetadataAgentTest(BaseAgentTest):
         self.start_agent()
         self.wait_for_metadata_status(is_reachable=True)
 
-    @tobiko.skip("Bug https://bugs.launchpad.net/neutron/+bug/2118398")
     def test_vm_reachability_when_metadata_agent_is_down(self):
         self.stop_agent()
         self.wait_for_metadata_status(is_reachable=False)
@@ -900,7 +898,6 @@ class MetadataAgentTest(BaseAgentTest):
         self.start_agent()
         self.wait_for_metadata_status(is_reachable=True)
 
-    @tobiko.skip("Bug https://bugs.launchpad.net/neutron/+bug/2118398")
     def test_restart_metadata_containers(self):
         self.restart_agent_container()
         self.wait_for_metadata_status(is_reachable=True)
