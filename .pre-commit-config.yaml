@@ -40,6 +40,7 @@ repos:
         files: ^tobiko/
         additional_dependencies:
           - types-setuptools==80.3.0.20250505
+          - types-paramiko==3.5.0.20250801
         entry: mypy --install-types --non-interactive tobiko/
         pass_filenames: false
         # args: [--ignore-missing-imports]
