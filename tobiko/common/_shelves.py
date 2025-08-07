@@ -20,6 +20,7 @@ import shelve
 from oslo_log import log
 
 import tobiko
+from tobiko.common import _lockutils
 
 
 LOG = log.getLogger(__name__)
@@ -37,6 +38,7 @@ def get_shelf_path(shelf):
     return os.path.join(get_shelves_dir(), shelf)
 
 
+@_lockutils.interworker_synched('shelves')
 def addme_to_shared_resource(shelf, resource):
     shelf_path = get_shelf_path(shelf)
     # this is needed for unit tests
@@ -59,6 +61,7 @@ def addme_to_shared_resource(shelf, resource):
                 raise
 
 
+@_lockutils.interworker_synched('shelves')
 def removeme_from_shared_resource(shelf, resource):
     shelf_path = get_shelf_path(shelf)
     # this is needed for unit tests
@@ -105,6 +108,7 @@ def remove_test_from_shelf_resources(testcase_id, shelf):
                 raise
 
 
+@_lockutils.interworker_synched('shelves')
 def remove_test_from_all_shared_resources(testcase_id):
     LOG.debug(f'Removing test {testcase_id} from all shelf resources')
     shelves_dir = get_shelves_dir()
@@ -113,6 +117,7 @@ def remove_test_from_all_shared_resources(testcase_id):
             remove_test_from_shelf_resources(testcase_id, filename)
 
 
+@_lockutils.interworker_synched('shelves')
 def initialize_shelves():
     shelves_dir = get_shelves_dir()
     shelf_path = os.path.join(shelves_dir, TEST_RUN_SHELF)
