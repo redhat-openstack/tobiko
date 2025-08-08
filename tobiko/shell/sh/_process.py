@@ -633,6 +633,10 @@ def check_or_start_external_process(start_function,
         LOG.info(
             f'Starting a new external process of function: {start_function}')
         start_function(**kwargs)
+        # wait before running liveness_function, it may take a couple of
+        # seconds to start the process - the command was sent in background,
+        # not waiting until it started running
+        time.sleep(3)
         if not liveness_function(**kwargs):
             tobiko.fail(f'Service did not start properly with '
                         f'function: {start_function} '
