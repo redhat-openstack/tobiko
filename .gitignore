@@ -18,6 +18,7 @@
 .venv
 .idea
 .ssh
+.vscode
 
 __pycache__
 AUTHORS
