@@ -29,6 +29,7 @@ get_log_dir = _custom_script.get_log_dir
 get_log_files = _custom_script.get_log_files
 copy_log_file = _custom_script.copy_log_file
 get_process_pid = _custom_script.get_process_pid
+get_process_pids = _custom_script.get_process_pids
 check_results = _custom_script.check_results
 
 start_script = _custom_script.start_script

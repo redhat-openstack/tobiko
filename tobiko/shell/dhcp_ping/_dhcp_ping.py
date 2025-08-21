@@ -97,6 +97,16 @@ def _get_dhcp_ping_pid(
     return processes
 
 
+def _get_dhcp_ping_pids(
+        ssh_client: ssh.SSHClientType) -> list:
+    pids = custom_script.get_process_pids(
+        command_line=_get_script_command(ssh_client),
+        ssh_client=ssh_client)
+    if not pids:
+        LOG.debug('no DHCP ping script found.')
+    return pids
+
+
 def start_dhcp_ping_process(ssh_client: ssh.SSHClientType) -> None:
     _ensure_script_is_on_server(ssh_client)
     if dhcp_ping_process_alive(ssh_client):
@@ -107,8 +117,8 @@ def start_dhcp_ping_process(ssh_client: ssh.SSHClientType) -> None:
 
 
 def stop_dhcp_ping_process(ssh_client: ssh.SSHClientType) -> None:
-    pid = _get_dhcp_ping_pid(ssh_client)
-    if pid:
+    pids = _get_dhcp_ping_pids(ssh_client)
+    for pid in pids:
         custom_script.stop_script(pid, ssh_client=ssh_client)
 
 

@@ -95,6 +95,19 @@ def get_process_pid(
     return None
 
 
+def get_process_pids(
+        command_line: str,
+        ssh_client: ssh.SSHClientType = None,
+        ) -> list:
+    processes = sh.list_processes(
+        command_line=command_line,
+        ssh_client=ssh_client)
+    pids = []
+    if processes:
+        pids = [p.pid for p in processes]
+    return pids
+
+
 def check_results(
         log_filenames: typing.List[str]):
 
