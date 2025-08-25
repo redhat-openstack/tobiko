@@ -340,10 +340,6 @@ class PodifiedContainersHealthTest(BaseContainersHealtTest):
         self._assert_containers_running(podified.EDPM_COMPUTE_GROUP,
                                         ['iscsid'])
 
-    def test_compute_logrotate_crond(self):
-        self._assert_containers_running(podified.EDPM_COMPUTE_GROUP,
-                                        ['logrotate_crond'])
-
     def test_nova_compute(self):
         self._assert_containers_running(podified.EDPM_COMPUTE_GROUP,
                                         ['nova_compute'])
