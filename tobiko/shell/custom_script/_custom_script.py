@@ -151,7 +151,12 @@ def start_script(
 def stop_script(
         pid: int,
         ssh_client: ssh.SSHClientType = None):
-    sh.execute(f'kill {pid}', ssh_client=ssh_client, sudo=True)
+    # expect_exit_status=None -> will not fail if the kill command fails, maybe
+    # the process had already died
+    sh.execute(f'kill {pid}',
+               ssh_client=ssh_client,
+               sudo=True,
+               expect_exit_status=None)
     # wait until http ping process disappears
     sh.wait_for_processes(timeout=120,
                           sleep_interval=5,
