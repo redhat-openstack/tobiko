@@ -36,7 +36,7 @@ OSP_DP_NODESET = 'openstackdataplanenodeset'
 OSP_CONFIG_SECRET_NAME = 'secret/openstack-config-secret'
 OSP_BM_HOST = 'baremetalhost.metal3.io'
 OSP_BM_CRD = 'baremetalhosts.metal3.io'
-OCP_WORKERS = 'nodes'
+OCP_NODES = 'nodes'
 OVNDBCLUSTER = 'ovndbcluster'
 
 OVN_DP_SERVICE_NAME = 'ovn'
@@ -107,17 +107,31 @@ def _get_group(services):
     return EDPM_OTHER_GROUP
 
 
-def _get_ocp_worker_hostname(worker):
-    for address in worker.get('status', {}).get('addresses', []):
+def _get_ocp_node_hostname(node):
+    for address in node.get('status', {}).get('addresses', []):
         if address.get('type') == 'Hostname':
             return address['address']
 
 
-def _get_ocp_worker_addresses(worker):
+def _get_ocp_node_addresses(node):
     return [
         netaddr.IPAddress(address['address']) for
-        address in worker.get('status', {}).get('addresses', [])
+        address in node.get('status', {}).get('addresses', [])
         if address.get('type') != 'Hostname']
+
+
+def _get_ocp_node_roles(node_dict):
+    # Gets a node_dict; returns a list of node's roles
+    labels = node_dict.get('metadata', {}).get('labels', {})
+    return [
+        key for key in labels.keys()
+        if key.startswith("node-role.kubernetes.io/")
+    ]
+
+
+def _get_ocp_node_taints(node_dict):
+    # Gets a node_dict; returns a list of node's taints
+    return node_dict.get("spec", {}).get("taints", []) or []
 
 
 def _get_edpm_node_ctlplane_ip_from_status(hostname, node_status):
@@ -203,17 +217,19 @@ def list_edpm_nodes():
     return nodes
 
 
-def list_ocp_workers():
+def list_ocp_nodes():
     # oc.selector("nodes") does not need to run on a specific OCP project
-    nodes_sel = oc.selector(OCP_WORKERS)
-    ocp_workers = []
+    nodes_sel = oc.selector(OCP_NODES)
+    ocp_nodes = []
     for node in nodes_sel.objects():
         node_dict = node.as_dict()
-        ocp_workers.append({
-            'hostname': _get_ocp_worker_hostname(node_dict),
-            'addresses': _get_ocp_worker_addresses(node_dict)
+        ocp_nodes.append({
+            'hostname': _get_ocp_node_hostname(node_dict),
+            'addresses': _get_ocp_node_addresses(node_dict),
+            'roles': _get_ocp_node_roles(node_dict),
+            'taints': _get_ocp_node_taints(node_dict)
         })
-    return ocp_workers
+    return ocp_nodes
 
 
 def power_on_edpm_node(nodename):

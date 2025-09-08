@@ -50,7 +50,7 @@ COMPUTE_GROUPS = [
     _openshift.EDPM_OTHER_GROUP
 ]
 ALL_COMPUTES_GROUP_NAME = 'compute'
-OCP_WORKER = 'ocp_worker'
+OCP_NODE = 'ocp_node'
 EDPM_NODE = 'edpm_node'
 
 
@@ -133,7 +133,7 @@ class PodifiedTopology(rhosp.RhospTopology):
 
     def create_node(self, name, ssh_client, **kwargs):
         node_type = kwargs.pop('node_type')
-        if node_type == OCP_WORKER:
+        if node_type == OCP_NODE:
             return OcpNode(topology=self, name=name, ssh_client=None,
                            **kwargs)
         else:
@@ -142,30 +142,44 @@ class PodifiedTopology(rhosp.RhospTopology):
 
     def discover_nodes(self):
         self.discover_ssh_proxy_jump_node()
-        self.discover_ocp_worker_nodes()
+        self.discover_ocp_nodes()
         self.discover_edpm_nodes()
 
     def discover_ssh_proxy_jump_node(self):
         pass
 
-    def discover_ocp_worker_nodes(self):
+    def discover_ocp_nodes(self):
         # NOTE(slaweq): For now this will only discover nodes but there will be
         # no ssh_client created to ssh to those nodes. Getting
         # ssh_client to those nodes may be implemented in the future if that
         # will be needed, but this may be hard e.g. for the CRC environments as
         # in that case internal OCP worker's IP address is not accessible from
         # outside at all
-        for worker_data in _openshift.list_ocp_workers():
+        for node_data in _openshift.list_ocp_nodes():
             node = self._add_node(
-                addresses=worker_data['addresses'],
-                hostname=worker_data['hostname'],
+                addresses=node_data['addresses'],
+                hostname=node_data['hostname'],
                 ssh_client=None,
                 create_ssh_client=False,
-                node_type=OCP_WORKER)
-            group_nodes = self.add_group(group='controller')
+                node_type=OCP_NODE)
+            # Adds 'ocp-node' group to all the nodes, and the group
+            # 'controller' to the control plane nodes
+            group_nodes = self.add_group(group='ocp-node')
             if node not in group_nodes:
-                group_nodes.append(node)
+                node.add_group(group='ocp-node')
+            group_nodes = self.add_group(group='controller')
+            if node not in group_nodes and self.is_osp_controller(node_data):
                 node.add_group(group='controller')
+
+    def is_osp_controller(self, node_data):
+        # Check whether this node is running the Openstack control plane pods
+        node_roles = node_data['roles']
+        node_taints = node_data['taints']
+        if (any("worker" in role for role in node_roles) and
+                (any("master" in role for role in node_roles) or not
+                    any(t.get("key") == "testOperator" for t in node_taints))):
+            return True
+        return False
 
     def discover_edpm_nodes(self):
         for node in _openshift.list_edpm_nodes():
