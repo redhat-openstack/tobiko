@@ -329,7 +329,13 @@ class IpUtilsIpVersionPingInterface(IpUtilsPingInterface,
 
     def match_ping_usage(self, usage):
         return (usage.startswith(IP_VERSION_IPUTILS_PING_USAGE) or
-                usage.startswith(IP_VERSION_IPUTILS_PING_USAGE_NEW))
+                usage.startswith(IP_VERSION_IPUTILS_PING_USAGE_NEW) or
+                # TODO(eolivare): the following conditions are a workaround for
+                # TOBIKO-176, but this is not the final solution for the issue
+                (' -4 ' in usage and
+                 ' -6 ' in usage and
+                 ' -i ' in usage and
+                 ' -M ' in usage))
 
 
 BUSYBOX_PING_USAGE = """
