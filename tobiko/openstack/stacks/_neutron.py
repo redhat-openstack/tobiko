@@ -265,6 +265,14 @@ class RouterNoSnatStackFixture(RouterStackFixture):
         neutron.update_router(self.router_id, external_gateway_info=egi)
 
 
+class RouterStackFixtureMtu(RouterStackFixture):
+    # This router is simply created because MTU from the tenant networks
+    # connected to it can be modified.
+    # If this was done to the generic RouterStackFixture stack, the MTU changes
+    # would affect other tenant networks connected to the router
+    pass
+
+
 @neutron.skip_if_missing_networking_extensions('subnet_allocation')
 class SubnetPoolFixture(base_fixture.ResourceFixture):
     """Neutron Subnet Pool Fixture.
@@ -531,6 +539,8 @@ class NetworkNoFipStackFixture(NetworkBaseStackFixture):
 
 @neutron.skip_if_missing_networking_extensions('net-mtu-writable')
 class NetworkWithNetMtuWriteStackFixture(NetworkBaseStackFixture):
+
+    gateway_stack = tobiko.required_fixture(RouterStackFixtureMtu)
 
     @tobiko.interworker_synched('create_network_withnetmtuwrite_stack')
     def setup_stack(self):
