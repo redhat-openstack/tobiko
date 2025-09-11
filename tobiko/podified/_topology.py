@@ -166,9 +166,11 @@ class PodifiedTopology(rhosp.RhospTopology):
             # 'controller' to the control plane nodes
             group_nodes = self.add_group(group='ocp-node')
             if node not in group_nodes:
+                group_nodes.append(node)
                 node.add_group(group='ocp-node')
             group_nodes = self.add_group(group='controller')
             if node not in group_nodes and self.is_osp_controller(node_data):
+                group_nodes.append(node)
                 node.add_group(group='controller')
 
     def is_osp_controller(self, node_data):
