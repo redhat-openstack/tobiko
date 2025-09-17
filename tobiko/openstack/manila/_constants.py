@@ -19,6 +19,3 @@ RESOURCE_STATUS = 'status'
 STATUS_AVAILABLE = 'available'
 STATUS_ERROR = 'error'
 STATUS_ERROR_DELETING = 'error_deleting'
-
-# Manila resource names
-SHARE_NAME = "tobiko-manila-share"

@@ -14,6 +14,7 @@
 from __future__ import absolute_import
 
 from manilaclient.v2 import client as manilaclient
+from manilaclient.v2 import shares as manilashares
 from manilaclient import exceptions
 from oslo_log import log
 
@@ -65,7 +66,8 @@ def get_manila_client(session=None, shared=True, init_client=None,
     return manila_client(fixture)
 
 
-def create_share(share_protocol=None, size=None, client=None, **kwargs):
+def create_share(share_protocol=None, size=None, client=None, **kwargs) \
+        -> manilashares.Share:
     share_protocol = share_protocol or CONF.tobiko.manila.share_protocol
     share_size = size or CONF.tobiko.manila.size
     return manila_client(client).shares.create(
