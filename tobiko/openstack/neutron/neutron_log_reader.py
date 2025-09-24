@@ -134,16 +134,23 @@ class UnsupportedDhcpOptionMessage(typing.NamedTuple):
 @_agent.skip_unless_is_ovn()
 class OvnUnsupportedDhcpOptionReader(NeutronNovaCommonReader):
     groups = ['controller']
-    message_pattern = (
-        'The DHCP option .* on port .* is not suppported by OVN, ignoring it')
+    # TODO(eolivare): remove the "(pp|ppp)" part, which is needed for
+    # backward compatibility with neutron versions without:
+    # https://review.opendev.org/961725
+    message_pattern = ('The DHCP option .* on port .* is not '
+                       'su(pp|ppp)orted by OVN, ignoring it')
     responses: tobiko.Selection[UnsupportedDhcpOptionMessage]
 
+    # NOTE: this method is too dependent on messages from neutron code, which
+    # could change (as it has happened with https://review.opendev.org/961725)
+    # but it is hard to do something different when tests have to check
+    # expected log messages
     def read_responses(self) \
             -> tobiko.Selection[UnsupportedDhcpOptionMessage]:
         # pylint: disable=no-member
         def _get_port_uuid(line):
-            port_pattern = 'on port (.*) is not suppported by OVN'
-            return re.findall(port_pattern, line)[0]
+            port_pattern = 'on port (.*) is not su(pp|ppp)orted by OVN'
+            return re.findall(port_pattern, line)[0][0]
 
         def _get_dhcp_option(line):
             dhcp_opt_pattern = 'The DHCP option (.*) on port'
