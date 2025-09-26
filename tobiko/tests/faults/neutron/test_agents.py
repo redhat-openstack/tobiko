@@ -748,6 +748,9 @@ class OvnControllerTest(BaseAgentTest):
                 labels={'service': 'ovn-controller-ovs'})
         ovn_ctl_names = _openshift.get_pod_names(
                 labels={'service': 'ovn-controller'})
+        if len(ovn_ctl_ovs_names + ovn_ctl_names) == 0:
+            tobiko.skip_test('No ovn-controller pods running')
+
         # Delete pods
         _openshift.delete_pods(labels={'service': 'ovn-controller-ovs'})
         _openshift.delete_pods(labels={'service': 'ovn-controller'})
