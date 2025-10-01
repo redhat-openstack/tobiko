@@ -1,0 +1,7 @@
+---
+other:
+  - |
+    A new testenv value has been added to the list of supported test scopes: `update_podified_post`.
+    This value can be used to run tests on openstack podified environments after an
+    update procedure has been completed.
+    For the moment, only one test, `test_kpatches_applied_on_compute_nodes`, has been added to `update_podified_post`.
