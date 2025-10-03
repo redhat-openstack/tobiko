@@ -48,6 +48,13 @@ prevent Tobiko POD to be deleted. After tests will finish, POD will still be
 there and it will be possible to connect to it and run or even modify Tobiko
 tests as needed.
 
+You could test your tobiko gerrit patches by adding the following parameter to
+your `tobiko_vars.yaml` file::
+
+    cifmw_test_operator_tobiko_patch:
+      repository: "https://review.opendev.org/x/tobiko"
+      refspec: "refs/changes/03/955203/8"
+
 Now you can run tobiko tests using the `08-run-tests.yml` playbook::
 
    $ ansible-playbook -i <ci-framework inventory file> -vv \
@@ -56,7 +63,7 @@ Now you can run tobiko tests using the `08-run-tests.yml` playbook::
 
 And watch tobiko test pod being created::
 
-   $ watch 'oc get pods -A | grep "tobiko\|test-operator"'
+   $ watch 'oc get pods -A | grep -e tobiko -e test-operator'
 
 
 Test results should be found under::
