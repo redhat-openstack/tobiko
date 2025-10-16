@@ -32,3 +32,14 @@
     pre-release:
       jobs:
         - tobiko-upload-git-mirror
+    # TODO(eolivare): openstack-tox-py313 voting is disabled temporarily
+    # There is an ongoing patch that fixes tobiko for this job:
+    # https://review.opendev.org/c/x/tobiko/+/955203
+    check:
+      jobs:
+        - openstack-tox-py313:
+            voting: false
+    gate:
+      jobs:
+        - openstack-tox-py313:
+            voting: false
