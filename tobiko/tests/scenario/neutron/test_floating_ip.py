@@ -110,9 +110,11 @@ class FloatingIPTest(testtools.TestCase):
     def observed_net_mtu(self):
         """Actual MTU value for internal network"""
         network_stack = self.stack.network_stack
-        mtu = network_stack.mtu
+        mtu = neutron.get_network(network_stack.network_id)['mtu']
         if network_stack.has_gateway:
-            mtu = min(mtu, network_stack.gateway_stack.mtu)
+            gw_mtu = neutron.get_network(
+                network_stack.gateway_stack.network_id)['mtu']
+            mtu = min(mtu, gw_mtu)
         return mtu
 
     # --- test l3_ha extension ------------------------------------------------
