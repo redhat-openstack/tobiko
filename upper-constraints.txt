@@ -76,7 +76,7 @@ django-pymemcache===1.0.0
 django-pyscss===2.0.2
 dnspython===2.1.0
 doc8===0.10.1
-docutils===0.17.1
+docutils===0.18.1
 dogpile.cache===1.1.5
 dogtag-pki===10.7.4.1
 dulwich===0.20.32
@@ -299,7 +299,7 @@ pydot===1.4.2
 pydotplus===2.0.2
 pyeclib===1.6.0
 pyghmi===1.5.34
-Pygments===2.11.2
+Pygments===2.14.0
 pyinotify===0.9.6
 PyJWT===2.3.0
 PyKMIP===0.10.0
@@ -442,7 +442,7 @@ sniffio===1.2.0
 snowballstemmer===2.2.0
 sortedcontainers===2.4.0
 soupsieve===2.3.1
-Sphinx===5.0.0
+Sphinx===7.2.6
 sphinx-feature-classification===1.1.0
 sphinx-rtd-theme===2.0.0
 sphinx-testing===1.0.1
@@ -460,7 +460,7 @@ sphinxcontrib-programoutput===0.17
 sphinxcontrib-qthelp===1.0.3
 sphinxcontrib-runcmd===0.2.0
 sphinxcontrib-seqdiag===3.0.0;python_version=='3.8'
-sphinxcontrib-serializinghtml===1.1.5
+sphinxcontrib-serializinghtml===1.1.9
 sphinxcontrib-svg2pdfconverter===1.2.0
 sphinxcontrib.datatemplates===0.9.1
 SQLAlchemy===1.4.31
