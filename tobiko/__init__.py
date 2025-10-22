@@ -32,6 +32,7 @@ from tobiko.common import _retry
 from tobiko.common import _select
 from tobiko.common import _shelves
 from tobiko.common import _skip
+from tobiko.common import _tabledata
 from tobiko.common import _time
 from tobiko.common import _utils
 from tobiko.common import _version
@@ -147,6 +148,9 @@ skip_on_error = _skip.skip_on_error
 skip_test = _skip.skip_test
 skip_unless = _skip.skip_unless
 skip = _skip.skip
+
+TableData = _tabledata.TableData
+concat = _tabledata.concat
 
 min_seconds = _time.min_seconds
 max_seconds = _time.max_seconds
