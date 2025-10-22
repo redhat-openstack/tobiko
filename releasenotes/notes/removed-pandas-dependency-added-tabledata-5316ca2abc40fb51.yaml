@@ -1,0 +1,34 @@
+---
+features:
+  - |
+    Introduced a new ``TableData`` class in ``tobiko.common`` module as a
+    lightweight alternative to pandas DataFrame. The TableData class provides
+    tabular data manipulation capabilities specifically tailored to Tobiko's
+    needs without requiring the heavy pandas dependency.
+upgrade:
+  - |
+    The pandas library has been removed as a dependency from Tobiko. All
+    code that previously used ``pandas.DataFrame`` has been migrated to use
+    the new ``TableData`` class. This change reduces the installation size
+    and simplifies dependency management. Users who were relying on pandas
+    functionality in Tobiko should update their code to use the new
+    ``TableData`` class instead. The following modules have been updated:
+
+    * ``tobiko.podified.containers``
+    * ``tobiko.rhosp.containers``
+    * ``tobiko.tripleo.containers``
+    * ``tobiko.tripleo.pacemaker``
+    * ``tobiko.tripleo.processes``
+    * ``tobiko.tripleo.services``
+    * ``tobiko.openstack.topology``
+    * ``tobiko.podified._topology``
+    * ``tobiko.tripleo._topology``
+    * ``tobiko.tripleo._overcloud``
+
+    References to "dataframe" in function names, variables, and documentation
+    have been renamed to "tabledata" to reflect this change.
+deprecations:
+  - |
+    The pandas library is no longer used or supported by Tobiko. Any external
+    code that depends on Tobiko returning pandas DataFrame objects should be
+    updated to work with the new ``TableData`` class.
