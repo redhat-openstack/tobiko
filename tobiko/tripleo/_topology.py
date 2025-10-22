@@ -126,8 +126,8 @@ class TripleoTopology(rhosp.RhospTopology):
             bool_check=bool_check,
             nodenames=nodenames)
 
-    def list_containers_df(self, group=None):
-        return containers.list_containers_df(group)
+    def list_containers_td(self, group=None):
+        return containers.list_containers_td(group)
 
     def discover_nodes(self):
         self.discover_ssh_proxy_jump_node()

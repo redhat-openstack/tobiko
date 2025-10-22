@@ -5,7 +5,6 @@ import io
 import time
 
 from oslo_log import log
-import pandas
 
 import tobiko
 from tobiko import config
@@ -27,7 +26,7 @@ class PcsResourceException(tobiko.TobikoException):
     message = "pcs cluster is not in a healthy state"
 
 
-def get_pcs_resources_table(timeout=720, interval=2) -> pandas.DataFrame:
+def get_pcs_resources_table(timeout=720, interval=2) -> tobiko.TableData:
     """
     get pcs status from a controller and parse it
     to have it's resources states in check
@@ -38,7 +37,7 @@ def get_pcs_resources_table(timeout=720, interval=2) -> pandas.DataFrame:
        openstack-cinder-volume-podman-0     (ocf::heartbeat:podman):        Sta
        rted controller-0
 
-    :return: dataframe of pcs resources stats table
+    :return: TableData of pcs resources stats table
     """
     # prevent pcs table read failure while pacemaker is starting
     for attempt in tobiko.retry(timeout=timeout,
@@ -48,7 +47,7 @@ def get_pcs_resources_table(timeout=720, interval=2) -> pandas.DataFrame:
             # remove the first column when it only includes '*' characters
             output = output.replace('*', '').strip()
             stream = io.StringIO(output)
-            table: pandas.DataFrame = pandas.read_csv(
+            table = tobiko.TableData.read_csv(
                 stream, delim_whitespace=True, header=None)
             table.columns = ['resource', 'resource_type', 'resource_state',
                              'overcloud_node']
@@ -80,26 +79,26 @@ class PacemakerResourcesStatus(object):
     class to handle pcs resources checks
     """
     def __init__(self):
-        self.pcs_df = get_pcs_resources_table()
+        self.pcs_td = get_pcs_resources_table()
         (self.ocf_prefix,
          self.promoted_status_str,
          self.unpromoted_status_str) = get_pcs_prefix_and_status_values()
 
     def container_runtime(self):
 
-        if not self.pcs_df[(self.pcs_df['resource_type'] ==
-                            f"({self.ocf_prefix}heartbeat:podman):")].empty:
+        if not self.pcs_td.query(
+                'resource_type == '
+                f'"({self.ocf_prefix}heartbeat:podman):"').empty:
             return 'podman'
 
     def resource_count(self, resource_type):
-        return self.pcs_df[(self.pcs_df['resource_type'] == resource_type)][
-            'resource_state'].count()
+        return self.pcs_td.query(
+            f'resource_type == "{resource_type}"')['resource_state'].count()
 
     def resource_count_in_state(self, resource_type, resource_state):
-        return self.pcs_df[(self.pcs_df['resource_type'] ==
-                            resource_type) & (self.pcs_df['resource_state'] ==
-                                              resource_state)][
-            'resource_state'].count()
+        return self.pcs_td.query(
+            f'resource_type == "{resource_type}" and '
+            f'resource_state == "{resource_state}"')['resource_state'].count()
 
     def rabbitmq_resource_healthy(self):
         rabbitmq_resource_str = \
@@ -132,7 +131,7 @@ class PacemakerResourcesStatus(object):
         if not overcloud.is_redis_expected():
             LOG.info("redis resource not expected on OSP 17 "
                      "and later releases by default")
-            return self.pcs_df.query(
+            return self.pcs_td.query(
                 f'resource_type == "{redis_resource_str}"').empty
         nodes_num = self.resource_count(redis_resource_str)
         master_num = self.resource_count_in_state(
@@ -189,7 +188,7 @@ class PacemakerResourcesStatus(object):
 
     def ovn_resource_healthy(self):
         ovn_resource_str = f"({self.ocf_prefix}ovn:ovndb-servers):"
-        if self.pcs_df.query(
+        if self.pcs_td.query(
                 f'resource_type == "{ovn_resource_str}"').empty:
             LOG.info('pcs status check: ovn is not deployed, skipping ovn '
                      'resource check')
@@ -242,7 +241,7 @@ class PacemakerResourcesStatus(object):
                 LOG.info('Retrying pacemaker resource checks attempt '
                          '{} of 360'.format(attempt_number))
                 time.sleep(1)
-                self.pcs_df = get_pcs_resources_table()
+                self.pcs_td = get_pcs_resources_table()
         # exhausted all retries
         tobiko.fail('pcs cluster is not in a healthy state')
 
@@ -256,23 +255,23 @@ def get_overcloud_nodes_running_pcs_resource(resource=None,
     :return: list of overcloud nodes
     """
     # pylint: disable=no-member
-    pcs_df = get_pcs_resources_table()
+    pcs_td = get_pcs_resources_table()
     if resource:
-        pcs_df_query_resource = pcs_df.query('resource=="{}"'.format(
+        pcs_td_query_resource = pcs_td.query('resource=="{}"'.format(
                                         resource))
-        return pcs_df_query_resource['overcloud_node'].unique().tolist()
+        return pcs_td_query_resource['overcloud_node'].unique()
 
     if resource_type and resource_state:
-        pcs_df_query_resource_type_state = pcs_df.query(
+        pcs_td_query_resource_type_state = pcs_td.query(
             'resource_type=="{}" and resource_state=="{}"'.format(
                 resource_type, resource_state))
-        return pcs_df_query_resource_type_state[
-            'overcloud_node'].unique().tolist()
+        return pcs_td_query_resource_type_state[
+            'overcloud_node'].unique()
 
     if resource_type and not resource_state:
-        pcs_df_query_resource_type = pcs_df.query(
+        pcs_td_query_resource_type = pcs_td.query(
             'resource_type=="{}"'.format(resource_type))
-        return pcs_df_query_resource_type['overcloud_node'].unique().tolist()
+        return pcs_td_query_resource_type['overcloud_node'].unique()
 
 
 def get_resource_master_node(resource_type=None):
@@ -294,20 +293,19 @@ def get_overcloud_resource(resource_type=None,
     resource/type/state: exact str of a resource name as seen in pcs status
     :return: list of overcloud nodes
     """
-    pcs_df = get_pcs_resources_table()
+    pcs_td = get_pcs_resources_table()
 
     if resource_type and resource_state:
-        pcs_df_query_resource_type_state = pcs_df.query(
+        pcs_td_query_resource_type_state = pcs_td.query(
             'resource_type=="{}" and resource_state=="{}"'.format(
                 resource_type, resource_state))
-        return pcs_df_query_resource_type_state[
-            'resource'].unique().tolist()
+        return pcs_td_query_resource_type_state['resource'].unique()
 
     if resource_type and not resource_state:
         # pylint: disable=no-member
-        pcs_df_query_resource_type = pcs_df.query(
+        pcs_td_query_resource_type = pcs_td.query(
             'resource_type=="{}"'.format(resource_type))
-        return pcs_df_query_resource_type['resource'].unique().tolist()
+        return pcs_td_query_resource_type['resource'].unique()
 
 
 def instanceha_deployed():

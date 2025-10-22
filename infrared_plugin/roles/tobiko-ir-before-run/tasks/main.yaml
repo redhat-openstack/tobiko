@@ -72,13 +72,13 @@
   block:
     - name: Save the containers list file, if exists
       copy:
-        dest: ~/expected_containers_list_df.old.csv
-        src: ~/expected_containers_list_df.csv
+        dest: ~/expected_containers_list_td.old.csv
+        src: ~/expected_containers_list_td.csv
         remote_src: yes
       failed_when: false
 
     - name: Remove the original containers list file
       file:
-        path: ~/expected_containers_list_df.csv
+        path: ~/expected_containers_list_td.csv
         state: absent
   when: cleanup_containerlist_file | bool

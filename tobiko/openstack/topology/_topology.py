@@ -399,7 +399,7 @@ class OpenStackTopology(tobiko.SharedFixture):
                                   nodenames=None):
         pass
 
-    def list_containers_df(self, group=None):
+    def list_containers_td(self, group=None):
         pass
 
     def discover_nodes(self):

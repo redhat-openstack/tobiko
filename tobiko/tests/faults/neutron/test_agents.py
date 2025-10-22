@@ -109,14 +109,14 @@ class BaseAgentTest(testtools.TestCase):
                 self.agent_name)
             if not self.container_name:
                 return
-            oc_containers_df = \
-                topology.get_openstack_topology().list_containers_df().query(
+            oc_containers_td = \
+                topology.get_openstack_topology().list_containers_td().query(
                     f'container_name == "{self.container_name}"')
             LOG.debug(
-                f"{self.container_name} container found:\n{oc_containers_df}")
+                f"{self.container_name} container found:\n{oc_containers_td}")
 
             self.agents = []
-            for _, oc_container in oc_containers_df.iterrows():
+            for _, oc_container in oc_containers_td.iterrows():
                 if oc_container['container_state'] == 'running':
                     agent_info = {'host': oc_container['container_host'],
                                   'name': oc_container['container_name']}
