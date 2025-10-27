@@ -96,11 +96,13 @@ LB_AMP_NAME = _constants.LB_AMP_NAME
 LISTENER_AMP_NAME = _constants.LISTENER_AMP_NAME
 POOL_AMP_NAME = _constants.POOL_AMP_NAME
 MEMBER_AMP_NAME_PREFIX = _constants.MEMBER_AMP_NAME_PREFIX
+HM_AMP_NAME = _constants.HM_AMP_NAME
+
 LB_OVN_NAME = _constants.LB_OVN_NAME
 LISTENER_OVN_NAME = _constants.LISTENER_OVN_NAME
 POOL_OVN_NAME = _constants.POOL_OVN_NAME
 MEMBER_OVN_NAME_PREFIX = _constants.MEMBER_OVN_NAME_PREFIX
-HM_NAME = _constants.HM_NAME
+HM_OVN_NAME = _constants.HM_OVN_NAME
 
 # Deployers
 deploy_ipv4_amphora_lb = _deployers.deploy_ipv4_amphora_lb

@@ -147,7 +147,8 @@ def deploy_ipv4_lb(provider: str,
     return lb, listener, pool
 
 
-def deploy_hm(name: str,
+def deploy_hm(provider: str,
+              name: str,
               pool_id: str,
               delay: int = 3,
               hm_timeout: int = 3,
@@ -155,6 +156,7 @@ def deploy_hm(name: str,
               max_retries: int = 2):
     """Deploy a health monitor and attach it to the pool
 
+    :param provider: the loadbalancer provider. For example: amphora
     :param name: the health monitor name. For example: ovn health monitor
     :param pool_id: the id of the pool to attach the hm to.
     :param delay: time, in seconds, between sending probes to members
@@ -164,8 +166,10 @@ def deploy_hm(name: str,
     :return: all Octavia resources it has created (LB, listener, and pool)
     """
     if pool_id is not None:
+        hm_name = octavia.OCTAVIA_PROVIDERS_NAMES['healthmonitor'][provider]
+
         health_monitor_kwargs = {
-            'name': octavia.HM_NAME,
+            'name': hm_name,
             'pool_id': pool_id,
             'delay': delay,
             'timeout': hm_timeout,
@@ -178,12 +182,15 @@ def deploy_hm(name: str,
                 LOG.debug(f'health_monitor {hm.name}: {hm.id} exists.')
                 return hm
             else:
-                err_message = f'healht_mointor {hm.name} used in another pool'
+                err_message = f'health_mointor {hm.name} used in another pool'
                 LOG.error(err_message)
                 tobiko.fail(err_message)
         else:
             hm = octavia.create_health_monitor(health_monitor_kwargs)
             return hm
+    else:
+        LOG.error(f"Cannot deploy health monitor '{name}': pool_id is None")
+        return None
 
 
 @tobiko.interworker_synched('deploy_ipv4_amphora_lb')

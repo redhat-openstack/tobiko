@@ -53,15 +53,14 @@ LB_AMP_NAME = 'tobiko_octavia_amphora_lb'
 LISTENER_AMP_NAME = 'tobiko_octavia_http_listener'
 POOL_AMP_NAME = 'tobiko_octavia_http_pool'
 MEMBER_AMP_NAME_PREFIX = 'tobiko_octavia_http_member'
+HM_AMP_NAME = 'tobiko_octavia_amphora_hm'
 
 # Octavia ovn provider resources names
 LB_OVN_NAME = 'tobiko_octavia_ovn_lb'
 LISTENER_OVN_NAME = 'tobiko_octavia_tcp_listener'
 POOL_OVN_NAME = 'tobiko_octavia_tcp_pool'
 MEMBER_OVN_NAME_PREFIX = 'tobiko_octavia_tcp_member'
-
-# Health Montior resources
-HM_NAME = 'tobiko_octavia_hm'
+HM_OVN_NAME = 'tobiko_octavia_ovn_hm'
 
 # Providers/lb-names dictionary
 OCTAVIA_PROVIDERS_NAMES = {
@@ -82,7 +81,7 @@ OCTAVIA_PROVIDERS_NAMES = {
         OVN_PROVIDER: MEMBER_OVN_NAME_PREFIX,
     },
     'healthmonitor': {
-        AMPHORA_PROVIDER: HM_NAME,
-        OVN_PROVIDER: HM_NAME,
+        AMPHORA_PROVIDER: HM_AMP_NAME,
+        OVN_PROVIDER: HM_OVN_NAME,
     }
 }

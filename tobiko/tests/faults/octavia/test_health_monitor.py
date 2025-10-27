@@ -59,7 +59,8 @@ class OctaviaOVNProviderHealthMonitorTest(testtools.TestCase):
             servers_stacks=[self.server_stack, self.other_server_stack]
         )
 
-        self.health_monitor = octavia.deploy_hm(octavia.HM_NAME, self.pool.id)
+        self.health_monitor = octavia.deploy_hm(
+            octavia.OVN_PROVIDER, octavia.HM_OVN_NAME, self.pool.id)
 
     def test_hm(self) -> None:
         # Wait for health monitor to be ONLINE
