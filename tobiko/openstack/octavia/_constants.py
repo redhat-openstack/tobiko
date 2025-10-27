@@ -22,6 +22,7 @@ ACTIVE = 'ACTIVE'
 ERROR = 'ERROR'
 PENDING_UPDATE = 'PENDING_UPDATE'
 ONLINE = 'ONLINE'
+DEGRADED = 'DEGRADED'
 
 # Octavia protocols
 PROTOCOL_HTTP = 'HTTP'
@@ -59,22 +60,29 @@ LISTENER_OVN_NAME = 'tobiko_octavia_tcp_listener'
 POOL_OVN_NAME = 'tobiko_octavia_tcp_pool'
 MEMBER_OVN_NAME_PREFIX = 'tobiko_octavia_tcp_member'
 
+# Health Montior resources
+HM_NAME = 'tobiko_octavia_hm'
+
 # Providers/lb-names dictionary
 OCTAVIA_PROVIDERS_NAMES = {
     'lb': {
         AMPHORA_PROVIDER: LB_AMP_NAME,
-        OVN_PROVIDER: LB_OVN_NAME
+        OVN_PROVIDER: LB_OVN_NAME,
     },
     'listener': {
         AMPHORA_PROVIDER: LISTENER_AMP_NAME,
-        OVN_PROVIDER: LISTENER_OVN_NAME
+        OVN_PROVIDER: LISTENER_OVN_NAME,
     },
     'pool': {
         AMPHORA_PROVIDER: POOL_AMP_NAME,
-        OVN_PROVIDER: POOL_OVN_NAME
+        OVN_PROVIDER: POOL_OVN_NAME,
     },
     'member': {
         AMPHORA_PROVIDER: MEMBER_AMP_NAME_PREFIX,
-        OVN_PROVIDER: MEMBER_OVN_NAME_PREFIX
+        OVN_PROVIDER: MEMBER_OVN_NAME_PREFIX,
+    },
+    'healthmonitor': {
+        AMPHORA_PROVIDER: HM_NAME,
+        OVN_PROVIDER: HM_NAME,
     }
 }

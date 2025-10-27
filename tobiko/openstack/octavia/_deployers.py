@@ -147,6 +147,45 @@ def deploy_ipv4_lb(provider: str,
     return lb, listener, pool
 
 
+def deploy_hm(name: str,
+              pool_id: str,
+              delay: int = 3,
+              hm_timeout: int = 3,
+              hm_type: str = _constants.PROTOCOL_TCP,
+              max_retries: int = 2):
+    """Deploy a health monitor and attach it to the pool
+
+    :param name: the health monitor name. For example: ovn health monitor
+    :param pool_id: the id of the pool to attach the hm to.
+    :param delay: time, in seconds, between sending probes to members
+    :param timeout: maximum consecutive health probe tries
+    :param type:type of probe sent to verify the member state.
+    :param max_retries: a list of server stacks (until we remove heat
+    :return: all Octavia resources it has created (LB, listener, and pool)
+    """
+    if pool_id is not None:
+        health_monitor_kwargs = {
+            'name': octavia.HM_NAME,
+            'pool_id': pool_id,
+            'delay': delay,
+            'timeout': hm_timeout,
+            'max_retries': max_retries,
+            'type': hm_type,
+        }
+        hm = octavia.find_health_monitor(name)
+        if hm:
+            if pool_id in [pool['id'] for pool in hm.pools]:
+                LOG.debug(f'health_monitor {hm.name}: {hm.id} exists.')
+                return hm
+            else:
+                err_message = f'healht_mointor {hm.name} used in another pool'
+                LOG.error(err_message)
+                tobiko.fail(err_message)
+        else:
+            hm = octavia.create_health_monitor(health_monitor_kwargs)
+            return hm
+
+
 @tobiko.interworker_synched('deploy_ipv4_amphora_lb')
 def deploy_ipv4_amphora_lb(protocol: str = _constants.PROTOCOL_HTTP,
                            protocol_port: int = 80,

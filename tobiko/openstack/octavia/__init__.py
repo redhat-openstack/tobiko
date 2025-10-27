@@ -38,6 +38,7 @@ OctaviaClientType = _client.OctaviaClientType
 list_members = _client.list_members
 list_load_balancers = _client.list_load_balancers
 find_load_balancer = _client.find_load_balancer
+get_load_balancer = _client.get_load_balancer
 create_load_balancer = _client.create_load_balancer
 find_listener = _client.find_listener
 create_listener = _client.create_listener
@@ -45,6 +46,9 @@ find_pool = _client.find_pool
 create_pool = _client.create_pool
 find_member = _client.find_member
 create_member = _client.create_member
+create_health_monitor = _client.create_health_monitor
+find_health_monitor = _client.find_health_monitor
+get_health_monitor = _client.get_health_monitor
 
 # Waiters
 wait_for_status = _waiters.wait_for_status
@@ -68,6 +72,7 @@ ACTIVE = _constants.ACTIVE
 ERROR = _constants.ERROR
 PENDING_UPDATE = _constants.PENDING_UPDATE
 ONLINE = _constants.ONLINE
+DEGRADED = _constants.DEGRADED
 PROTOCOL_HTTP = _constants.PROTOCOL_HTTP
 PROTOCOL_TCP = _constants.PROTOCOL_TCP
 LB_ALGORITHM_ROUND_ROBIN = _constants.LB_ALGORITHM_ROUND_ROBIN
@@ -95,7 +100,9 @@ LB_OVN_NAME = _constants.LB_OVN_NAME
 LISTENER_OVN_NAME = _constants.LISTENER_OVN_NAME
 POOL_OVN_NAME = _constants.POOL_OVN_NAME
 MEMBER_OVN_NAME_PREFIX = _constants.MEMBER_OVN_NAME_PREFIX
+HM_NAME = _constants.HM_NAME
 
 # Deployers
 deploy_ipv4_amphora_lb = _deployers.deploy_ipv4_amphora_lb
 deploy_ipv4_ovn_lb = _deployers.deploy_ipv4_ovn_lb
+deploy_hm = _deployers.deploy_hm

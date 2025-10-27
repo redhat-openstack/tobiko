@@ -125,3 +125,23 @@ def find_member(member_name: str, pool: str):
 def create_member(member_kwargs):
     os_sdk_client = openstacksdkclient.openstacksdk_client()
     return os_sdk_client.load_balancer.create_member(**member_kwargs)
+
+
+def create_health_monitor(hm_kwargs):
+    os_sdk_client = openstacksdkclient.openstacksdk_client()
+    return os_sdk_client.load_balancer.create_health_monitor(**hm_kwargs)
+
+
+def find_health_monitor(hm_name: str):
+    os_sdk_client = openstacksdkclient.openstacksdk_client()
+    return os_sdk_client.load_balancer.find_health_monitor(hm_name)
+
+
+def get_load_balancer(lb_id: str):
+    os_sdk_client = openstacksdkclient.openstacksdk_client()
+    return os_sdk_client.load_balancer.get_load_balancer(lb_id)
+
+
+def get_health_monitor(hm_id: str):
+    os_sdk_client = openstacksdkclient.openstacksdk_client()
+    return os_sdk_client.load_balancer.get_health_monitor(hm_id)
