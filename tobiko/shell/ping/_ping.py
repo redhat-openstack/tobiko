@@ -640,5 +640,8 @@ def execute_ping_in_background(address: typing.Union[str, netaddr.IPAddress],
     start_background_ping(address, output_path, ssh_client)
 
     # if ping does not start properly, fail the test
-    if not ping_alive(address, ssh_client):
-        tobiko.fail('background ping process did not start')
+    for attempt in tobiko.retry(count=5, sleep_time=.5):
+        if ping_alive(address, ssh_client):
+            return
+        elif attempt.is_last:
+            tobiko.fail('background ping process did not start')
