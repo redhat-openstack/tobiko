@@ -63,7 +63,7 @@
   register: upper_constraints_file
 
 
-- name: "upgrade '{{ python_command }}' packages to the latest versions"
+- name: "upgrade '{{ python_command }}' packages to the latest versions - but do not fail if not possible"
   command: >
     '{{ python_info[python_command].executable }}' -m pip install \
     {% if upper_constraints_file.stat.exists == true %}-c'{{ upper_constraints_file.stat.path }}'{% endif %}
@@ -71,6 +71,7 @@
   register: upgrade_python_packages
   changed_when:
     "'Successfully installed' in upgrade_python_packages.stdout"
+  failed_when: false
   loop:
     - pip
     - setuptools
