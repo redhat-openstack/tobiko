@@ -311,13 +311,23 @@ class UrlGlanceImageFixture(UploadGlanceImageFixture, ABC):
         super().__init__(**kwargs)
         if image_url:
             self.image_url = image_url
-        tobiko.check_valid_type(self.image_url, str)
-        # self.image_url has to be a URL - if it refers to a local file, it
-        # should start with file://
-        url = urlparse(self.image_url)
-        if not self.image_file:
-            self.image_file = (url.path if url.scheme == 'file'
-                               else os.path.basename(url.path))
+        # Only validate image_url if it's set - it may not be needed if the
+        # image already exists in Glance
+        if self.image_url:
+            tobiko.check_valid_type(self.image_url, str)
+            # self.image_url has to be a URL - if it refers to a local file, it
+            # should start with file://
+            url = urlparse(self.image_url)
+            if not url.scheme:
+                raise ValueError(
+                    f"Invalid image URL (missing scheme): {self.image_url}")
+
+            if not self.image_file:
+                if url.scheme == 'file':
+                    self.image_file = url.path
+                else:
+                    self.image_file = (os.path.basename(url.path) or
+                                       f"image_{id(self)}")
 
         if image_dir:
             self.image_dir = image_dir
@@ -342,7 +352,13 @@ class UrlGlanceImageFixture(UploadGlanceImageFixture, ABC):
         # if the file exists, then skip the download part
         if os.path.exists(real_image_file):
             return self.get_image_from_file(real_image_file)
-        # else, download the image
+        # else, download the image - image_url is required for download
+        if not self.image_url:
+            tobiko.fail(
+                f"image_url is required to download image '{self.image_name}' "
+                f"because the image file '{real_image_file}' does not exist. "
+                f"Either set image_url in the configuration or ensure the "
+                f"image already exists in Glance.")
         return self.get_image_from_url(real_image_file)
 
     def get_image_from_file(self, image_file: str):
