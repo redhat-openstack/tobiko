@@ -51,6 +51,7 @@ class ManilaShareFixture(base_fixture.ResourceFixture):
         super().try_create_resource()
 
     def resource_create(self):
+        manila.ensure_default_share_type_exists()
         share = manila.create_share(share_protocol=self.share_protocol,
                                     size=self.size,
                                     name=self.name)
