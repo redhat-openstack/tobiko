@@ -60,7 +60,12 @@ def get_command_line(pid: int,
         try:
             output = _execute.execute(cmd,
                                       ssh_client=ssh_client).stdout
-        except _exception.ShellCommandFailed:
+        except _exception.ShellCommandFailed as ex:
+            # Don't retry on legitimate errors like "No such file or directory"
+            # (which means the PID doesn't exist)
+            if 'No such file or directory' in ex.stderr:
+                raise GetCommandLineError(error=ex.stderr) from ex
+            # Retry on timeout or other transient errors
             LOG.error(f'Error getting command line for pid {pid}')
         else:
             break
