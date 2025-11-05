@@ -46,10 +46,13 @@ skip_if_podified = tobiko.skip_if(
 # contain all of those "sub groups"
 COMPUTE_GROUPS = [
     _openshift.EDPM_COMPUTE_GROUP,
-    _openshift.EDPM_NETWORKER_GROUP,
     _openshift.EDPM_OTHER_GROUP
 ]
+NETWORKER_GROUPS = [
+    _openshift.EDPM_NETWORKER_GROUP,
+]
 ALL_COMPUTES_GROUP_NAME = 'compute'
+ALL_NETWORKERS_GROUP_NAME = 'networker'
 OCP_NODE = 'ocp_node'
 EDPM_NODE = 'edpm_node'
 
@@ -123,12 +126,17 @@ class PodifiedTopology(rhosp.RhospTopology):
             **create_params
         )
         # NOTE(slaweq): additionally lets add every edpm node to the "legacy"
-        # group named "compute"
+        # groups named "compute" or "networker"
         if group and group in COMPUTE_GROUPS:
             group_nodes = self.add_group(group=ALL_COMPUTES_GROUP_NAME)
             if node and node not in group_nodes:
                 group_nodes.append(node)
                 node.add_group(group=ALL_COMPUTES_GROUP_NAME)
+        if group and group in NETWORKER_GROUPS:
+            group_nodes = self.add_group(group=ALL_NETWORKERS_GROUP_NAME)
+            if node and node not in group_nodes:
+                group_nodes.append(node)
+                node.add_group(group=ALL_NETWORKERS_GROUP_NAME)
         return node
 
     def create_node(self, name, ssh_client, **kwargs):
