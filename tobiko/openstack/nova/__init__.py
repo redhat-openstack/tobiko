@@ -13,6 +13,7 @@
 #    under the License.
 from __future__ import absolute_import
 
+from tobiko.openstack.nova import _agent
 from tobiko.openstack.nova import _checks
 from tobiko.openstack.nova import _client
 from tobiko.openstack.nova import _cloud_init
@@ -95,3 +96,6 @@ check_virsh_domains_running = _checks.check_virsh_domains_running
 wait_for_all_instances_status = _checks.wait_for_all_instances_status
 check_vms_ping = _checks.check_vms_ping
 check_vm_evacuations = _checks.check_vm_evacuations
+
+ISCSID = _agent.ISCSID
+NOVA_COMPUTE = _agent.NOVA_COMPUTE

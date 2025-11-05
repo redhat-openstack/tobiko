@@ -19,10 +19,13 @@ import pytest
 import testtools
 
 import tobiko
+from tobiko.openstack import nova
+from tobiko.openstack import neutron
+from tobiko.openstack import topology
+from tobiko import podified
 from tobiko.shell import ip
 from tobiko.shell import ping
 from tobiko.shell import sh
-from tobiko.openstack import topology
 
 
 LOG = log.getLogger(__name__)
@@ -67,3 +70,33 @@ class OpenstackNodesTest(testtools.TestCase):
                 if ips is not other_ips:
                     tobiko.fail(f"Duplicate network namespace {namespace} in "
                                 f"node {node.name}: {other_ips}, {ips}")
+
+    @podified.skip_if_not_podified
+    def test_systemd_services(self):
+        """Verify expected systemd services are running on compute nodes"""
+        # Define the services to check on compute nodes
+        services_to_check = [
+            nova.ISCSID,
+            nova.NOVA_COMPUTE,
+            neutron.OVN_CONTROLLER,
+            neutron.NEUTRON_OVN_METADATA_AGENT
+        ]
+
+        # Get compute nodes
+        compute_nodes = topology.list_openstack_nodes(
+            group=podified.ALL_COMPUTES_GROUP_NAME)
+
+        for node in compute_nodes:
+            LOG.info(f'Checking systemd services on node {node.name}')
+            for service_key in services_to_check:
+                service_name = self.topology.get_agent_service_name(
+                    service_key)
+                LOG.debug(f'Checking service {service_name} on node '
+                          f'{node.name}')
+                sh.wait_for_active_systemd_units(
+                    service_name + '.service',
+                    ssh_client=node.ssh_client,
+                    sudo=True,
+                    timeout=30)
+                LOG.info(f'Service {service_name} is active on node '
+                         f'{node.name}')
