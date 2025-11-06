@@ -45,30 +45,11 @@ def get_command_line(pid: int,
                      command: str = None,
                      _cache_id: int = None) \
         -> _command.ShellCommand:
-    cmd = f'cat /proc/{pid}/cmdline'
-
-    # Sometimes the `cat /proc/{pid}/cmdline` command gets stuck forever on
-    # some machines. Due to this, we are running the command with timeout and
-    # retrying it when it fails
-    which_timeout = _execute.execute("which timeout",
-                                     ssh_client=ssh_client,
-                                     expect_exit_status=None)
-    if which_timeout.exit_status == 0:
-        cmd = f'timeout 1 {cmd}'
-
-    for _ in tobiko.retry(timeout=60, interval=3):
-        try:
-            output = _execute.execute(cmd,
-                                      ssh_client=ssh_client).stdout
-        except _exception.ShellCommandFailed as ex:
-            # Don't retry on legitimate errors like "No such file or directory"
-            # (which means the PID doesn't exist)
-            if 'No such file or directory' in ex.stderr:
-                raise GetCommandLineError(error=ex.stderr) from ex
-            # Retry on timeout or other transient errors
-            LOG.error(f'Error getting command line for pid {pid}')
-        else:
-            break
+    try:
+        output = _execute.execute(f'cat /proc/{pid}/cmdline',
+                                  ssh_client=ssh_client).stdout
+    except _exception.ShellCommandFailed as ex:
+        raise GetCommandLineError(error=ex.stderr) from ex
 
     command_line = _command.ShellCommand(output.strip().split('\0')[:-1])
     if not command_line:
