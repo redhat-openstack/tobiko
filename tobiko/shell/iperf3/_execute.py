@@ -147,12 +147,15 @@ def execute_iperf3_client_in_background(
             port=port, protocol=protocol,
             ssh_client=iperf3_server_ssh_client)
 
-        if not _iperf3_server_alive(
-                port=port, protocol=protocol,
-                ssh_client=iperf3_server_ssh_client):
-            testcase = tobiko.get_test_case()
-            testcase.fail('iperf3 server did not start properly '
-                          f'on the server {iperf3_server_ssh_client}')
+        # if iperf3 server does not start properly, fail the test
+        for attempt in tobiko.retry(count=5, sleep_time=.5):
+            if _iperf3_server_alive(
+                    port=port, protocol=protocol,
+                    ssh_client=iperf3_server_ssh_client):
+                break
+            elif attempt.is_last:
+                tobiko.fail('iperf3 server did not start properly '
+                            f'on the server {iperf3_server_ssh_client}')
 
     # Now, finally iperf3 client should be ready to start
     execute_iperf3_client(
