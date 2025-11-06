@@ -398,6 +398,7 @@ class SSHClientFixture(tobiko.SharedFixture):
                 else:
                     break
 
+        LOG.debug("SSH connection ensured")
         return client
 
     def close(self):

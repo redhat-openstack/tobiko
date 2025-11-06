@@ -135,8 +135,11 @@ class SSHShellProcessFixture(_process.ShellProcessFixture):
             LOG.debug(f"Create remote process... ({details})")
             try:
                 client = ssh_client.connect()
+                LOG.debug("SSH client connected - Establishing session with "
+                          f"timeout = {self.open_session_timeout}")
                 process = client.get_transport().open_session(
                     timeout=self.open_session_timeout)
+                LOG.debug("Remote session created")
                 if environment:
                     variables = " ".join(
                         f"{name}={shlex.quote(value)}"
