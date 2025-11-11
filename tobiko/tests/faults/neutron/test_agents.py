@@ -116,7 +116,7 @@ class BaseAgentTest(testtools.TestCase):
                 f"{self.container_name} container found:\n{oc_containers_td}")
 
             self.agents = []
-            for _, oc_container in oc_containers_td.iterrows():
+            for oc_container in oc_containers_td.data:
                 if oc_container['container_state'] == 'running':
                     agent_info = {'host': oc_container['container_host'],
                                   'name': oc_container['container_name']}
