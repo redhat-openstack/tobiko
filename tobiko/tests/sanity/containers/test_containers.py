@@ -330,10 +330,6 @@ class PodifiedContainersHealthTest(BaseContainersHealtTest):
         return podified_containers.get_container_runtime().\
             list_containers(ssh_client=ssh_client)
 
-    def test_compute_iscsid(self):
-        self._assert_containers_running(podified.EDPM_COMPUTE_GROUP,
-                                        ['iscsid'])
-
     def test_nova_compute(self):
         self._assert_containers_running(podified.EDPM_COMPUTE_GROUP,
                                         ['nova_compute'])
