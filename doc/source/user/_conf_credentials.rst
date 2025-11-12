@@ -11,7 +11,7 @@ supported by Tobiko:
 Get credentials from a DevStack host
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Copy the `clouds.yaml <https://docs.openstack.org/python-openstackclient/pike/configuration/index.html#clouds-yaml>`__
+Copy the `clouds.yaml <https://docs.openstack.org/python-openstackclient/latest/configuration/index.html#clouds-yaml>`__
 file from your remote cloud to any one of the below locations:
 
   - Tobiko source files directory
