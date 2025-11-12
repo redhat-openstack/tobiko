@@ -184,6 +184,30 @@ def get_processes(processes: str) -> typing.List[str]:
     return process_list
 
 
+def _detect_ip_version(headers: SockHeader,
+                       sock_data: typing.List[str]) -> typing.Optional[int]:
+    """Detect IP version from non-wildcard addresses in socket data"""
+    for idx, header in enumerate(headers):
+        if header in ('local', 'remote'):
+            ip, _ = sock_data[idx].strip().rsplit(':', 1)
+            if ip != '*':
+                try:
+                    addr = netaddr.IPAddress(ip.strip(']['))
+                    return addr.version
+                except (netaddr.core.AddrFormatError, ValueError):
+                    pass
+    return None
+
+
+def _parse_socket_address(ip: str, ip_version: typing.Optional[int]) -> str:
+    """Convert wildcard IP to proper format for netaddr >= 1.3.0"""
+    if ip == '*':
+        # Use proper wildcard addresses for netaddr >= 1.3.0
+        # Default to IPv6 if we couldn't detect the version
+        return '0.0.0.0' if ip_version == 4 else '::'
+    return ip
+
+
 def parse_tcp_socket(headers: SockHeader,
                      sock_info: SockLine) -> SockData:
     socket_details = SockData()
@@ -191,13 +215,15 @@ def parse_tcp_socket(headers: SockHeader,
     if len(headers) != len(sock_data):
         msg = 'Unable to parse line: "{}"'.format(sock_info)
         raise ValueError(msg)
+
+    ip_version = _detect_ip_version(headers, sock_data)
+
     for idx, header in enumerate(headers):
         if not header:
             continue
-        if header == 'local' or header == 'remote':
+        if header in ('local', 'remote'):
             ip, port = sock_data[idx].strip().rsplit(':', 1)
-            if ip == '*':
-                ip = '0'
+            ip = _parse_socket_address(ip, ip_version)
             socket_details['{}_addr'.format(header)] = netaddr.IPAddress(
                     ip.strip(']['))
             socket_details['{}_port'.format(header)] = port
