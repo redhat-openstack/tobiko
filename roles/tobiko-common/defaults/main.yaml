@@ -63,26 +63,8 @@ download_images_default:
   advanced_vm:
     username: fedora
     type: advanced_vm
-    url: "https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2"
-    customized: false
-    copy_in_files:
-      - nginx_id.conf
-      - iperf3-server.service
-      - config
-    # vlan101 is created on top of both eth0 and ens3 because depending on the computes OS, VM interface name changes
-    # nmcli will create two connections with same name and different UUIDs and only one of them will become active: the one that finds an existing parent NIC
-    customize_command_pattern: >
-      LIBGUESTFS_BACKEND=direct virt-customize -a $TMPPATH
-      --copy-in /tmp/config:/etc/selinux
-      --firstboot-command 'sh -c "nmcli connection add type vlan con-name vlan101 ifname vlan101 vlan.parent eth0 vlan.id 101 ipv6.addr-gen-mode default-or-eui64;
-      nmcli connection add type vlan con-name vlan101 ifname vlan101 vlan.parent ens3 vlan.id 101 ipv6.addr-gen-mode default-or-eui64"'
-      --install iperf3,iputils,nmap,nmap-ncat,nginx
-      --copy-in /tmp/nginx_id.conf:/etc/nginx/conf.d
-      --run-command 'systemctl enable nginx'
-      --copy-in /tmp/iperf3-server.service:/etc/systemd/system
-      --run-command 'systemctl enable iperf3-server'
-      --root-password password:tobiko
-      --selinux-relabel
+    url: "https://github.com/openstack-k8s-operators/openstack-k8s-operators-ci/releases/download/v1.0.0/tobiko-custom-v1.0.0.qcow2"
+    customized: true
 
 download_images: >-
   {{
