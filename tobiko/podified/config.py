@@ -80,7 +80,10 @@ OPTIONS = [
                      ' The provided value has to be a non-nested dictionary '
                      'without any {} bouds. '
                      'Example: kubernetes.io/hostname:worker-3'),
-
+    cfg.StrOpt('edpm_iscsid_service_name',
+               default='iscsid',
+               help='Specify the iscsid service name, which differs depending '
+                    'on the version of the Podified Openstack environment.')
 ]
 
 

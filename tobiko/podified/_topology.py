@@ -20,6 +20,7 @@ from oslo_log import log
 
 import tobiko
 from tobiko.openstack import neutron
+from tobiko.openstack import nova
 from tobiko.openstack import topology
 from tobiko.podified import _edpm
 from tobiko.podified import _openshift
@@ -70,8 +71,17 @@ class PodifiedTopology(rhosp.RhospTopology):
         neutron.NEUTRON_OVN_AGENT: 'edpm_ovn_agent',
         neutron.OVN_CONTROLLER: 'edpm_ovn_controller',
         neutron.OVN_BGP_AGENT: 'edpm_ovn_bgp_agent',
-        neutron.FRR: 'edpm_frr'
+        neutron.FRR: 'edpm_frr',
+        nova.ISCSID: '',
+        nova.NOVA_COMPUTE: 'edpm_nova_compute'
     }
+
+    @classmethod
+    def get_agent_service_name(cls, agent_name: str) -> str:
+        # Handle nova.ISCSID specially since it's configurable
+        if agent_name == nova.ISCSID:
+            return tobiko.tobiko_config().podified.edpm_iscsid_service_name
+        return super().get_agent_service_name(agent_name)
 
     # NOTE(slaweq): those container names are only valid for the EDPM nodes
     agent_to_container_name_mappings = {
