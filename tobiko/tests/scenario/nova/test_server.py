@@ -103,8 +103,16 @@ class BaseServerTest(testtools.TestCase):
         server = self.ensure_server(status='ACTIVE')
         initial_hypervisor = nova.get_server_hypervisor(server)
 
+        # Get the hypervisor object to determine its type
+        initial_hypervisor_obj = nova.find_hypervisor(
+            hypervisor_hostname=initial_hypervisor)
+        initial_hypervisor_type = initial_hypervisor_obj.hypervisor_type
+
+        # Filter by same hypervisor type and exclude the current hypervisor
         hypervisors = nova.list_hypervisors(
-            status='enabled', state='up').select(
+            status='enabled',
+            state='up',
+            hypervisor_type=initial_hypervisor_type).select(
             lambda h: h.hypervisor_hostname != initial_hypervisor)
         if not hypervisors:
             tobiko.skip_test("Cannot find a valid hypervisor host to migrate "
