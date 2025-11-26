@@ -201,7 +201,17 @@ class MigrateServerTest(testtools.TestCase):
         """
         server = self.setup_server()
         initial_hypervisor = nova.get_server_hypervisor(server)
-        for hypervisor in nova.list_hypervisors(status='enabled', state='up'):
+
+        # Get the hypervisor object to determine its type
+        initial_hypervisor_obj = nova.find_hypervisor(
+            hypervisor_hostname=initial_hypervisor)
+        initial_hypervisor_type = initial_hypervisor_obj.hypervisor_type
+
+        # Filter by same hypervisor type
+        for hypervisor in nova.list_hypervisors(
+                status='enabled',
+                state='up',
+                hypervisor_type=initial_hypervisor_type):
             if initial_hypervisor != hypervisor.hypervisor_hostname:
                 target_hypervisor = hypervisor.hypervisor_hostname
                 break

@@ -1,0 +1,14 @@
+---
+fixes:
+  - |
+    Migration tests now filter candidate hypervisors by hypervisor type before
+    selecting a migration target. This prevents test failures when attempting
+    to migrate servers between incompatible hypervisor types (e.g., from QEMU
+    compute nodes to Ironic baremetal nodes). Nova does not support migration
+    between different hypervisor types, and tests will now properly select
+    only compatible hypervisors of the same type (QEMU to QEMU, Ironic to
+    Ironic, etc.) when performing live or cold migrations with an explicit
+    target host.
+
+    For more information, see
+    `Story 2011623 <https://storyboard.openstack.org/#!/story/2011623>`_.
