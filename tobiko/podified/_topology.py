@@ -47,7 +47,6 @@ skip_if_podified = tobiko.skip_if(
 # contain all of those "sub groups"
 COMPUTE_GROUPS = [
     _openshift.EDPM_COMPUTE_GROUP,
-    _openshift.EDPM_OTHER_GROUP
 ]
 NETWORKER_GROUPS = [
     _openshift.EDPM_NETWORKER_GROUP,
