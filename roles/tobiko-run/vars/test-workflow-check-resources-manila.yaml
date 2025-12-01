@@ -6,3 +6,11 @@ test_workflow_steps:
     tox_step_name: check_manila_resources
     tox_environment:
       TOBIKO_PREVENT_CREATE: yes
+    pytest_addopts: "-k 'not test_manila_upgrade'"
+
+  - tox_description: 'verify manila upgrade test resources'
+    tox_envlist: manila
+    tox_step_name: verify_manila_upgrade_resources
+    tox_environment:
+      TOBIKO_PREVENT_CREATE: yes
+    pytest_addopts: "-k test_manila_upgrade"
