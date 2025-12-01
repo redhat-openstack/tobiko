@@ -17,7 +17,6 @@ from __future__ import absolute_import
 
 import typing
 
-from manilaclient.v2.shares import Share
 from oslo_log import log
 
 import tobiko
@@ -29,7 +28,7 @@ LOG = log.getLogger(__name__)
 
 class ManilaShareFixture(base_fixture.ResourceFixture):
 
-    _resource: typing.Optional[Share] = None
+    _resource: typing.Optional[dict] = None
     share_protocol: typing.Optional[str] = None
     size: typing.Optional[int] = None
 

@@ -14,7 +14,6 @@
 from __future__ import absolute_import
 
 from manilaclient.v2 import client as manilaclient
-from manilaclient.v2 import shares as manilashares
 from manilaclient import exceptions
 from oslo_log import log
 
@@ -26,6 +25,31 @@ from tobiko.openstack.manila import _skip
 
 LOG = log.getLogger(__name__)
 CONF = config.CONF
+
+
+def to_dict(obj):
+    """Convert a Manila client Resource object to a dictionary.
+
+    Manila client methods return Resource objects that have attributes.
+    This helper function converts them to dictionaries when needed.
+
+    :param obj: Manila resource object, dict, or list
+    :return: Dictionary representation of the object(s)
+    """
+    if isinstance(obj, dict):
+        # Already a dict, return as-is
+        return obj
+    if isinstance(obj, list):
+        # Convert list of objects to list of dicts
+        return [to_dict(item) for item in obj]
+    if hasattr(obj, 'to_dict'):
+        # Use the object's to_dict method if available
+        return obj.to_dict()
+    if hasattr(obj, '_info'):
+        # Resource objects store their data in _info attribute
+        return obj._info  # pylint: disable=W0212
+    # Fallback: try to convert to dict
+    return dict(obj)
 
 
 class ManilaClientFixture(_client.OpenstackClientFixture):
@@ -66,17 +90,15 @@ def get_manila_client(session=None, shared=True, init_client=None,
     return manila_client(fixture)
 
 
-def create_share(share_protocol=None, size=None, client=None, **kwargs) \
-        -> manilashares.Share:
+def create_share(share_protocol=None, size=None, client=None, **kwargs):
     share_protocol = share_protocol or CONF.tobiko.manila.share_protocol
     share_size = size or CONF.tobiko.manila.size
-    return manila_client(client).shares.create(
-        share_proto=share_protocol, size=share_size, return_raw=True,
-        **kwargs)
+    return to_dict(manila_client(client).shares.create(
+        share_proto=share_protocol, size=share_size, **kwargs))
 
 
 def list_shares(client=None, **kwargs):
-    return manila_client(client).shares.list(return_raw=True, **kwargs)
+    return to_dict(manila_client(client).shares.list(**kwargs))
 
 
 def delete_share(share_id, client=None, **kwargs):
@@ -96,7 +118,7 @@ def extend_share(share_id, new_size, client=None):
 
 def get_share(share_id, client=None):
     try:
-        return manila_client(client).shares.get(share_id, return_raw=True)
+        return to_dict(manila_client(client).shares.get(share_id))
     except exceptions.NotFound as ex:
         raise _exceptions.ShareNotFound(id=share_id) from ex
 
