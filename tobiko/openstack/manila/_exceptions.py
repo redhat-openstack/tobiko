@@ -22,3 +22,11 @@ class ShareNotFound(tobiko.ObjectNotFound):
 
 class ShareReleaseFailed(tobiko.ObjectNotFound):
     message = "Share has 'error_deleting' status and can not be deleted"
+
+
+class SnapshotNotFound(tobiko.ObjectNotFound):
+    message = "No such manila snapshot {id!r}"
+
+
+class SnapshotReleaseFailed(tobiko.ObjectNotFound):
+    message = "Snapshot has 'error_deleting' status and can not be deleted"
