@@ -19,3 +19,8 @@ RESOURCE_STATUS = 'status'
 STATUS_AVAILABLE = 'available'
 STATUS_ERROR = 'error'
 STATUS_ERROR_DELETING = 'error_deleting'
+
+# Access rules
+ACCESS_STATE = 'state'
+ACCESS_STATE_ACTIVE = 'active'
+ACCESS_STATE_ERROR = 'error'

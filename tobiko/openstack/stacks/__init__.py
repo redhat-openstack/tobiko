@@ -105,3 +105,5 @@ VlanProxyServerStackFixture = _vlan.VlanProxyServerStackFixture
 
 # Manila resources
 ManilaShareFixture = _manila.ManilaShareFixture
+ManilaShareWithAccessFixture = _manila.ManilaShareWithAccessFixture
+ManilaShareWithMountFixture = _manila.ManilaShareWithMountFixture

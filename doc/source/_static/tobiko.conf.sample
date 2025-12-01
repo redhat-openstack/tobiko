@@ -214,6 +214,35 @@
 # Specifies whether the driver handles the share servers or not (boolean value)
 #spec_driver_handles_share_servers = false
 
+# Access type for Manila share (ip, user, cert, cephx) (string value)
+#access_type = ip
+
+# Access to value (IP address, username, etc.) for Manila share
+# access rule (string value)
+#access_to = <None>
+
+# Access level for Manila share (rw, ro) (string value)
+#access_level = rw
+
+# Mount point for Manila share on destination host (string value)
+#mount_point = /mnt/tobiko_manila_test
+
+# Mount options for Manila share (string value)
+#mount_options =
+
+# Hostname or IP of the destination host where share will be
+# mounted (string value)
+#destination_host = <None>
+
+# SSH username for destination host (string value)
+#destination_ssh_username = <None>
+
+# SSH key filename for destination host (string value)
+#destination_ssh_key_filename = <None>
+
+# Filename for date log on mounted share (string value)
+#date_log_filename = date_log.txt
+
 
 [neutron]
 

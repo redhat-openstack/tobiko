@@ -58,6 +58,11 @@ Run Scenario Test Cases
 
 .. include:: _run_scenario.rst
 
+Run Manila Upgrade Test Cases
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. include:: _run_manila_upgrade.rst
+
 Running Disruptive Test Cases
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

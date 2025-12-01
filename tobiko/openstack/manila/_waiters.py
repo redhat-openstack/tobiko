@@ -91,3 +91,16 @@ def wait_for_resource_deletion(share_id, build_interval=1, build_timeout=60):
         if int(time.time()) - start_time >= build_timeout:
             raise exceptions.TimeoutException
         time.sleep(build_interval)
+
+
+def wait_for_access_rule_status(
+        access_id, state=_constants.ACCESS_STATE_ACTIVE):
+    """Wait for a Manila access rule to reach the expected state
+
+    :param access_id: ID of the access rule
+    :param state: Expected state (default: 'active')
+    """
+    wait_for_status(object_id=access_id,
+                    status_key=_constants.ACCESS_STATE,
+                    status=state,
+                    get_client=_client.get_access_rule)
