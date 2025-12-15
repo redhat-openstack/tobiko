@@ -84,6 +84,14 @@
     state: present
     key: "{{ ssh_public_key }}"
 
+- name: enable access via key file on all nodes for other authorized_users
+  become: true
+  authorized_key:
+    user: '{{ item }}'
+    state: present
+    key: "{{ ssh_public_key }}"
+  loop: '{{ ssh_other_authorized_users }}'
+
 - name: set facts
   set_fact:
     ssh_key_file: '{{ ssh_key_file }}'
