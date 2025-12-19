@@ -120,6 +120,39 @@ class PodifiedTopology(rhosp.RhospTopology):
     def list_containers_td(self, group=None):
         return containers.list_containers_td(group)
 
+    def run_octavia_ovn_db_sync(
+            self,
+            ssh_client: ssh.SSHClientFixture) -> sh.ShellExecuteResult:
+        """Run Octavia OVN database synchronization tool in Podified
+
+        In Podified/RHOSO, the tool runs inside the octavia-api pod.
+
+        Args:
+            ssh_client: SSH client (not used in Podified, kept for signature
+                       compatibility)
+
+        Returns:
+            Shell execution result with stdout/stderr
+        """
+        LOG.info("Running Octavia OVN DB sync tool in Podified environment")
+
+        # Get octavia-api pod name
+        pod_names = _openshift.get_pod_names(labels='service=octavia')
+        if not pod_names:
+            raise tobiko.SkipException("No octavia-api pod found")
+
+        pod_name = [name for name in pod_names if 'octavia-api' in name][0]
+        LOG.info(f"Running sync tool in pod: {pod_name}")
+
+        # Execute the sync command in the pod
+        output = _openshift.execute_in_pod(
+            command='octavia-ovn-db-sync-util',
+            pod_name=pod_name,
+            container_name='octavia-api'
+        )
+        LOG.info(f"Sync tool output: {output}")
+        return output
+
     def add_node(self,
                  hostname: typing.Optional[str] = None,
                  address: typing.Optional[str] = None,

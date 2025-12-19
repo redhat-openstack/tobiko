@@ -56,6 +56,7 @@ wait_for_octavia_service = _waiters.wait_for_octavia_service
 
 # Validators
 check_members_balanced = _validators.check_members_balanced
+verify_lb_traffic = _validators.verify_lb_traffic
 
 # Exceptions
 RequestException = _exceptions.RequestException

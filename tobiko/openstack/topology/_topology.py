@@ -306,7 +306,8 @@ class OpenStackTopology(tobiko.SharedFixture):
 
     config_file_mappings = {
         'ml2_conf.ini': '/etc/neutron/plugins/ml2/ml2_conf.ini',
-        'bgp-agent.conf': '/etc/ovn-bgp-agent/bgp-agent.conf'
+        'bgp-agent.conf': '/etc/ovn-bgp-agent/bgp-agent.conf',
+        'octavia.conf': '/etc/octavia/octavia.conf'
     }
 
     _connections = tobiko.required_fixture(
@@ -401,6 +402,79 @@ class OpenStackTopology(tobiko.SharedFixture):
 
     def list_containers_td(self, group=None):
         pass
+
+    def run_octavia_ovn_db_sync(
+            self,
+            ssh_client: ssh.SSHClientFixture) -> sh.ShellExecuteResult:
+        """Run Octavia OVN database synchronization tool
+
+        In DevStack/OpenstackTopology, the tool needs to be run from the
+        ovn-octavia-provider directory with a properly configured venv:
+        1. Create/use venv
+        2. Install package in editable mode
+        3. Run octavia-ovn-db-sync-util
+
+        Args:
+            ssh_client: SSH client to the controller node
+
+        Returns:
+            Shell execution result with stdout/stderr
+        """
+        LOG.info("Running Octavia OVN DB sync tool in DevStack environment")
+
+        ovn_octavia_path = '/opt/stack/ovn-octavia-provider'
+
+        # Get the owner of the directory to run commands as that user
+        owner_result = sh.execute(
+            f'stat -c %U {ovn_octavia_path}',
+            ssh_client=ssh_client
+        )
+        dir_owner = owner_result.stdout.strip()
+        LOG.info(f"Directory owner: {dir_owner}")
+
+        # Determine if we need to use sudo
+        current_user_result = sh.execute('whoami', ssh_client=ssh_client)
+        current_user = current_user_result.stdout.strip()
+        LOG.info(f"Current user: {current_user}")
+
+        # Prepare command prefix based on user
+        if current_user != dir_owner:
+            cmd_prefix = f'sudo -u {dir_owner} bash -c "'
+            cmd_suffix = '"'
+            LOG.info(f"Will run commands as {dir_owner} using sudo")
+        else:
+            cmd_prefix = ''
+            cmd_suffix = ''
+            LOG.info(f"Running commands as current user {current_user}")
+
+        # Check if venv exists, create if not
+        check_venv_cmd = (
+            f'{cmd_prefix}test -d {ovn_octavia_path}/venv && '
+            f'echo env_exists || echo env_not_exists{cmd_suffix}'
+        )
+        check_venv = sh.execute(check_venv_cmd, ssh_client=ssh_client)
+
+        if 'env_exists' not in check_venv.stdout:
+            LOG.info("Creating venv for ovn-octavia-provider")
+            cmd_create_venv = (
+                f'{cmd_prefix}cd {ovn_octavia_path} && '
+                f'python3 -m venv venv && '
+                f'source venv/bin/activate && '
+                f'pip install -e .{cmd_suffix}'
+            )
+            sh.execute(cmd_create_venv, ssh_client=ssh_client, timeout=300)
+            LOG.info("Venv created and package installed")
+        else:
+            LOG.info("Venv already exists")
+
+        # Run the sync tool
+        cmd = (f'{cmd_prefix}source {ovn_octavia_path}/venv/bin/activate && '
+               f'octavia-ovn-db-sync-util{cmd_suffix}')
+
+        LOG.info(f"Executing: {cmd}")
+        output = sh.execute(cmd, ssh_client=ssh_client, timeout=300)
+        LOG.info(f"Sync tool output: {output.stdout}")
+        return output
 
     def discover_nodes(self):
         self.discover_ssh_proxy_jump_node()

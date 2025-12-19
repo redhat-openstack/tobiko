@@ -100,3 +100,54 @@ def check_members_balanced(ip_address: str,
             f'Missing replies from {missing_members_count} members.')
 
     return replies
+
+
+def verify_lb_traffic(pool_id: str,
+                      ip_address: str,
+                      lb_algorithm: str,
+                      protocol: str,
+                      port: int,
+                      timeout: tobiko.Seconds = 300.,
+                      members_count: int = None,
+                      requests_count: int = 10,
+                      connect_timeout: tobiko.Seconds = 10.,
+                      interval: tobiko.Seconds = 1,
+                      ssh_client: ssh.SSHClientFixture = None,
+                      exceptions: tuple = None):
+    """Verify load balancer traffic with retries.
+
+    This function attempts to verify that traffic is properly balanced to
+    all members of a load balancer pool, retrying on expected exceptions
+    during resource provisioning or service disruption.
+
+    Raises:
+        The last exception caught if all retries are exhausted
+
+    Returns:
+        Dict mapping member addresses to request counts
+    """
+    if exceptions is None:
+        exceptions = (octavia.RoundRobinException,
+                      octavia.TrafficTimeoutError,
+                      sh.ShellCommandFailed,
+                      octavia.OctaviaClientException)
+
+    for attempt in tobiko.retry(timeout=timeout):
+        try:
+            return check_members_balanced(
+                pool_id=pool_id,
+                ip_address=ip_address,
+                lb_algorithm=lb_algorithm,
+                protocol=protocol,
+                port=port,
+                members_count=members_count,
+                requests_count=requests_count,
+                connect_timeout=connect_timeout,
+                interval=interval,
+                ssh_client=ssh_client)
+        except exceptions:
+            LOG.exception(
+                f"Traffic verification failed after #{attempt.number} "
+                f"attempts and {attempt.elapsed_time} seconds")
+            if attempt.is_last:
+                raise

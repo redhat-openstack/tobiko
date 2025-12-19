@@ -84,27 +84,17 @@ class OctaviaServicesFaultTest(testtools.TestCase):
         self.lb, self.listener, self.pool = octavia.deploy_ipv4_amphora_lb(
             servers_stacks=[self.server_stack, self.other_server_stack]
         )
-
         self._send_http_traffic()
 
     def _send_http_traffic(self):
-        # For 30 seconds we ignore the OctaviaClientException as we know
-        # that Octavia services are being stopped and restarted
-        for attempt in tobiko.retry(timeout=30.):
-            try:
-                octavia.check_members_balanced(
-                    pool_id=self.pool.id,
-                    ip_address=self.lb.vip_address,
-                    lb_algorithm=self.pool.lb_algorithm,
-                    protocol=self.listener.protocol,
-                    port=self.listener.protocol_port)
-                break
-            except octavia.OctaviaClientException:
-                LOG.exception(f"Octavia service was unavailable after "
-                              f"#{attempt.number} attempts and "
-                              f"{attempt.elapsed_time} seconds")
-                if attempt.is_last:
-                    raise
+        octavia.verify_lb_traffic(
+            pool_id=self.pool.id,
+            ip_address=self.lb.vip_address,
+            lb_algorithm=self.pool.lb_algorithm,
+            protocol=self.listener.protocol,
+            port=self.listener.protocol_port,
+            timeout=30.,
+            exceptions=(octavia.OctaviaClientException,))
 
     def test_services_fault(self):
         # We get the services we want to stop on all nodes, in a way we leave

@@ -39,5 +39,6 @@ get_ovndbcluter = _openshift.get_ovndbcluter
 execute_in_pod = _openshift.execute_in_pod
 get_openstack_config_secret = _openshift.get_openstack_config_secret
 get_pods = _openshift.get_pods
+get_pod_names = _openshift.get_pod_names
 
 get_container_runtime_name = containers.get_container_runtime_name

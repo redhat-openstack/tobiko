@@ -22,7 +22,6 @@ from tobiko.openstack import keystone
 from tobiko.openstack import neutron
 from tobiko.openstack import octavia
 from tobiko.openstack import stacks
-from tobiko.shell import sh
 
 
 LOG = log.getLogger(__name__)
@@ -53,42 +52,15 @@ class OctaviaBasicTrafficScenarioTest(testtools.TestCase):
         )
 
     def test_round_robin_traffic(self):
-        _test_traffic(
+        # For 5 minutes we ignore specific exceptions as we know
+        # that Octavia resources are being provisioned
+        octavia.verify_lb_traffic(
             pool_id=self.pool.id,
             ip_address=self.lb.vip_address,
             lb_algorithm=self.pool.lb_algorithm,
             protocol=self.listener.protocol,
-            port=self.listener.protocol_port)
-
-
-def _test_traffic(pool_id: str, ip_address: str, lb_algorithm: str,
-                  protocol: str, port: int):
-    # For 5 minutes we ignore specific exceptions as we know
-    # that Octavia resources are being provisioned
-    for attempt in tobiko.retry(timeout=300.):
-        try:
-            octavia.check_members_balanced(pool_id=pool_id,
-                                           ip_address=ip_address,
-                                           lb_algorithm=lb_algorithm,
-                                           protocol=protocol,
-                                           port=port)
-            break
-
-        # TODO oschwart: change the following without duplicating code
-        except octavia.RoundRobinException:
-            if lb_algorithm == 'ROUND_ROBIN':
-                LOG.exception(f"Traffic didn't reach all members after "
-                              f"#{attempt.number} attempts and "
-                              f"{attempt.elapsed_time} seconds")
-            if attempt.is_last:
-                raise
-        except (octavia.TrafficTimeoutError,
-                sh.ShellCommandFailed):
-            LOG.exception(f"Traffic didn't reach all members after "
-                          f"#{attempt.number} attempts and "
-                          f"{attempt.elapsed_time} seconds")
-            if attempt.is_last:
-                raise
+            port=self.listener.protocol_port,
+            timeout=300.)
 
 
 @neutron.skip_unless_is_ovn()
@@ -120,9 +92,12 @@ class OctaviaOVNProviderTrafficTest(testtools.TestCase):
     def test_source_ip_port_traffic(self):
         """Send traffic to the load balancer FIP to test source ip port
         """
-        _test_traffic(
+        # For 5 minutes we ignore specific exceptions as we know
+        # that Octavia resources are being provisioned
+        octavia.verify_lb_traffic(
             pool_id=self.pool.id,
             ip_address=self.lb.vip_address,
             lb_algorithm=self.pool.lb_algorithm,
             protocol=self.listener.protocol,
-            port=self.listener.protocol_port)
+            port=self.listener.protocol_port,
+            timeout=300.)

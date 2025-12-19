@@ -62,6 +62,10 @@ skip_if_missing_overcloud = tobiko.skip_unless(
     'TripleO overcloud not configured', has_overcloud)
 
 
+skip_if_overcloud = tobiko.skip_if(
+    'Not supported on TripleO overcloud environments', has_overcloud)
+
+
 def skip_unless_has_overcloud(min_version: tobiko.VersionType = None,
                               max_version: tobiko.VersionType = None):
     return tobiko.skip_on_error(

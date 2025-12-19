@@ -21,7 +21,6 @@ import tobiko
 from tobiko.openstack import keystone
 from tobiko.openstack import octavia
 from tobiko.openstack import stacks
-from tobiko.shell import sh
 from tobiko import tripleo
 
 
@@ -61,24 +60,13 @@ class OctaviaBasicFaultTest(testtools.TestCase):
     def _send_http_traffic(self):
         # For 5 minutes we ignore specific exceptions as we know
         # that Octavia resources are being provisioned
-        for attempt in tobiko.retry(timeout=300.):
-            try:
-                octavia.check_members_balanced(
-                    pool_id=self.pool.id,
-                    ip_address=self.lb.vip_address,
-                    lb_algorithm=self.pool.lb_algorithm,
-                    protocol=self.listener.protocol,
-                    port=self.listener.protocol_port)
-                break
-            except (octavia.RoundRobinException,
-                    octavia.TrafficTimeoutError,
-                    sh.ShellCommandFailed):
-                LOG.exception(
-                    f"Traffic didn't reach all members after "
-                    f"#{attempt.number} attempts and "
-                    f"{attempt.elapsed_time} seconds")
-                if attempt.is_last:
-                    raise
+        octavia.verify_lb_traffic(
+            pool_id=self.pool.id,
+            ip_address=self.lb.vip_address,
+            lb_algorithm=self.pool.lb_algorithm,
+            protocol=self.listener.protocol,
+            port=self.listener.protocol_port,
+            timeout=300.)
 
     def test_reboot_amphora_compute_node(self):
         amphora_compute_host = octavia.get_amphora_compute_node(
