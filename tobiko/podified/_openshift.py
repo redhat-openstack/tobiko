@@ -40,7 +40,6 @@ OCP_NODES = 'nodes'
 OVNDBCLUSTER = 'ovndbcluster'
 
 OVN_DP_SERVICE_NAME = 'ovn'
-COMPUTE_DP_SERVICE_NAMES = ['nova', 'nova-custom', 'nova-custom-ceph']
 
 EDPM_COMPUTE_GROUP = 'edpm-compute'
 EDPM_NETWORKER_GROUP = 'edpm-networker'
@@ -99,7 +98,7 @@ def _is_baremetal_crd_available() -> bool:
 
 
 def _get_group(services):
-    for compute_dp_service in COMPUTE_DP_SERVICE_NAMES:
+    for compute_dp_service in CONF.tobiko.podified.compute_dp_service_names:
         if compute_dp_service in services:
             return EDPM_COMPUTE_GROUP
     if OVN_DP_SERVICE_NAME in services:

@@ -83,7 +83,11 @@ OPTIONS = [
     cfg.StrOpt('edpm_iscsid_service_name',
                default='iscsid',
                help='Specify the iscsid service name, which differs depending '
-                    'on the version of the Podified Openstack environment.')
+                    'on the version of the Podified Openstack environment.'),
+    cfg.ListOpt('compute_dp_service_names',
+                default=['nova', 'nova-custom', 'nova-custom-ceph'],
+                help='List of compute dataplane service names used to '
+                     'identify compute nodes in the dataplane nodesets.')
 ]
 
 
