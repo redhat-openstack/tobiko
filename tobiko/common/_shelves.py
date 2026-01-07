@@ -95,6 +95,7 @@ def removeme_from_shared_resource(shelf, resource):
                 raise
 
 
+@_lockutils.interworker_synched('shelves')
 def remove_test_from_shelf_resources(testcase_id, shelf):
     shelf_path = get_shelf_path(shelf)
 

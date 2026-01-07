@@ -24,6 +24,8 @@ from oslo_log import log
 from oslo_utils import reflection
 from oslo_utils import timeutils
 
+from tobiko.common import _fixture
+
 
 LOG = log.getLogger(__name__)
 
@@ -43,22 +45,35 @@ def interworker_synched(name):
     With intra-process locks, the creation of CirrosServerStackFixture could
     not be started (would be locked by the creation of
     CirrosPeerServerStackFixture).
+
+    The lock name is automatically extended with the fully qualified class
+    name of the instance (including module path) to prevent different fixture
+    classes from blocking each other.
     """
 
     def wrap(f):
 
         @functools.wraps(f)
         def inner(*args, **kwargs):
+            # Include the fully qualified class name in the lock to ensure
+            # different fixture classes don't block each other
+            instance = args[0] if args else None
+            if instance is not None:
+                class_name = _fixture.get_object_name(instance)
+                lock_name = f"{name}:{class_name}"
+            else:
+                lock_name = name
+
             t1 = timeutils.now()
             t2 = None
             gotten = True
             f_name = reflection.get_callable_name(f)
             try:
-                with lock(name):
+                with lock(lock_name):
                     t2 = timeutils.now()
                     LOG.debug('Lock "%(name)s" acquired by "%(function)s" :: '
                               'waited %(wait_secs)0.3fs',
-                              {'name': name,
+                              {'name': lock_name,
                                'function': f_name,
                                'wait_secs': (t2 - t1)})
                     return f(*args, **kwargs)
@@ -72,7 +87,7 @@ def interworker_synched(name):
                     held_secs = "%0.3fs" % (t3 - t2)
                 LOG.debug('Lock "%(name)s" "%(gotten)s" by "%(function)s" ::'
                           ' held %(held_secs)s',
-                          {'name': name,
+                          {'name': lock_name,
                            'gotten': 'released' if gotten else 'unacquired',
                            'function': f_name,
                            'held_secs': held_secs})
