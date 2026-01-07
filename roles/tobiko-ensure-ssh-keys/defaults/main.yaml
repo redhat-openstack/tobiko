@@ -6,3 +6,4 @@ ssh_key_file: '{{ ansible_user_dir }}/.ssh/id_{{ ssh_key_algorithm }}'
 ssh_key_algorithm: ecdsa
 ssh_key_size: 521
 ssh_key_user: '{{ ansible_ssh_user }}'
+ssh_other_authorized_users: []
