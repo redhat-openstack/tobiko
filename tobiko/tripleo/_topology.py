@@ -283,7 +283,8 @@ class TripleoTopologyNode(rhosp.RhospNode):
         return self._rhosp_version
 
     l3_agent_conf_path = (
-        '/var/lib/config-data/neutron/etc/neutron/l3_agent.ini')
+        '/var/lib/config-data/puppet-generated'
+        '/neutron/etc/neutron/l3_agent.ini')
 
     def list_running_servers(self) -> typing.List[nova.NovaServer]:
         running_servers = list()
