@@ -238,7 +238,7 @@ class DvrRouterNamespaceTest(RouterNamespaceTestBase, testtools.TestCase):
             self.skipTest(f'Host(s) {self.legacy_hostnames!r} with legacy '
                           'L3 agent mode')
 
-    host_groups = ['compute']
+    host_groups = ['controller', 'compute']
 
     @property
     def snat_namespace(self) -> str:
