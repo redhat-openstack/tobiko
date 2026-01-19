@@ -144,23 +144,51 @@ class TripleoTopology(rhosp.RhospTopology):
 
     def discover_overcloud_nodes(self):
         if _undercloud.has_undercloud():
-            for instance in _overcloud.list_overcloud_nodes():
-                try:
-                    _overcloud.power_on_overcloud_node(instance)
-                except Exception:
-                    LOG.exception("Error ensuring overcloud node power "
-                                  "status is on")
-                host_config = _overcloud.overcloud_host_config(
-                    instance=instance)
-                ssh_client = _overcloud.overcloud_ssh_client(
-                    instance=instance,
-                    host_config=host_config)
-                node = self.add_node(address=host_config.hostname,
-                                     group='overcloud',
-                                     ssh_client=ssh_client,
-                                     overcloud_instance=instance)
-                assert isinstance(node, TripleoTopologyNode)
-                self.discover_overcloud_node_subgroups(node)
+            # Check if we should use Ansible inventory for discovery
+            inventory_nodes = _overcloud.load_tripleo_ansible_inventory()
+            if inventory_nodes is not None:
+                # Use Ansible inventory for discovery
+                self._discover_overcloud_nodes_from_inventory(inventory_nodes)
+            else:
+                # Use metalsmith for discovery (traditional method)
+                self._discover_overcloud_nodes_from_metalsmith()
+
+    def _discover_overcloud_nodes_from_inventory(self, inventory_nodes):
+        """Discover overcloud nodes from Ansible inventory file
+
+        :param inventory_nodes: List of node info dicts from inventory
+        """
+        for node_info in inventory_nodes:
+            host_config = _overcloud.overcloud_host_config_from_inventory(
+                node_info)
+            ssh_client = _overcloud.overcloud_ssh_client(
+                host_config=host_config)
+            node = self.add_node(address=host_config.hostname,
+                                 group='overcloud',
+                                 ssh_client=ssh_client,
+                                 overcloud_instance=None)
+            assert isinstance(node, TripleoTopologyNode)
+            self.discover_overcloud_node_subgroups(node)
+
+    def _discover_overcloud_nodes_from_metalsmith(self):
+        """Discover overcloud nodes using metalsmith (traditional method)"""
+        for instance in _overcloud.list_overcloud_nodes():
+            try:
+                _overcloud.power_on_overcloud_node(instance)
+            except Exception:
+                LOG.exception("Error ensuring overcloud node power "
+                              "status is on")
+            host_config = _overcloud.overcloud_host_config(
+                instance=instance)
+            ssh_client = _overcloud.overcloud_ssh_client(
+                instance=instance,
+                host_config=host_config)
+            node = self.add_node(address=host_config.hostname,
+                                 group='overcloud',
+                                 ssh_client=ssh_client,
+                                 overcloud_instance=instance)
+            assert isinstance(node, TripleoTopologyNode)
+            self.discover_overcloud_node_subgroups(node)
 
     def discover_overcloud_node_subgroups(self, node):
         # set of subgroups extracted from node name

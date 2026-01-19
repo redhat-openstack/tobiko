@@ -140,6 +140,14 @@ TRIPLEO_OPTIONS = [
                      'data plane adoption jobs when background ping should '
                      'be run from the POD even before adoption but it '
                      'requires access to the OpenShift cluster API.'),
+
+    cfg.StrOpt('tripleo_ansible_inventory',
+               default=None,
+               help='Path to TripleO Ansible inventory file. When set, '
+                    'overcloud nodes will be discovered from this inventory '
+                    'file instead of using metalsmith. The file should '
+                    'contain an "overcloud" group with host definitions '
+                    'including ansible_host and ansible_user variables.'),
 ]
 
 

@@ -108,6 +108,75 @@ def find_overcloud_node(**params):
     return metalsmith.find_instance(client=client, **params)
 
 
+def load_tripleo_ansible_inventory():
+    """Load and parse TripleO Ansible inventory file
+
+    Returns a list of dicts with node information from the inventory file,
+    or None if no inventory file is configured.
+
+    Each dict contains:
+        - name: hostname from inventory
+        - ansible_host: IP address to connect to
+        - ansible_user: SSH username
+
+    :return: List of node info dicts or None
+    """
+    inventory_path = CONF.tobiko.tripleo.tripleo_ansible_inventory
+    if not inventory_path:
+        return None
+
+    # Use tobiko's path helper to expand ~ and make absolute
+    inventory_path = tobiko.tobiko_config_path(inventory_path)
+
+    with io.open(inventory_path, 'r') as f:
+        inventory = tobiko.load_yaml(f)
+
+    # Extract nodes from the 'overcloud' group
+    overcloud_group = inventory.get('overcloud', {})
+    hosts = overcloud_group.get('hosts', {})
+
+    if not hosts:
+        LOG.warning(f"No hosts found in 'overcloud' group in inventory file "
+                    f"{inventory_path}")
+        return []
+
+    nodes = []
+    for hostname, host_vars in hosts.items():
+        ansible_host = host_vars.get('ansible_host')
+        ansible_user = host_vars.get('ansible_user')
+
+        if not ansible_host or not ansible_user:
+            LOG.warning(f"Skipping node {hostname}: missing ansible_host or "
+                        f"ansible_user in inventory")
+            continue
+
+        nodes.append({
+            'name': hostname,
+            'ansible_host': ansible_host,
+            'ansible_user': ansible_user,
+        })
+
+    LOG.debug(f"Loaded {len(nodes)} nodes from inventory file "
+              f"{inventory_path}")
+    return nodes
+
+
+def overcloud_host_config_from_inventory(node_info):
+    """Create OvercloudHostConfig from Ansible inventory node info
+
+    :param node_info: Dict with node information from inventory file.
+                      Must contain: 'name', 'ansible_host', 'ansible_user'
+    :return: Configured OvercloudHostConfig fixture
+    """
+    host_config = OvercloudHostConfig(
+        host=node_info['ansible_host'],
+        hostname=node_info['ansible_host'],
+        username=node_info['ansible_user'],
+        instance=None  # No metalsmith instance when using inventory
+    )
+    return tobiko.setup_fixture(host_config)
+
+
 def power_on_overcloud_node(instance: metalsmith.MetalsmithInstance,
                             timeout: tobiko.Seconds = 120.,
                             sleep_time: tobiko.Seconds = 5.):
