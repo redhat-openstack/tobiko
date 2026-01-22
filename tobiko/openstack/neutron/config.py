@@ -71,6 +71,10 @@ OPTIONS = [
                 default=[],
                 help="Behave as these networking extensions are not available"
                 ),
+    cfg.StrOpt('dscp_capture_interface',
+               default=None,
+               help=("Interface that the test_ping_dscp uses to capture "
+                     "traffic")),
 ]
 
 

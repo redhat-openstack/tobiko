@@ -50,8 +50,9 @@ class QoSNetworkTest(testtools.TestCase):
 
     def test_ping_dscp(self):
         capture_file = sh.execute('mktemp', sudo=True).stdout.strip()
-        interface = ip.get_network_main_route_device(
-            self.server.floating_ip_address)
+        interface = (CONF.tobiko.neutron.dscp_capture_interface or
+                     ip.get_network_main_route_device(
+                         self.server.floating_ip_address))
 
         # IPv4 tcpdump DSCP filters explanation:
         # ip[1] refers to the byte 1 (the TOS byte) of the IP header
