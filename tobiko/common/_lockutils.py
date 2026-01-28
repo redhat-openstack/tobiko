@@ -89,7 +89,10 @@ def lock(name):
     from tobiko import config
     lock_path = os.path.expanduser(config.CONF.tobiko.common.lock_dir)
 
-    LOG.debug('Acquired lock "%(lock)s"', {'lock': name})
+    # Ensure lock directory exists before trying to acquire locks
+    os.makedirs(lock_path, exist_ok=True)
+
+    LOG.debug('Acquiring lock "%(lock)s"', {'lock': name})
 
     try:
         ext_lock = lockutils.external_lock(name,

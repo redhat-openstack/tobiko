@@ -16,6 +16,7 @@ from __future__ import absolute_import
 import dbm
 import os
 import shelve
+import sqlite3
 
 from oslo_log import log
 
@@ -25,6 +26,12 @@ from tobiko.common import _lockutils
 
 LOG = log.getLogger(__name__)
 TEST_RUN_SHELF = 'test_run'
+
+# dbm.error is a tuple of exception classes from available DBM backends.
+# We need to combine it with sqlite3.DatabaseError for Python 3.13+ where
+# the default shelve backend is dbm.sqlite3. Using tuple concatenation
+# ensures a flat tuple that Python's exception handling can process.
+SHELVE_ERRORS = dbm.error + (sqlite3.DatabaseError,)
 
 
 def get_shelves_dir():
@@ -40,7 +47,9 @@ def get_shelf_path(shelf):
 
 @_lockutils.interworker_synched('shelves')
 def addme_to_shared_resource(shelf, resource):
-    shelf_path = get_shelf_path(shelf)
+    shelves_dir = get_shelves_dir()
+    tobiko.makedirs(shelves_dir)
+    shelf_path = os.path.join(shelves_dir, shelf)
     # this is needed for unit tests
     resource = str(resource)
     testcase_id = tobiko.get_test_case().id()
@@ -63,7 +72,9 @@ def addme_to_shared_resource(shelf, resource):
 
 @_lockutils.interworker_synched('shelves')
 def removeme_from_shared_resource(shelf, resource):
-    shelf_path = get_shelf_path(shelf)
+    shelves_dir = get_shelves_dir()
+    tobiko.makedirs(shelves_dir)
+    shelf_path = os.path.join(shelves_dir, shelf)
     # this is needed for unit tests
     resource = str(resource)
     testcase_id = tobiko.get_test_case().id()
@@ -86,6 +97,7 @@ def removeme_from_shared_resource(shelf, resource):
 
 def remove_test_from_shelf_resources(testcase_id, shelf):
     shelf_path = get_shelf_path(shelf)
+
     for attempt in tobiko.retry(timeout=10.0,
                                 interval=0.5):
         try:
@@ -98,22 +110,49 @@ def remove_test_from_shelf_resources(testcase_id, shelf):
                         auxset.remove(testcase_id)
                         db[resource] = auxset
                 return db
-        except dbm.error as err:
-            LOG.exception(f"Error accessing shelf {shelf}")
-            if "db type could not be determined" in str(err):
-                # remove the filename extension, which depends on the specific
-                # DBM implementation
-                shelf_path = '.'.join(shelf_path.split('.')[:-1])
+        except FileNotFoundError:
+            # File was deleted between os.listdir() and shelve.open()
+            # This can happen due to race conditions with parallel workers
+            LOG.debug(f"Shelf file not found (likely deleted): {shelf_path}")
+            return
+        except SHELVE_ERRORS as err:
+            # sqlite3.DatabaseError is raised when the file has SQLite magic
+            # bytes but is corrupted or not a valid database. This is NOT a
+            # subclass of dbm.error, so we need to catch it separately.
+            err_str = str(err)
+            LOG.debug(f"Error accessing shelf {shelf}: {err_str}")
+
+            if "db type could not be determined" in err_str:
+                # The file might have an extension from a different DBM
+                # implementation. Try removing the extension.
+                if '.' in os.path.basename(shelf_path):
+                    shelf_path = '.'.join(shelf_path.split('.')[:-1])
+                    LOG.debug(f"Retrying with path: {shelf_path}")
+                    continue
+
             if attempt.is_last:
-                raise
+                # Log at warning level on final failure, but don't raise
+                # to avoid failing tests due to shelf cleanup issues
+                LOG.warning(f"Failed to clean shelf {shelf} after retries: "
+                            f"{err_str}")
+                return
 
 
 @_lockutils.interworker_synched('shelves')
 def remove_test_from_all_shared_resources(testcase_id):
     LOG.debug(f'Removing test {testcase_id} from all shelf resources')
     shelves_dir = get_shelves_dir()
+
+    # Gracefully handle case where shelves directory doesn't exist yet
+    if not os.path.isdir(shelves_dir):
+        LOG.debug(f'Shelves directory does not exist: {shelves_dir}')
+        return
+
     for filename in os.listdir(shelves_dir):
-        if TEST_RUN_SHELF not in filename:
+        # Skip test run shelf and SQLite auxiliary files
+        # (-shm, -wal for WAL mode, -journal for rollback journal mode)
+        if (TEST_RUN_SHELF not in filename and
+                not filename.endswith(('-shm', '-wal', '-journal'))):
             remove_test_from_shelf_resources(testcase_id, filename)
 
 
