@@ -18,6 +18,7 @@ from __future__ import absolute_import
 from collections import abc
 import contextlib
 import getpass
+from hashlib import md5
 import os
 import subprocess
 import time
@@ -27,7 +28,6 @@ import typing
 import netaddr
 import testtools
 from oslo_log import log
-from oslo_utils.secretutils import md5
 import paramiko
 from paramiko import common
 
