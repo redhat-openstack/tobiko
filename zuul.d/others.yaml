@@ -1,22 +1,22 @@
 ---
 
 - secret:
-    name: tobiko_git_mirror_credentials
+    name: tobiko_git_mirror_credentials_2026_feb
     data:
       user: git
       host: github.com
-      host_key: github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=
+      host_key: github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPI9lqL8g7VMSBttuxhBirhC0IrrEVq6uQV2kybEhlAq
       ssh_key: !encrypted/pkcs1-oaep
-        - KVpaJkAEwg5nE1uk1okGMDBvRHc1K6tlwxTri5IX6nNx1Ph9/iKw14AVNNW3/7+Zz5DLP
-          KTPxfCGVKEb4lduYctCamS0h7rKEx1/2mSb0CCZLYH9X7vuLL8bHU8ARfzChCzPLb4je2
-          iLws6DDEhInbS1EHsq0rHm/iVHBLbeEwD0Oj6qScsOasVfrL6hf/A9RAHaLnOYHw1b3HJ
-          MQ6dDMCiX02pZMJrdeKQO+UxloGHnqcIYhPlqodueLCBOPrhztGGXLpjoWYfeMTzzzx1w
-          f7JXItdkR1uqtR5xc0oS1y/fB70kweHsB16qqHcxOb7DN037Q7+9bEi3aRHxSTuU+3zOD
-          1T8HHvTXBjZQscjVFo70a98QUkPjsox1+akQAnbiblnG0NFDyJ/1YWr8VCphAgGbdjYyv
-          nFtrW7OT+3GfVtdbUSb43SQs4UDYBmZlbyn/+zYa3kQJ6FG4zzI+zUX5AcKpYzBEjNie9
-          v2RXxASyurZ431LB4vdoR8M2ORVBnmer/YMRgfXW0PI6/3AusYrOnQH0/U+oNnciS8xn0
-          wGGYaVK/2TYRa1GQOkvxm1m3AByKDws0Pkvx/l/9h/WPVHMPlOg6DVKIiiABhGRh2rVsc
-          xIWnEa+QZNgBcj2o5rxknJ/OLn9hwyL+zBRCBrd1c7376xnjehLtscNaEKS+TE=
+        - C9zIcX8NxiCDVZKCnBbekRAMQ8msU+okyR+HO10e5GsHiHN3j/ohAteAqezolGAUHfBs7
+          xfJVz1TSdx3n1+bauUdqv7+RDKnpToCPfP277dKihywcDm5Os0UfH7lI/3U+VkSf9ifux
+          kxNwjBH/GNZQX0FSvjSQrljXE3TlXdgh25RLLCjGVdL+nuU+YqBBPrDXiQAmPu0ESbV7J
+          O5lrmFBpxr0OtfZM4ttzburOfD4IXdgTNw2SxEjzfHNzLZ52j6WotycIE0aQpz6AnFAPX
+          Op738GTl+5D/SQLh7y6I8Ax6e++3NfLLcGmCqOIeJsjADDoYyijt0kRfgla/2Up8dT3br
+          Y19s/XkKqtzm+5l2t2R6chTGtXMePbmMpB8eVoQ1/pLCRx+REjOmWFHnr+JusSuQ0nsg8
+          Ji9H+jGFGDZHra8BLbOIVjrF/FES3oU74nrDzrBrXU1kHArht3efTvBtQdWEcy3tsqoow
+          E0ZfjlxahWD8bqnBxPmjhvpDycv741UCxF40yQVfhNPB5mLOWsrWjNwyAFtqMsUyLvHKv
+          LN/SGTVmYS8yxmzZDHYDhunGaYtvaePQedlH09BM5OuTBuA/7UPBJRuZKiYolNtzRCW/W
+          oFc4BsBEegzeOlpOS324Uvd4hLASsjm7m9fzXg8wYzp+j5vG+JUfe4E3bhK/VM=
 
 
 - job:
@@ -28,7 +28,7 @@
       git_mirror_repository: redhat-openstack/tobiko
     secrets:
       - name: git_mirror_credentials
-        secret: tobiko_git_mirror_credentials
+        secret: tobiko_git_mirror_credentials_2026_feb
         pass-to-parent: true
 
 
