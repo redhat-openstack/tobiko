@@ -593,7 +593,6 @@ def ssh_client(host, port=None, username=None, proxy_jump=None,
 
 KEY_CLASSES: typing.List[typing.Type[paramiko.PKey]] = [
     paramiko.RSAKey,
-    paramiko.DSSKey,
     paramiko.ECDSAKey,
     paramiko.Ed25519Key,
 ]
