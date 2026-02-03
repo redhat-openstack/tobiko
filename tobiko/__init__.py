@@ -163,6 +163,7 @@ to_seconds_float = _time.to_seconds_float
 true_seconds = _time.true_seconds
 
 get_short_hostname = _utils.get_short_hostname
+is_collection = _utils.is_collection
 
 InvalidVersion = _version.InvalidVersion
 VersionMismatch = _version.VersionMismatch

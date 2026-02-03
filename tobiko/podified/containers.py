@@ -91,9 +91,46 @@ def list_containers(group=None):
     return containers_list
 
 
-def assert_containers_running(group, expected_containers, full_name=True,
-                              bool_check=False, nodenames=None):
+def _select_container(
+        container_itr: typing.Union[str, typing.Iterable[str]],
+        full_name,
+        node_name,
+        containers_list_td,
+) -> typing.Tuple[typing.Optional[str], tobiko.TableData, list]:
+    """Return the status of a single container if present"""
+    _name, _attrs, _fail = None, tobiko.TableData(), []
+    if isinstance(container_itr, str):
+        container_itr = [container_itr]
 
+    # Get selected container attrs tabledata.
+    for _name in container_itr:
+        if full_name:
+            _attrs = containers_list_td.query(
+                'container_name == "{}"'.format(_name))
+        else:
+            container_attrs_rows = []
+            for row in containers_list_td:
+                if _name in row['container_name']:
+                    container_attrs_rows.append(row)
+            _attrs = tobiko.TableData(container_attrs_rows)
+        if _attrs.empty:
+            _fail.append(
+                'expected container {} not found on node {} ! : \n\n'.
+                format(_name, node_name))
+        else:
+            break
+
+    return _name, _attrs, _fail
+
+
+def assert_containers_running(
+        group: topology.OpenstackGroupNamesType,
+        expected_containers: typing.Iterable[
+            typing.Union[str, typing.Iterable[str]]],
+        full_name: bool = True,
+        bool_check: bool = False,
+        nodenames: typing.Iterable[str] = None,
+) -> typing.Union[None, bool]:
     """assert that all containers specified in the list are running
     on the specified openstack group(controller or compute etc..)
     if bool_check is True then return only True or false without failing"""
@@ -110,40 +147,35 @@ def assert_containers_running(group, expected_containers, full_name=True,
         # check that the containers are present
         LOG.info('node: {} containers list : {}'.format(
             node.name, containers_list_td.to_string()))
-        for container in expected_containers:
-            # get container attrs tabledata
-            if full_name:
-                container_attrs = containers_list_td.query(
-                    'container_name == "{}"'.format(container))
+        for container_itr in expected_containers:
+            container_name, container_attrs, container_fail = (
+                _select_container(container_itr, full_name, node.name,
+                                  containers_list_td))
+
+            # check if any container exists
+            LOG.info('checking container(s): {}'.format(container_itr))
+            if not container_name:
+                failures += container_fail
+                continue
             else:
-                container_attrs_rows = []
-                for row in containers_list_td:
-                    if container in row['container_name']:
-                        container_attrs_rows.append(row)
-                container_attrs = tobiko.TableData(container_attrs_rows)
-            # check if the container exists
-            LOG.info('checking container: {}'.format(container))
-            if container_attrs.empty:
+                LOG.info('selected container: {}'.format(container_name))
+
+            # If one container exists, check it is running and discard the
+            # other options. Only one running container is expected.
+            container_running_attrs = container_attrs.query(
+                'container_state=="running"')
+            if container_running_attrs.empty:
                 failures.append(
-                    'expected container {} not found on node {} ! : \n\n'.
-                    format(container, node.name))
-            # if container exists, check it is running
-            else:
-                # only one running container is expected
-                container_running_attrs = container_attrs.query(
-                    'container_state=="running"')
-                if container_running_attrs.empty:
-                    failures.append(
-                        'expected container {} is not running on node {} , '
-                        'its state is {}! : \n\n'.format(
-                            container, node.name,
-                            container_attrs['container_state'].values.item()))
-                elif len(container_running_attrs) > 1:
-                    failures.append(
-                        'only one running container {} was expected on '
-                        'node {}, but got {}! : \n\n'.format(
-                            container, node.name,
-                            len(container_running_attrs)))
+                    'expected container {} is not running on node {} , '
+                    'its state is {}! : \n\n'.format(
+                        container_name, node.name,
+                        container_attrs['container_state'].values.item()))
+            elif len(container_running_attrs) > 1:
+                failures.append(
+                    'only one running container {} was expected on '
+                    'node {}, but got {}! : \n\n'.format(
+                        container_name, node.name,
+                        len(container_running_attrs)))
 
     if not bool_check and failures:
         tobiko.fail(
@@ -162,7 +194,7 @@ def assert_ovn_containers_running():
     if not neutron.has_ovn():
         LOG.info("Networking OVN not configured")
         return
-    ovn_containers = ['ovn_metadata_agent',
+    ovn_containers = [('ovn_metadata_agent', 'ovn_agent'),
                       'ovn_controller']
     potential_groups = ['edpm-compute', 'edpm-networker']
     groups = [group for group in potential_groups if

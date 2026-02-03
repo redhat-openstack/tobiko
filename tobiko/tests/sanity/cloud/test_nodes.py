@@ -75,11 +75,13 @@ class OpenstackNodesTest(testtools.TestCase):
     def test_systemd_services(self):
         """Verify expected systemd services are running on compute nodes"""
         # Define the services to check on compute nodes
+        # NOTE(ralonsoh): remove the OVN metadata agent once it is removed
+        # (currently it is only deprecated).
         services_to_check = [
             nova.ISCSID,
             nova.NOVA_COMPUTE,
             neutron.OVN_CONTROLLER,
-            neutron.NEUTRON_OVN_METADATA_AGENT
+            (neutron.NEUTRON_OVN_METADATA_AGENT, neutron.NEUTRON_OVN_AGENT),
         ]
 
         # Get compute nodes
@@ -88,15 +90,22 @@ class OpenstackNodesTest(testtools.TestCase):
 
         for node in compute_nodes:
             LOG.info(f'Checking systemd services on node {node.name}')
-            for service_key in services_to_check:
-                service_name = self.topology.get_agent_service_name(
-                    service_key)
-                LOG.debug(f'Checking service {service_name} on node '
+            for service_itr in services_to_check:
+                if not tobiko.is_collection(service_itr):
+                    service_itr = tuple([service_itr])
+
+                service_names = []
+                for service_key in service_itr:
+                    service_names.append(self.topology.get_agent_service_name(
+                        service_key))
+
+                LOG.debug(f'Checking service(s) {service_names} on node '
                           f'{node.name}')
-                sh.wait_for_active_systemd_units(
-                    service_name + '.service',
+                service_units = [sname + '.service' for sname in service_names]
+                running_units = sh.wait_for_active_systemd_units(
+                    *service_units,
                     ssh_client=node.ssh_client,
                     sudo=True,
                     timeout=30)
-                LOG.info(f'Service {service_name} is active on node '
+                LOG.info(f'Service {running_units.first} is active on node '
                          f'{node.name}')
