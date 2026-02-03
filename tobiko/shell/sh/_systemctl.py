@@ -111,7 +111,7 @@ def list_systemd_units(*units: SystemdUnitType,
         names.append(match.group(0).lower())
         starts.append(match.start())
         search_pos = match.end()
-    ends: typing.List[int] = list(starts[1:]) + [-1]
+    ends: typing.List[int | None] = list(starts[1:]) + [None]
 
     for line in table_lines:
         message = line.strip()
