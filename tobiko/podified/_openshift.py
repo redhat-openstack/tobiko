@@ -158,6 +158,23 @@ def has_podified_cp() -> bool:
         return False
 
 
+def is_controlplane_ready(controlplane_obj) -> bool:
+    conditions = controlplane_obj.as_dict().get("status", {}).get(
+        "conditions", [])
+    return any(
+        condition.get("type") == "Ready" and
+        condition.get("status") == "True"
+        for condition in conditions)
+
+
+def wait_for_controlplane_ready(cp_name: str, timeout: int = 600):
+    with oc.project(CONF.tobiko.podified.osp_project):
+        controlplane_sel = oc.selector(f"{OSP_CONTROLPLANE}/{cp_name}")
+        with oc.timeout(timeout):
+            controlplane_sel.until_all(
+                success_func=is_controlplane_ready)
+
+
 def get_dataplane_ssh_keypair():
     private_key = ""
     public_key = ""
@@ -185,6 +202,11 @@ def get_openstack_config_secret():
                      f"{OSP_CONFIG_SECRET_NAME} from Openshift. Error: {err}")
             return
     return secret_object.as_dict()
+
+
+def list_rabbitmq_user_names():
+    with oc.project(CONF.tobiko.podified.osp_project):
+        return oc.selector("rabbitmquser").qnames()
 
 
 def list_edpm_nodes():

@@ -70,3 +70,8 @@ class DisruptPodifiedNodesTest(testtools.TestCase):
         PodifiedCloudHealthCheck.run_before()
         cloud_disruptions.remove_one_grastate_galera()
         PodifiedCloudHealthCheck.run_after()
+
+    def test_rabbitmq_rotation(self):
+        PodifiedCloudHealthCheck.run_before()
+        cloud_disruptions.rabbitmq_rotation()
+        PodifiedCloudHealthCheck.run_after()

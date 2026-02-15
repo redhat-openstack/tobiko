@@ -26,6 +26,7 @@ OCP_NODE = _topology.OCP_NODE
 EDPM_COMPUTE_GROUP = _openshift.EDPM_COMPUTE_GROUP
 EDPM_NETWORKER_GROUP = _openshift.EDPM_NETWORKER_GROUP
 EDPM_OTHER_GROUP = _openshift.EDPM_OTHER_GROUP
+OSP_CONTROLPLANE = _openshift.OSP_CONTROLPLANE
 ALL_COMPUTES_GROUP_NAME = _topology.ALL_COMPUTES_GROUP_NAME
 
 PodifiedTopology = _topology.PodifiedTopology
@@ -35,6 +36,8 @@ skip_if_podified = _topology.skip_if_podified
 
 get_dataplane_ssh_keypair = _openshift.get_dataplane_ssh_keypair
 has_podified_cp = _openshift.has_podified_cp
+wait_for_controlplane_ready = _openshift.wait_for_controlplane_ready
+list_rabbitmq_user_names = _openshift.list_rabbitmq_user_names
 get_ovndbcluter = _openshift.get_ovndbcluter
 execute_in_pod = _openshift.execute_in_pod
 get_openstack_config_secret = _openshift.get_openstack_config_secret

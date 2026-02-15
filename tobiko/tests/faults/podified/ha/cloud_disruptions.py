@@ -30,11 +30,11 @@ from tobiko.openstack import keystone
 CONF = config.CONF
 LOG = log.getLogger(__name__)
 
-kill_galera = 'kill -9 $(pidof mysqld)'
-rm_grastate = 'rm -rf /var/lib/mysql/grastate.dat'
-galera_cluster_size = 'mysql -u root --password={passwd} -e \'SHOW STATUS ' \
+KILL_GALERA = 'kill -9 $(pidof mysqld)'
+RM_GRASTATE = 'rm -rf /var/lib/mysql/grastate.dat'
+GALERA_CLUSTER_SIZE = 'mysql -u root --password={passwd} -e \'SHOW STATUS ' \
                       'LIKE "wsrep_cluster_size"\''
-check_bootstrap = """
+CHECK_BOOTSTRAP = """
 ps -eo lstart,cmd | grep -v grep|
 grep wsrep-cluster-address=gcomm://
 """
@@ -98,7 +98,7 @@ def remove_one_grastate_galera():
         verify_all_galera_cells_restored(pods)
         # gcomm:// without args means that bootstrap is done from this node
         bootstrap = podified.execute_in_pod(
-            random_pod_name, check_bootstrap, 'galera').out().strip()
+            random_pod_name, CHECK_BOOTSTRAP, 'galera').out().strip()
         if len(pods) > 1:
             if re.search(r'wsrep-cluster-address=gcomm://(?:\s|$)', bootstrap
                          ) is None:
@@ -111,13 +111,13 @@ def remove_one_grastate_galera():
 
 
 def remove_grastate(pod_name):
-    podified.execute_in_pod(pod_name, rm_grastate, 'galera')
+    podified.execute_in_pod(pod_name, RM_GRASTATE, 'galera')
     LOG.info(f'grastate.dat removed from {pod_name}')
 
 
 def kill_all_galera_pods(galera_pods):
     for pod in galera_pods:
-        podified.execute_in_pod(pod.name(), kill_galera, 'galera')
+        podified.execute_in_pod(pod.name(), KILL_GALERA, 'galera')
         LOG.info(f'kill galera pod {pod}')
 
 
@@ -128,7 +128,7 @@ def check_all_galera_cells_down(pod_name):
     for _ in retry:
         try:
             cluster_size = podified.execute_in_pod(
-                pod_name, galera_cluster_size.format(passwd=pw), 'galera')
+                pod_name, GALERA_CLUSTER_SIZE.format(passwd=pw), 'galera')
             error_output = cluster_size.err()
             non_error_message = "Defaulted container \"galera\" out of:"\
                                 "galera, mysql-bootstrap (init)\n"
@@ -149,7 +149,7 @@ def verify_all_galera_cells_restored(pods):
         pod_name = pods[0].name()
         try:
             cluster_size = podified.execute_in_pod(
-                pod_name, galera_cluster_size.format(passwd=pw), 'galera')
+                pod_name, GALERA_CLUSTER_SIZE.format(passwd=pw), 'galera')
         except oc.OpenShiftPythonException:
             continue
 
@@ -160,3 +160,103 @@ def verify_all_galera_cells_restored(pods):
             return
 
     raise RestoredException()
+
+
+def _rabbitmq_user_full_name(user_name: str, rabbitmq_users=None):
+    rabbitmq_users = rabbitmq_users or podified.list_rabbitmq_user_names()
+    for qname in rabbitmq_users:
+        name = qname.split("/")[-1]
+        if user_name in name:
+            return name
+    return None
+
+
+def _rabbitmq_user_exists(user_name: str, rabbitmq_users=None) -> bool:
+    return bool(_rabbitmq_user_full_name(user_name, rabbitmq_users))
+
+
+def rabbitmq_rotation():
+    # Configure a dedicated RabbitMQ user for a service
+    # and then rotate RabbitMQ credentials for this service
+    LOG.info("Starting RabbitMQ rotation flow")
+    with oc.project(config.CONF.tobiko.podified.osp_project):
+        cp_name = oc.selector(
+            podified.OSP_CONTROLPLANE
+        ).qname().split("/")[-1]
+    LOG.info("Using controlplane '%s' for rotation", cp_name)
+    LOG.info("Adding dedicated RabbitMQ user for cinder")
+    user = modify_service_messaging_user(cp_name, 'cinder', 'add')
+    podified.wait_for_controlplane_ready(cp_name)
+    rabbitmq_users = podified.list_rabbitmq_user_names()
+    if not _rabbitmq_user_exists(user, rabbitmq_users):
+        raise tobiko.TobikoException(
+            f"RabbitMQ user '{user}' was not found in: {rabbitmq_users}")
+    LOG.info("Replacing RabbitMQ user for cinder")
+    new_user = modify_service_messaging_user(cp_name, 'cinder', 'replace')
+    podified.wait_for_controlplane_ready(cp_name)
+    rabbitmq_users = podified.list_rabbitmq_user_names()
+    if not (_rabbitmq_user_exists(user, rabbitmq_users) or
+            _rabbitmq_user_exists(new_user, rabbitmq_users)):
+        raise tobiko.TobikoException(
+            "RabbitMQ users not found after replace: "
+            f"expected '{user}' or '{new_user}' in {rabbitmq_users}")
+    LOG.info("Removing safeguard finalizer for old user '%s'", user)
+    remove_rabbitmq_user_safeguard(user)
+    podified.wait_for_controlplane_ready(cp_name)
+    try:
+        for _ in tobiko.retry(timeout=100., interval=10.):
+            rabbitmq_users = podified.list_rabbitmq_user_names()
+            if not _rabbitmq_user_exists(user, rabbitmq_users):
+                LOG.info("RabbitMQ rotation flow completed successfully")
+                return
+    except tobiko.RetryTimeLimitError as exc:
+        raise tobiko.TobikoException(
+            f"RabbitMQ user '{user}' was still found in: "
+            f"{rabbitmq_users} after safeguard deletion") from exc
+
+
+def modify_service_messaging_user(cp_name: str, service: str,
+                                  modification: str = "add"):
+    with oc.project(config.CONF.tobiko.podified.osp_project):
+        cp_obj = oc.selector(
+            f"{podified.OSP_CONTROLPLANE}/{cp_name}"
+        ).objects()[0]
+    spec = cp_obj.model.setdefault("spec", {})
+    sv_name = spec.setdefault(service, {})
+    template = sv_name.setdefault("template", {})
+    mbus = template.setdefault("messagingBus", {})
+    new_user_name = f"{service}-{random.randrange(1000000)}"
+
+    if modification in ("add", "replace"):
+        # add if empty, replace if already set
+        mbus["user"] = new_user_name
+        cp_obj.apply()
+        return new_user_name
+    else:
+        raise ValueError(f"Unsupported modification: {modification}")
+
+
+def remove_rabbitmq_user_safeguard(user_name: str):
+    with oc.project(CONF.tobiko.podified.osp_project):
+        qnames = oc.selector("rabbitmquser").qnames()
+        full_name = _rabbitmq_user_full_name(user_name, qnames)
+        if not full_name:
+            raise tobiko.TobikoException(
+                f"RabbitMQ user '{user_name}' not found in: {qnames}")
+        rabbitmq_user = oc.selector(
+            f"rabbitmquser/{full_name}"
+        ).object()
+        finalizers = rabbitmq_user.as_dict().get(
+            "metadata", {}).get("finalizers", [])
+        if "rabbitmq.openstack.org/cleanup-blocked" not in finalizers:
+            return
+        new_finalizers = [
+            finalizer for finalizer in finalizers
+            if finalizer != "rabbitmq.openstack.org/cleanup-blocked"
+        ]
+        patch = [{
+            "op": "replace",
+            "path": "/metadata/finalizers",
+            "value": new_finalizers
+        }]
+        rabbitmq_user.patch(patch, "json")
