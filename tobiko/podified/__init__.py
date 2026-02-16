@@ -34,6 +34,12 @@ PodifiedTopology = _topology.PodifiedTopology
 skip_if_not_podified = _topology.skip_if_not_podified
 skip_if_podified = _topology.skip_if_podified
 
+project_context = _openshift.project_context
+get_secret = _openshift.get_secret
+get_secret_password = _openshift.get_secret_password
+secret_has_finalizer = _openshift.secret_has_finalizer
+assert_command_ok = _openshift.assert_command_ok
+create_secret = _openshift.create_secret
 get_dataplane_ssh_keypair = _openshift.get_dataplane_ssh_keypair
 has_podified_cp = _openshift.has_podified_cp
 wait_for_controlplane_ready = _openshift.wait_for_controlplane_ready

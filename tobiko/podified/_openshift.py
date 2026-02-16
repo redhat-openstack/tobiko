@@ -13,6 +13,7 @@
 #    under the License.
 from __future__ import absolute_import
 
+import base64
 import glob
 import json
 import typing
@@ -168,7 +169,7 @@ def is_controlplane_ready(controlplane_obj) -> bool:
 
 
 def wait_for_controlplane_ready(cp_name: str, timeout: int = 600):
-    with oc.project(CONF.tobiko.podified.osp_project):
+    with project_context():
         controlplane_sel = oc.selector(f"{OSP_CONTROLPLANE}/{cp_name}")
         with oc.timeout(timeout):
             controlplane_sel.until_all(
@@ -181,7 +182,7 @@ def get_dataplane_ssh_keypair():
     secret_name = (
         f'secret/{CONF.tobiko.podified.dataplane_node_ssh_key_secret}')
     try:
-        with oc.project(CONF.tobiko.podified.osp_project):
+        with project_context():
             secret_object = oc.selector(secret_name).object()
         private_key = secret_object.as_dict(
             ).get('data', {}).get('ssh-privatekey', "")
@@ -193,8 +194,12 @@ def get_dataplane_ssh_keypair():
     return private_key, public_key
 
 
+def project_context():
+    return oc.project(CONF.tobiko.podified.osp_project)
+
+
 def get_openstack_config_secret():
-    with oc.project(CONF.tobiko.podified.osp_project):
+    with project_context():
         try:
             secret_object = oc.selector(OSP_CONFIG_SECRET_NAME).object()
         except oc.OpenShiftPythonException as err:
@@ -204,19 +209,64 @@ def get_openstack_config_secret():
     return secret_object.as_dict()
 
 
+def create_secret(name, password, key):
+    """Create an Opaque Secret with a single base64-encoded password field."""
+    encoded = base64.b64encode(password.encode('utf-8')).decode('utf-8')
+    secret_def = {
+        'apiVersion': 'v1',
+        'kind': 'Secret',
+        'metadata': {
+            'name': name,
+            'namespace': CONF.tobiko.podified.osp_project,
+        },
+        'type': 'Opaque',
+        'data': {key: encoded},
+    }
+    with project_context():
+        oc.create(secret_def)
+
+
+def get_secret(secret_name):
+    """Return a Secret as a dict or None when missing."""
+    with project_context():
+        selector = oc.selector(f'secret/{secret_name}')
+        if not selector.objects():
+            return None
+        return selector.object().as_dict()
+
+
+def get_secret_password(secret, keys):
+    """Decode a password value from a Secret data payload."""
+    data = secret.get('data', {})
+    for key in keys:
+        if key in data:
+            return base64.b64decode(data[key]).decode('utf-8').strip()
+    tobiko.fail(f"Secret {secret.get('metadata', {}).get('name')} "
+                "missing expected password key")
+
+
+def secret_has_finalizer(secret_name, finalizer):
+    """Return True if a Secret carries the given finalizer."""
+    secret = get_secret(secret_name)
+    if not secret:
+        return False
+    finalizers = secret.get('metadata', {}).get('finalizers') or []
+    return finalizer in finalizers
+
+
 def list_rabbitmq_user_names():
-    with oc.project(CONF.tobiko.podified.osp_project):
+    with project_context():
         return oc.selector("rabbitmquser").qnames()
 
 
 def wait_for_rabbitmq_user_ready(user_name, timeout=300., interval=10.):
     for attempt in tobiko.retry(timeout=timeout, interval=interval):
-        with oc.project(CONF.tobiko.podified.osp_project):
+        with project_context():
             qnames = oc.selector("rabbitmquser").qnames()
         for qname in qnames:
             name = qname.split("/")[-1]
             if user_name in name:
-                with oc.project(CONF.tobiko.podified.osp_project):
+                with project_context():
                     obj = oc.selector(f"rabbitmquser/{name}").object()
                 conditions = obj.as_dict().get(
                     "status", {}).get("conditions", [])
@@ -233,7 +283,7 @@ def wait_for_rabbitmq_user_ready(user_name, timeout=300., interval=10.):
 def wait_for_transporturl_user(service, expected_user,
                                timeout=300., interval=10.):
     for attempt in tobiko.retry(timeout=timeout, interval=interval):
-        with oc.project(CONF.tobiko.podified.osp_project):
+        with project_context():
             transport_urls = oc.selector("transporturl").objects()
         for turl in transport_urls:
             name = turl.as_dict()["metadata"]["name"]
@@ -255,7 +305,7 @@ def wait_for_transporturl_user(service, expected_user,
 
 def list_edpm_nodes():
     nodes = []
-    with oc.project(CONF.tobiko.podified.osp_project):
+    with project_context():
         nodesets = oc.selector(OSP_DP_NODESET).objects()
     for nodeset in nodesets:
         nodeset_spec = nodeset.as_dict()['spec']
@@ -311,7 +361,7 @@ def _set_edpm_node_online_status(nodename, online):
                  "Starting and stopping EDPM nodes is not supported.")
         return
     try:
-        with oc.project(CONF.tobiko.podified.osp_project):
+        with project_context():
             bm_node = oc.selector(f"{OSP_BM_HOST}/{nodename}").objects()[0]
     except oc.OpenShiftPythonException as err:
         LOG.info(f"Error while trying to get BareMetal Node '{nodename}' "
@@ -341,7 +391,7 @@ def _wait_for_poweredOn_status(nodename, expected_status,
             default_timeout=30):
         LOG.debug(f"Checking power status of the '{nodename}'.")
         try:
-            with oc.project(CONF.tobiko.podified.osp_project):
+            with project_context():
                 poweredOn = oc.selector(
                     f"{OSP_BM_HOST}/{nodename}"
                 ).objects()[0].model.status['poweredOn']
@@ -359,7 +409,7 @@ def _wait_for_poweredOn_status(nodename, expected_status,
 
 
 def get_ovndbcluter(ovndbcluster_name):
-    with oc.project(CONF.tobiko.podified.osp_project):
+    with project_context():
         ovndbcluter = oc.selector(
             f"{OVNDBCLUSTER}/{ovndbcluster_name}").objects()
     if len(ovndbcluter) != 1:
@@ -369,22 +419,22 @@ def get_ovndbcluter(ovndbcluster_name):
 
 
 def get_pods(labels=None):
-    with oc.project(CONF.tobiko.podified.osp_project):
+    with project_context():
         return oc.selector('pods', labels=labels).objects()
 
 
 def get_pod_names(labels=None):
-    with oc.project(CONF.tobiko.podified.osp_project):
+    with project_context():
         return oc.selector('pods', labels=labels).qnames()
 
 
 def get_pod_count(labels=None):
-    with oc.project(CONF.tobiko.podified.osp_project):
+    with project_context():
         return oc.selector('pods', labels=labels).count_existing()
 
 
 def delete_pods(labels=None):
-    with oc.project(CONF.tobiko.podified.osp_project):
+    with project_context():
         return oc.selector('pods', labels=labels).delete()
 
 
@@ -542,9 +592,21 @@ def _check_ping_results(pod):
 
 
 def execute_in_pod(pod_name, command, container_name=None):
-    with oc.project(CONF.tobiko.podified.osp_project):
+    with project_context():
         return oc.selector(f'pod/{pod_name}').object().execute(
             ['sh', '-c', command], container_name=container_name)
+
+
+def assert_command_ok(result, command):
+    """Fail with stderr when a pod command exits non-zero."""
+    status = getattr(result, 'status', 0)
+    if callable(status):
+        status = status()
+    if isinstance(status, str) and status.isdigit():
+        status = int(status)
+    if status not in (0, None):
+        stderr = getattr(result, 'err', lambda: '')()
+        tobiko.fail(f"Command failed: {command}\n{stderr}")
 
 
 def _get_iperf_client_pod_name(
