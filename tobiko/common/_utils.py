@@ -13,6 +13,15 @@
 #    under the License.
 from __future__ import absolute_import
 
+from collections import abc
+
 
 def get_short_hostname(hostname):
     return hostname.lower().split('.', 1)[0]
+
+
+def is_collection(variable):
+    """Checks if a variable is iterable, excluding string types."""
+    if isinstance(variable, (str, bytes, bytearray)):
+        return False
+    return isinstance(variable, abc.Iterable)
