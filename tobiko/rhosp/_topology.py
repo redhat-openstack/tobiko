@@ -38,12 +38,18 @@ def get_ip_to_nodes_dict(group, openstack_nodes=None):
 def ip_to_hostname(oc_ip, group=None):
     ip_to_nodes_dict = get_ip_to_nodes_dict(group)
     oc_ipv6 = oc_ip.replace(".", ":")
-    if netaddr.valid_ipv4(oc_ip) or netaddr.valid_ipv6(oc_ip):
+    if netaddr.valid_ipv4(oc_ip):
         return ip_to_nodes_dict[oc_ip]
+    elif netaddr.valid_ipv6(oc_ip):
+        # Normalize IPv6 address to canonical form for dictionary lookup
+        normalized_ip = str(netaddr.IPAddress(oc_ip))
+        return ip_to_nodes_dict[normalized_ip]
     elif netaddr.valid_ipv6(oc_ipv6):
         LOG.debug("The provided string was a modified IPv6 address: %s",
                   oc_ip)
-        return ip_to_nodes_dict[oc_ipv6]
+        # Normalize IPv6 address to canonical form for dictionary lookup
+        normalized_ip = str(netaddr.IPAddress(oc_ipv6))
+        return ip_to_nodes_dict[normalized_ip]
     else:
         tobiko.fail("wrong IP value provided %s" % oc_ip)
 
