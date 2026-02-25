@@ -529,7 +529,7 @@ validations-libs===1.6.0
 vine===5.0.0
 vintage===0.4.1
 virtualbmc===2.2.1
-virtualenv===20.27.1
+virtualenv===20.29.0
 voluptuous===0.12.2
 waiting===1.4.1
 waitress===2.0.0
