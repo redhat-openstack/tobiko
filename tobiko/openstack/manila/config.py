@@ -19,6 +19,10 @@ from oslo_config import cfg
 
 GROUP_NAME = 'manila'
 OPTIONS = [
+    cfg.StrOpt('service_name',
+               default='shared-file-system',
+               help="Keystone service name for Manila "
+                    "(e.g. 'shared-file-system', 'manilav2' or 'manila')."),
     cfg.StrOpt('share_protocol',
                default='nfs',
                help="Share protocol"),

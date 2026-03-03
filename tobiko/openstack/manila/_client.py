@@ -20,9 +20,9 @@ from oslo_log import log
 
 import tobiko
 from tobiko import config
-from tobiko.openstack import keystone
 from tobiko.openstack import _client
 from tobiko.openstack.manila import _exceptions
+from tobiko.openstack.manila import _skip
 
 LOG = log.getLogger(__name__)
 CONF = config.CONF
@@ -46,7 +46,7 @@ class ManilaClientManager(_client.OpenstackClientManager):
 CLIENTS = ManilaClientManager()
 
 
-@keystone.skip_if_missing_service(name='manila')
+@_skip.skip_if_missing_manila_service
 def manila_client(obj=None):
     obj = obj or default_manila_client()
     if tobiko.is_fixture(obj):
