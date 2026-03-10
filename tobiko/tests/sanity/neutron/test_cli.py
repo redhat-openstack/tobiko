@@ -136,7 +136,8 @@ class NeutronLogCliTest(BaseCliTest):
 
     def test_network_loggable_resources_list(self):
         response = openstackclient.network_loggable_resources_list()
-        self.assertIn('security_group', response[0]['Supported types'],
+        supported_types = [item['Supported types'] for item in response]
+        self.assertIn('security_group', supported_types,
                       "Security group logging isn't supported.")
 
     def test_network_log_create(self):
