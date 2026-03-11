@@ -20,7 +20,6 @@ from oslo_log import log
 
 import tobiko
 from tobiko import config
-from tobiko.openstack import keystone
 from tobiko.openstack import manila
 from tobiko.openstack import stacks
 
@@ -28,7 +27,7 @@ LOG = log.getLogger(__name__)
 CONF = config.CONF
 
 
-@keystone.skip_if_missing_service(name='manila')
+@manila.skip_if_missing_manila_service
 class ManilaApiTestCase(testtools.TestCase):
     """Manila scenario tests.
 

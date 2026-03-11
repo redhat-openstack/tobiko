@@ -33,6 +33,15 @@ tox -e functional
 tox -e cover
 ```
 
+**Note**: If tox fails to create the virtualenv (e.g., dependency
+installation errors), try running tox with a specific Python version:
+
+```bash
+python3.13 -m tox -e py3 -- tobiko/tests/unit/path/to/test_file.py
+```
+
+Ask the user which Python version to use if the default one fails.
+
 ### Linting and Static Analysis
 
 ```bash

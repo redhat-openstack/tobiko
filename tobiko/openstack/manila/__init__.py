@@ -16,6 +16,7 @@ from __future__ import absolute_import
 from tobiko.openstack.manila import _client
 from tobiko.openstack.manila import _constants
 from tobiko.openstack.manila import _exceptions
+from tobiko.openstack.manila import _skip
 from tobiko.openstack.manila import _waiters
 
 manila_client = _client.manila_client
@@ -36,6 +37,10 @@ wait_for_resource_deletion = _waiters.wait_for_resource_deletion
 # Exceptions
 ShareNotFound = _exceptions.ShareNotFound
 ShareReleaseFailed = _exceptions.ShareReleaseFailed
+
+# Skip decorators
+skip_if_missing_manila_service = _skip.skip_if_missing_manila_service
+is_manila_service_missing = _skip.is_manila_service_missing
 
 # Constants
 RESOURCE_STATUS = _constants.RESOURCE_STATUS
