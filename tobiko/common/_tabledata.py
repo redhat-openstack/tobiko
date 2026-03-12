@@ -41,6 +41,7 @@ class TableData(collections.UserList):
     """
     _schema: typing.List[str] = []  # Stores the ordered list of expected keys
     data: typing.List[typing.Dict[str, typing.Any]] = []
+    _logged_columns: typing.Set[str] = set()  # Track columns already logged
 
     def __init__(self,
                  initial_data: OptionalTableDataType = None,
@@ -59,6 +60,7 @@ class TableData(collections.UserList):
         """
         super().__init__()
         self._schema = []  # No schema unless initial_data is provided
+        self._logged_columns = set()  # Reset logged columns for new instance
 
         if initial_data:
             # Convert to list to iterate multiple times if needed
@@ -333,9 +335,53 @@ class TableData(collections.UserList):
             self.append(item)  # Use append to ensure validation
         return self
 
+    def _log_query_column_values(self, expr: str):
+        """Log column values once per column for debugging."""
+        col_match = re.match(r'(\w+)\s*[=!<>.]', expr)
+        if col_match:
+            col_name = col_match.group(1)
+            if col_name in self._schema and \
+                    col_name not in self._logged_columns:
+                values = [str(row.get(col_name, ''))
+                          for row in self.data]
+                LOG.debug('column %s values (%d rows): %s',
+                          col_name, len(self.data), values)
+                self._logged_columns.add(col_name)
+
+    def _build_eval_expr(self, row, expr):
+        """Build evaluable expression by replacing column names
+        with their values."""
+        eval_expr = expr
+        # Sort schema by length (descending) to replace longer names first
+        # This prevents substring matches (e.g., 'resource' vs others)
+        for col_name in sorted(self._schema, key=len, reverse=True):
+            # Use word boundary regex to match only complete column names
+            pattern = r'\b' + re.escape(col_name) + r'\b'
+            if re.search(pattern, eval_expr):
+                # Replace column name with quoted value for safe eval
+                col_value = row[col_name]
+                if isinstance(col_value, str):
+                    # Use lambda to avoid escape sequence interpretation
+                    # Bind col_value to avoid cell-var-from-loop
+                    eval_expr = re.sub(
+                        pattern,
+                        typing.cast(
+                            typing.Callable[[typing.Any], str],
+                            lambda m, val=col_value: f'"{val}"'),
+                        eval_expr)
+                else:
+                    # Use lambda to avoid escape sequence interpretation
+                    # Bind col_value to avoid cell-var-from-loop
+                    eval_expr = re.sub(
+                        pattern,
+                        typing.cast(
+                            typing.Callable[[typing.Any], str],
+                            lambda m, val=col_value: str(val)),
+                        eval_expr)
+        return eval_expr
+
     def query(self, expr: str) -> 'TableData':
-        """
-        Query the table using a simple expression (pandas-style).
+        """Query the table using a simple expression (pandas-style).
 
         Supports expressions like:
         - column_name == "value"
@@ -349,16 +395,15 @@ class TableData(collections.UserList):
             New TableData with filtered results
         """
         results = []
-        LOG.debug('filtering data with expression: %s' % expr)
+
+        if self.data:
+            self._log_query_column_values(expr)
+        LOG.debug('filtering with expression: %s', expr)
 
         for row in self.data:
-            # Simple expression evaluation
-            # Replace column names with their values for evaluation
-            eval_expr = expr
-
             # Handle string contains operations
-            contains_match = re.search(r'(\w+)\.str\.contains\("([^"]+)"\)',
-                                       expr)
+            contains_match = re.search(
+                r'(\w+)\.str\.contains\("([^"]+)"\)', expr)
             if contains_match:
                 col_name, search_str = contains_match.groups()
                 if col_name in row:
@@ -368,37 +413,14 @@ class TableData(collections.UserList):
                 continue
 
             # Handle equality/inequality operations
-            # Sort schema by length (descending) to replace longer names first
-            # This prevents substring matches (e.g., 'resource' vs others)
-            for col_name in sorted(self._schema, key=len, reverse=True):
-                # Use word boundary regex to match only complete column names
-                pattern = r'\b' + re.escape(col_name) + r'\b'
-                if re.search(pattern, eval_expr):
-                    # Replace column name with quoted value for safe eval
-                    col_value = row[col_name]
-                    if isinstance(col_value, str):
-                        # Use lambda to avoid escape sequence interpretation
-                        # Bind col_value to avoid cell-var-from-loop warning
-                        eval_expr = re.sub(
-                            pattern,
-                            typing.cast(typing.Callable[[typing.Any], str],
-                                        lambda m, val=col_value: f'"{val}"'),
-                            eval_expr)
-                    else:
-                        # Use lambda to avoid escape sequence interpretation
-                        # Bind col_value to avoid cell-var-from-loop warning
-                        eval_expr = re.sub(
-                            pattern,
-                            typing.cast(typing.Callable[[typing.Any], str],
-                                        lambda m, val=col_value: str(val)),
-                            eval_expr)
-
-            LOG.debug('final expression to evaluate: %s' % eval_expr)
+            eval_expr = self._build_eval_expr(row, expr)
             try:
-                # Use eval with restricted namespace to support comparisons
-                # while maintaining safety by preventing access to builtins
+                # Use eval with restricted namespace to support
+                # comparisons while maintaining safety by preventing
+                # access to builtins
                 if eval( # noqa; pylint: disable=eval-used
                         eval_expr, {"__builtins__": {}}, {}):
+                    LOG.debug('match found: %s', eval_expr)
                     results.append(row)
             except (SyntaxError, NameError, ValueError):
                 # If expression can't be evaluated, skip this row
