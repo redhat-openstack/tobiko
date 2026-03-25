@@ -92,7 +92,7 @@ References
 Related projects
 ~~~~~~~~~~~~~~~~
 * OpenStack: https://www.openstack.org/
-* Red Hat OpenStack Platform: https://www.redhat.com/en/resources/openstack-platform-datasheet
+* Red Hat OpenStack Services on OpenShift: https://www.redhat.com/en/resources/openstack-services-on-openshift-datasheet
 * Python: https://www.python.org/
 * Testtools: https://github.com/testing-cabal/testtools
 * Ansible: https://www.ansible.com/
