@@ -34,7 +34,9 @@ LOG = log.getLogger(__name__)
 F = typing.TypeVar('F', 'SharedFixture', fixtures.Fixture)
 G = typing.TypeVar('G', bound=fixtures.Fixture)
 
-FixtureType = typing.Union[F, typing.Type[F], str]
+FixtureType = typing.Union[fixtures.Fixture,
+                           typing.Type[fixtures.Fixture],
+                           str]
 
 
 def is_fixture(obj: typing.Any) -> bool:
@@ -71,7 +73,7 @@ def get_fixture(obj: str,
 def get_fixture(obj: FixtureType,
                 fixture_id: typing.Any = None,
                 manager: 'FixtureManager' = None,
-                **kwargs) -> F:
+                **kwargs) -> fixtures.Fixture:
     """Returns a fixture identified by given :param obj:
 
     It returns registered fixture for given :param obj:. If none has been
@@ -97,7 +99,7 @@ def get_fixture(obj: FixtureType,
 
     """
     if isinstance(obj, fixtures.Fixture):
-        return typing.cast(F, obj)
+        return obj
     return fixture_manager(obj, manager).get_fixture(
         obj, fixture_id=fixture_id, **kwargs)
 
@@ -175,7 +177,7 @@ def setup_fixture(obj: FixtureType,
                   manager: 'FixtureManager' = None,
                   alternative: FixtureType = None,
                   **kwargs) \
-        -> F:
+        -> fixtures.Fixture:
     """I setups registered fixture
 
     """
@@ -187,11 +189,11 @@ def setup_fixture(obj: FixtureType,
             handle_exception=handle_setup_error):
         errors = []
         for _obj in objs:
-            fixture: F = typing.cast(F,
-                                     get_fixture(_obj,
-                                                 fixture_id=fixture_id,
-                                                 manager=manager,
-                                                 **kwargs))
+            fixture = get_fixture(
+                _obj,
+                fixture_id=fixture_id,
+                manager=manager,
+                **kwargs)
             try:
                 fixture.setUp()
                 break
@@ -234,9 +236,9 @@ def reset_fixture(obj: F,
 def reset_fixture(obj: FixtureType,
                   fixture_id: typing.Any = None,
                   manager: 'FixtureManager' = None,
-                  **kwargs) -> F:
+                  **kwargs) -> fixtures.Fixture:
     """It cleanups and setups registered fixture"""
-    fixture: F = get_fixture(
+    fixture = get_fixture(
         obj, fixture_id=fixture_id, manager=manager, **kwargs)
     with _exception.handle_multiple_exceptions():
         fixture.reset()
@@ -259,7 +261,7 @@ def cleanup_fixture(obj: F,
 
 def cleanup_fixture(obj: FixtureType,
                     fixture_id: typing.Any = None,
-                    manager: 'FixtureManager' = None) -> F:
+                    manager: 'FixtureManager' = None) -> fixtures.Fixture:
     """It cleans up registered fixture"""
     fixture = get_fixture(obj, fixture_id=fixture_id, manager=manager)
     with _exception.handle_multiple_exceptions():
@@ -286,7 +288,7 @@ def use_fixture(obj: F,
 def use_fixture(obj: FixtureType,
                 fixture_id: typing.Any = None,
                 manager: 'FixtureManager' = None,
-                **kwargs) -> F:
+                **kwargs) -> fixtures.Fixture:
     """It setups registered fixture and then register it for cleanup
 
     At the end of the test case execution it will call cleanup_fixture
@@ -445,7 +447,7 @@ def required_fixture(cls: typing.Type[G], setup=True, **params) \
         -> 'RequiredFixture[G]':
     """Creates a property that gets fixture identified by given :param cls:
     """
-    return RequiredFixture[F](cls, setup=setup, **params)
+    return RequiredFixture[G](cls, setup=setup, **params)
 
 
 def get_fixture_id(obj: typing.Any) -> typing.Any:
@@ -480,30 +482,34 @@ def get_object_name(obj) -> str:
 class FixtureManager:
 
     def __init__(self):
-        self.fixtures: typing.Dict[str, F] = {}
+        self.fixtures: typing.Dict[str, fixtures.Fixture] = {}
 
     def get_fixture(self,
                     obj: FixtureType,
                     fixture_id: typing.Any = None,
-                    **kwargs) -> F:
+                    **kwargs) -> fixtures.Fixture:
         name, obj = get_name_and_object(obj)
         if fixture_id:
             name += f'-{fixture_id}'
         try:
             return self.fixtures[name]
         except KeyError:
-            fixture: F = self.init_fixture(obj=obj,
-                                           name=name,
-                                           fixture_id=fixture_id,
-                                           **kwargs)
+            fixture = self.init_fixture(
+                obj=obj,
+                name=name,
+                fixture_id=fixture_id,
+                **kwargs)
             assert isinstance(fixture, fixtures.Fixture)
             self.fixtures[name] = fixture
             return fixture
 
-    def init_fixture(self, obj: typing.Union[typing.Type[F], F],
+    def init_fixture(self,
+                     obj: typing.Union[
+                         typing.Type[fixtures.Fixture],
+                         fixtures.Fixture],
                      name: str,
                      fixture_id: typing.Any,
-                     **kwargs) -> F:
+                     **kwargs) -> fixtures.Fixture:
         return init_fixture(obj=obj,
                             name=name,
                             fixture_id=fixture_id,
@@ -511,7 +517,8 @@ class FixtureManager:
 
     def remove_fixture(self,
                        obj: FixtureType,
-                       fixture_id: typing.Any = None) -> typing.Optional[F]:
+                       fixture_id: typing.Any = None) \
+            -> typing.Optional[fixtures.Fixture]:
         name = get_object_name(obj)
         if fixture_id:
             name += '-' + str(fixture_id)

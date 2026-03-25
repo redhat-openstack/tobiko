@@ -34,7 +34,7 @@ repos:
         files: ^tobiko/
 
   - repo: https://github.com/pre-commit/mirrors-mypy.git
-    rev: 'v0.981'
+    rev: 'v1.9.0'
     hooks:
       - id: mypy
         files: ^tobiko/
