@@ -103,18 +103,14 @@ def parse_ping_footer(line_it):
     return transmitted, received, errors
 
 
+MATCH_NUMBERS_RE = re.compile(r'\d+')
+
+
 def extract_integer(field):
-    for number in extract_integers(field):
-        return number
+    match = MATCH_NUMBERS_RE.search(field)
+    if match:
+        return int(match.group())
     raise ValueError("Integer not found in {!r}".format(field))
-
-
-MATCH_NUMBERS_RE = re.compile('([0-9]).')
-
-
-def extract_integers(field):
-    for match_obj in MATCH_NUMBERS_RE.finditer(field):
-        yield int(field[match_obj.start():match_obj.end()])
 
 
 class PingStatistics(object):
