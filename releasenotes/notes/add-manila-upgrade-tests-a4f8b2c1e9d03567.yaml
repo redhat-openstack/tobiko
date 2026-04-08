@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    Added Manila upgrade tests that validate share functionality across
+    OpenStack upgrades. Pre-upgrade tests create a Manila share, grant
+    access, mount it on a destination host via NFS, and start a continuous
+    date writer service. Post-upgrade tests verify the share is still
+    accessible, the date log survived the upgrade, and that snapshots and
+    share-from-snapshot creation work correctly.
