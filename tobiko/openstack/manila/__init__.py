@@ -37,14 +37,25 @@ list_access_rules = _client.list_access_rules
 get_access_rule = _client.get_access_rule
 get_export_locations = _client.get_export_locations
 
+# Snapshot management
+create_snapshot = _client.create_snapshot
+delete_snapshot = _client.delete_snapshot
+get_snapshot = _client.get_snapshot
+list_snapshots = _client.list_snapshots
+create_share_from_snapshot = _client.create_share_from_snapshot
+
 # Waiters
 wait_for_access_rule_status = _waiters.wait_for_access_rule_status
 wait_for_share_status = _waiters.wait_for_share_status
 wait_for_resource_deletion = _waiters.wait_for_resource_deletion
+wait_for_snapshot_status = _waiters.wait_for_snapshot_status
+wait_for_snapshot_deletion = _waiters.wait_for_snapshot_deletion
 
 # Exceptions
 ShareNotFound = _exceptions.ShareNotFound
 ShareReleaseFailed = _exceptions.ShareReleaseFailed
+SnapshotNotFound = _exceptions.SnapshotNotFound
+SnapshotReleaseFailed = _exceptions.SnapshotReleaseFailed
 
 # Skip decorators
 skip_if_missing_manila_service = _skip.skip_if_missing_manila_service

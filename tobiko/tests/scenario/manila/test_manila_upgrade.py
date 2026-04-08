@@ -28,7 +28,10 @@ Pre-upgrade (with TOBIKO_PREVENT_CREATE=no):
 Post-upgrade (with TOBIKO_PREVENT_CREATE=yes):
     1. Verify the share is still accessible
     2. Verify the date log file exists and contains data from before upgrade
+    3. Create a snapshot of the share
+    4. Create a new share from the snapshot
 """
+# pylint: disable=unsubscriptable-object
 from __future__ import absolute_import
 
 import time
@@ -52,12 +55,15 @@ class ManilaUpgradeTestCase(testtools.TestCase):
 
     These tests validate Manila functionality before and after an OpenStack
     upgrade. The pre-upgrade tests create resources and start continuous
-    operations, while post-upgrade tests verify existing resources and ensure
-    continuous workloads survived the upgrade.
+    operations, while post-upgrade tests verify existing resources, ensure
+    continuous workloads survived, and test advanced features like snapshots.
     """
 
     # Use the advanced Manila fixture with mounting capabilities
     share_fixture = tobiko.required_fixture(stacks.ManilaShareWithMountFixture)
+
+    snapshot = None
+    snapshot_share = None
 
     def setUp(self):
         super(ManilaUpgradeTestCase, self).setUp()
@@ -277,3 +283,72 @@ class ManilaUpgradeTestCase(testtools.TestCase):
         LOG.info(f"Date log file verified with {len(lines)} entries")
         LOG.debug(f"First entry: {lines[0]}")
         LOG.debug(f"Last entry: {lines[-1]}")
+
+    @config.skip_unless_prevent_create()
+    def test_08_create_snapshot(self):
+        """Create a snapshot of the Manila share after upgrade"""
+        share_id = self.share_fixture.share_id
+        snapshot_name = f"tobiko-snapshot-{share_id[:8]}"
+
+        snapshot = manila.create_snapshot(
+            share_id,
+            name=snapshot_name,
+            description="Tobiko Manila upgrade test snapshot")
+        self.__class__.snapshot = snapshot
+
+        self.assertIsNotNone(snapshot)
+        self.assertIn('id', snapshot)
+
+        manila.wait_for_snapshot_status(snapshot['id'])
+
+        updated = manila.get_snapshot(snapshot['id'])
+        self.assertEqual('available', updated['status'].lower())
+
+        LOG.info(f"Snapshot {snapshot['id']} is available")
+
+    @config.skip_unless_prevent_create()
+    def test_09_create_share_from_snapshot(self):
+        """Create a new share from the snapshot"""
+        snapshot = self.snapshot
+        if not snapshot:
+            tobiko.skip_test("Snapshot not created in previous test")
+
+        snapshot_id = snapshot['id']
+        share_name = f"tobiko-from-snapshot-{snapshot_id[:8]}"
+
+        new_share = manila.create_share_from_snapshot(
+            snapshot_id,
+            name=share_name,
+            description="Tobiko Manila share created from snapshot")
+        self.__class__.snapshot_share = new_share
+
+        self.assertIsNotNone(new_share)
+        self.assertIn('id', new_share)
+
+        manila.wait_for_share_status(new_share['id'])
+
+        updated = manila.get_share(new_share['id'])
+        self.assertEqual('available', updated['status'].lower())
+
+        LOG.info(
+            f"Share from snapshot {new_share['id']} is available")
+
+    @classmethod
+    def tearDownClass(cls):
+        super(ManilaUpgradeTestCase, cls).tearDownClass()
+        snapshot_share = cls.snapshot_share
+        if snapshot_share:
+            try:
+                manila.delete_share(snapshot_share['id'])
+                manila.wait_for_resource_deletion(
+                    snapshot_share['id'])
+            except Exception as ex:
+                LOG.warning(
+                    f"Failed to clean up snapshot share: {ex}")
+        snapshot = cls.snapshot
+        if snapshot:
+            try:
+                manila.delete_snapshot(snapshot['id'])
+                manila.wait_for_snapshot_deletion(snapshot['id'])
+            except Exception as ex:
+                LOG.warning(f"Failed to clean up snapshot: {ex}")

@@ -104,3 +104,43 @@ def wait_for_access_rule_status(
                     status_key=_constants.ACCESS_STATE,
                     status=state,
                     get_client=_client.get_access_rule)
+
+
+def wait_for_snapshot_status(snapshot_id, status=_constants.STATUS_AVAILABLE):
+    """Wait for a Manila snapshot to reach the expected status
+
+    :param snapshot_id: ID of the snapshot
+    :param status: Expected status (default: 'available')
+    """
+    wait_for_status(object_id=snapshot_id,
+                    status=status,
+                    get_client=_client.get_snapshot)
+
+
+def _is_snapshot_deleted(snapshot_id):
+    """Check if a Manila snapshot has been deleted"""
+    try:
+        res = _client.get_snapshot(snapshot_id)
+    except _exceptions.SnapshotNotFound:
+        return True
+    if res.get(_constants.RESOURCE_STATUS) in [
+            _constants.STATUS_ERROR, _constants.STATUS_ERROR_DELETING]:
+        raise _exceptions.SnapshotReleaseFailed(id=snapshot_id)
+    return False
+
+
+def wait_for_snapshot_deletion(snapshot_id, build_interval=1,
+                               build_timeout=60):
+    """Wait for a Manila snapshot to be deleted
+
+    :param snapshot_id: ID of the snapshot
+    :param build_interval: Time to wait between checks
+    :param build_timeout: Maximum time to wait
+    """
+    start_time = int(time.time())
+    while True:
+        if _is_snapshot_deleted(snapshot_id):
+            return
+        if int(time.time()) - start_time >= build_timeout:
+            raise exceptions.TimeoutException
+        time.sleep(build_interval)

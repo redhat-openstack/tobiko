@@ -220,3 +220,73 @@ def get_export_locations(share_id, client=None):
         manila_client(client).share_export_locations.list(share_id))
     LOG.debug(f'Export locations for share {share_id}: {export_locations}')
     return export_locations
+
+
+# Snapshot management
+def create_snapshot(share_id, name=None, description=None, client=None):
+    """Create a snapshot of a Manila share
+
+    :param share_id: ID of the share to snapshot
+    :param name: Name for the snapshot
+    :param description: Description for the snapshot
+    :return: Snapshot object
+    """
+    return to_dict(manila_client(client).share_snapshots.create(
+        share_id, name=name, description=description))
+
+
+def delete_snapshot(snapshot_id, client=None):
+    """Delete a Manila snapshot
+
+    :param snapshot_id: ID of the snapshot to delete
+    """
+    try:
+        manila_client(client).share_snapshots.delete(snapshot_id)
+    except exceptions.NotFound:
+        LOG.debug(f'Snapshot {snapshot_id} was not found')
+        return False
+    else:
+        LOG.debug(f'Snapshot {snapshot_id} was deleted successfully')
+        return True
+
+
+def get_snapshot(snapshot_id, client=None):
+    """Get a Manila snapshot by ID
+
+    :param snapshot_id: ID of the snapshot
+    :return: Snapshot object
+    """
+    try:
+        return to_dict(manila_client(client).share_snapshots.get(
+            snapshot_id))
+    except exceptions.NotFound as ex:
+        raise _exceptions.SnapshotNotFound(id=snapshot_id) from ex
+
+
+def list_snapshots(client=None, **kwargs):
+    """List all Manila snapshots
+
+    :return: List of snapshot objects
+    """
+    return to_dict(manila_client(client).share_snapshots.list(**kwargs))
+
+
+def create_share_from_snapshot(snapshot_id, share_protocol=None, size=None,
+                               name=None, description=None, client=None):
+    """Create a new share from a snapshot
+
+    :param snapshot_id: ID of the snapshot to create share from
+    :param share_protocol: Protocol for the new share
+    :param size: Size of the new share in GiB
+    :param name: Name for the new share
+    :param description: Description for the new share
+    :return: New share object
+    """
+    share_protocol = share_protocol or CONF.tobiko.manila.share_protocol
+    size = size or CONF.tobiko.manila.size
+    return to_dict(manila_client(client).shares.create(
+        share_proto=share_protocol,
+        size=size,
+        snapshot_id=snapshot_id,
+        name=name,
+        description=description))
