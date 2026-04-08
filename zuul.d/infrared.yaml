@@ -37,7 +37,7 @@
         --
         --collect-dir {{ test_collect_dir | quote }}
         --customized-fedora-image-url
-        https://github.com/openstack-k8s-operators/openstack-k8s-operators-ci/releases/download/v1.0.0/tobiko-custom-v1.0.0.qcow2
+        https://github.com/openstack-k8s-operators/openstack-k8s-operators-ci/releases/download/v2.0.2/tobiko-custom-v2.0.2.qcow2
       tox_environ:
         ANSIBLE_INVENTORY: '{{ test_inventory_file }}'
       zuul_output_dir: '{{ ansible_user_dir }}/zuul-output'
