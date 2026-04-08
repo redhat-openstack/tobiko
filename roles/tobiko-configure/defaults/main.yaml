@@ -23,6 +23,15 @@ test_default_conf:
 
   manila:
     share_protocol: "{{ manila_share_protocol }}"
+    # Manila upgrade test configuration (CI)
+    access_type: "{{ manila_access_type }}"
+    access_to: "{{ manila_access_to }}"
+    access_level: "{{ manila_access_level }}"
+    destination_host: "{{ manila_destination_host }}"
+    destination_ssh_username: "{{ manila_destination_ssh_username }}"
+    mount_point: "{{ manila_mount_point }}"
+    mount_options: "{{ manila_mount_options }}"
+    date_log_filename: "{{ manila_date_log_filename }}"
 
 test_log_debug: ''
 
@@ -42,3 +51,13 @@ advanced_vm_connection_timeout: ''
 advanced_vm_is_reachable_timeout: ''
 
 manila_share_protocol: ''
+
+# Manila upgrade test defaults (for CI with devstack)
+manila_access_type: 'ip'
+manila_access_to: '0.0.0.0/0'
+manila_access_level: 'rw'
+manila_destination_host: 'localhost'
+manila_destination_ssh_username: 'stack'
+manila_mount_point: '/tmp/tobiko_manila_test'
+manila_mount_options: 'vers=4.1,proto=tcp'
+manila_date_log_filename: 'date_log.txt'
