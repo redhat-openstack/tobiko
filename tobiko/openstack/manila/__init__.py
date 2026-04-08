@@ -30,7 +30,15 @@ extend_share = _client.extend_share
 list_shares = _client.list_shares
 ensure_default_share_type_exists = _client.ensure_default_share_type_exists
 
+# Access rules management
+allow_access = _client.allow_access
+deny_access = _client.deny_access
+list_access_rules = _client.list_access_rules
+get_access_rule = _client.get_access_rule
+get_export_locations = _client.get_export_locations
+
 # Waiters
+wait_for_access_rule_status = _waiters.wait_for_access_rule_status
 wait_for_share_status = _waiters.wait_for_share_status
 wait_for_resource_deletion = _waiters.wait_for_resource_deletion
 

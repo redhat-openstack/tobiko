@@ -13,6 +13,7 @@
 #    under the License.
 from __future__ import absolute_import
 
+from manilaclient import api_versions as manila_api_versions
 from manilaclient.v2 import client as manilaclient
 from manilaclient import exceptions
 from oslo_log import log
@@ -25,6 +26,12 @@ from tobiko.openstack.manila import _skip
 
 LOG = log.getLogger(__name__)
 CONF = config.CONF
+
+# Minimum API version required for:
+# - access_list (2.45+)
+# - share_export_locations.list (2.47+)
+# - LP 1967312 requires 2.69+
+MANILA_API_VERSION = manila_api_versions.APIVersion('2.69')
 
 
 def to_dict(obj):
@@ -58,7 +65,9 @@ class ManilaClientFixture(_client.OpenstackClientFixture):
         cacert = (session.cert or CONF.tobiko.tripleo.undercloud_cacert_file
                   if 'https://' in session.auth.auth_url
                   else None)
-        return manilaclient.Client(session=session, cacert=cacert)
+        return manilaclient.Client(session=session,
+                                   cacert=cacert,
+                                   api_version=MANILA_API_VERSION)
 
 
 class ManilaClientManager(_client.OpenstackClientManager):
@@ -148,3 +157,66 @@ def ensure_default_share_type_exists(client=None):
         if share_type.name == name:
             return
     create_share_type(name, dhss, client=client)
+
+
+# Access rules management
+def allow_access(share_id, access_type=None, access_to=None, access_level=None,
+                 client=None):
+    """Allow access to a Manila share
+
+    :param share_id: ID of the share
+    :param access_type: Type of access (ip, user, cert, cephx)
+    :param access_to: Value for access (IP address, username, etc.)
+    :param access_level: Access level (rw, ro)
+    :return: Access rule object
+    """
+    access_type = access_type or CONF.tobiko.manila.access_type
+    access_to = access_to or CONF.tobiko.manila.access_to
+    access_level = access_level or CONF.tobiko.manila.access_level
+
+    if not access_to:
+        raise ValueError("access_to must be specified")
+
+    return to_dict(manila_client(client).shares.allow(
+        share_id, access_type, access_to, access_level))
+
+
+def deny_access(share_id, access_id, client=None):
+    """Deny access to a Manila share
+
+    :param share_id: ID of the share
+    :param access_id: ID of the access rule to revoke
+    """
+    manila_client(client).shares.deny(share_id, access_id)
+
+
+def list_access_rules(share_id, client=None):
+    """List access rules for a Manila share
+
+    :param share_id: ID of the share
+    :return: List of access rules
+    """
+    return to_dict(
+        manila_client(client).share_access_rules.access_list(share_id))
+
+
+def get_access_rule(access_id, client=None):
+    """Get a single access rule by ID
+
+    :param access_id: ID of the access rule
+    :return: Access rule object
+    """
+    return to_dict(
+        manila_client(client).share_access_rules.get(access_id))
+
+
+def get_export_locations(share_id, client=None):
+    """Get export locations for a Manila share
+
+    :param share_id: ID of the share
+    :return: List of export location objects
+    """
+    export_locations = to_dict(
+        manila_client(client).share_export_locations.list(share_id))
+    LOG.debug(f'Export locations for share {share_id}: {export_locations}')
+    return export_locations
