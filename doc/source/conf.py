@@ -134,6 +134,16 @@ config_generator_config_file = [
     (f'etc/tobiko.conf.gen', f"{TOBIKO_DOC_DIR}/_static/tobiko")
 ]
 
+# -- Options for linkcheck --------------------------------------------------
+
+# opendev.org (Gitea) serves different HTML to non-browser clients, making
+# line-anchor verification unreliable. Skip anchor checks for these URLs while
+# still verifying the base URL is reachable.
+linkcheck_anchors_ignore_for_url = [
+    r'https://opendev\.org/.*',
+]
+
+
 def autodoc_skip_member(app, what, name, obj, skip, options):
     # NOTE(slaweq): skip all external modules, like fixtures from the autodoc
     if "tobiko" not in str(obj):
