@@ -266,15 +266,21 @@ class ManilaShareWithMountFixture(ManilaShareWithAccessFixture):
         mount_cmd = self._build_mount_command(
             export_location, mount_point, mount_options)
 
-        # Mount the share, retrying in case NFS-Ganesha needs time
-        # to reload its export configuration
+        # Workaround for Manila bug LP#2148644: CephFS NFS driver
+        # marks access rule active before Ganesha loads the export
+        # https://bugs.launchpad.net/manila/+bug/2148644
         for attempt in tobiko.retry(timeout=60., interval=5.):
             try:
                 sh.execute(mount_cmd, ssh_client=self.ssh_client)
-                break
             except sh.ShellCommandFailed:
-                attempt.check_limits()
-                LOG.debug("Mount failed, retrying...")
+                LOG.debug("Mount failed, NFS-Ganesha export may not "
+                          "be ready yet (LP#2148644)")
+                if attempt.is_last:
+                    raise
+                else:
+                    continue
+            LOG.debug("Mount succeeded")
+            break
 
         LOG.info(f"Share mounted successfully at {mount_point}")
 
