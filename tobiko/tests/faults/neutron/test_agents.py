@@ -930,9 +930,6 @@ class MetadataAgentTest(BaseAgentTest):
         self.wait_for_metadata_status(is_reachable=True)
 
 
-# TODO(eolivare): these tests will always be skipped on OSP13 because 'agent
-# list' requests return empty list with OVN+OSP13
-# Search for the corresponding container instead of the networking agent
 class OvnMetadataAgentTest(MetadataAgentTest):
 
     _agent_name = [

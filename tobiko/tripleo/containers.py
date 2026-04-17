@@ -2,7 +2,6 @@ from __future__ import absolute_import
 
 import functools
 import os
-import re
 import typing
 
 from oslo_log import log
@@ -285,15 +284,6 @@ def ceph_rgw_expected():
 
 def skip_if_ceph_rgw():
     return tobiko.skip_if('Ceph rgw deployed', ceph_rgw_expected)
-
-
-def osp13_container_name_short_format(container_name_long_format):
-    """This takes a long format container name :
-    'rhosp13/openstack-neutron-l3-agent'
-    and turns it into : neutron_l3_agent
-    """
-    return re.sub('-', '_', re.sub('rhosp13/openstack-', '',
-                                   container_name_long_format))
 
 
 def assert_ovn_containers_running():
