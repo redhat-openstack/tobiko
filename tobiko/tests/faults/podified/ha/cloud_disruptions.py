@@ -38,6 +38,10 @@ CHECK_BOOTSTRAP = """
 ps -eo lstart,cmd | grep -v grep|
 grep wsrep-cluster-address=gcomm://
 """
+RABBITMQ_LABEL = {'app.kubernetes.io/name': 'rabbitmq'}
+RABBITMQ_KILL = "pkill -9 beam.smp || pkill -9 beam"
+RABBITMQ_CLUSTER_STATUS = "rabbitmqctl cluster_status"
+RABBITMQ_RUNNING_NODES_HEADER = "Running Nodes"
 
 
 class GaleraBoostrapException(tobiko.TobikoException):
@@ -173,6 +177,93 @@ def _rabbitmq_user_full_name(user_name: str, rabbitmq_users=None):
 
 def _rabbitmq_user_exists(user_name: str, rabbitmq_users=None) -> bool:
     return bool(_rabbitmq_user_full_name(user_name, rabbitmq_users))
+
+
+def _get_rabbitmq_pods(labels=None):
+    return podified.get_pods(labels or RABBITMQ_LABEL)
+
+
+def _rabbitmq_container_ready(pod_obj):
+    statuses = pod_obj.as_dict().get("status", {}).get(
+        "containerStatuses", [])
+    for status in statuses:
+        if status.get("name") == "rabbitmq":
+            return bool(status.get("ready"))
+    # Fallback if there are no explicit rabbitmq pod, if every pod is ready.
+    return all(status.get("ready") for status in statuses
+               ) if statuses else False
+
+
+def _wait_for_rabbitmq_pod_ready(pod_name: str, ready: bool,
+                                 timeout: float = 120.,
+                                 interval: float = 5.):
+    retry = tobiko.retry(timeout=timeout, interval=interval)
+    for attempt in retry:
+        with oc.project(CONF.tobiko.podified.osp_project):
+            pod = oc.selector(f"pod/{pod_name}").object()
+        if _rabbitmq_container_ready(pod) is ready:
+            return
+        if attempt.is_last:
+            raise tobiko.TobikoException(
+                f"RabbitMQ pod '{pod_name}' did not reach ready={ready}")
+
+
+def _rabbitmq_running_nodes(pod_name: str):
+    output = podified.execute_in_pod(
+        pod_name, RABBITMQ_CLUSTER_STATUS, "rabbitmq").out()
+    running = []
+    in_running = False
+    for line in output.splitlines():
+        stripped = line.strip()
+        if stripped == RABBITMQ_RUNNING_NODES_HEADER:
+            in_running = True
+            continue
+        if in_running:
+            if not stripped:
+                continue
+            if stripped.startswith("rabbit@"):
+                running.append(stripped)
+                continue
+            break
+    return running
+
+
+def _wait_for_rabbitmq_cluster_ready(control_pod: str, expected_nodes: int,
+                                     timeout: float = 120.,
+                                     interval: float = 10.):
+    retry = tobiko.retry(timeout=timeout, interval=interval)
+    for attempt in retry:
+        running = _rabbitmq_running_nodes(control_pod)
+        if len(running) == expected_nodes:
+            return
+        if attempt.is_last:
+            raise tobiko.TobikoException(
+                "RabbitMQ cluster did not recover: "
+                f"expected {expected_nodes} running nodes")
+
+
+def kill_random_rabbitmq_pod_and_recover():
+    # Kill a random RabbitMQ pod, verify it goes down, then confirm pod
+    # and cluster recover and health checks pass.
+    LOG.info("Starting kill random RabbitMQ pod flow")
+    pods = _get_rabbitmq_pods()
+    if not pods:
+        raise tobiko.TobikoException("No RabbitMQ pods found")
+    target_pod = random.choice(pods)
+    target_pod_name = target_pod.name()
+    control_pod_name = next(
+        (pod.name() for pod in pods if pod.name() != target_pod_name),
+        target_pod_name)
+    LOG.info("Killing RabbitMQ process in pod '%s'", target_pod_name)
+    podified.execute_in_pod(target_pod_name, RABBITMQ_KILL, "rabbitmq")
+    _wait_for_rabbitmq_pod_ready(target_pod_name, ready=False)
+    LOG.info("RabbitMQ pod '%s' is down; waiting for recovery",
+             target_pod_name)
+    _wait_for_rabbitmq_pod_ready(target_pod_name, ready=True)
+    _wait_for_rabbitmq_cluster_ready(
+        control_pod_name, expected_nodes=len(pods))
+    LOG.info("RabbitMQ pod '%s' recovered and cluster is healthy",
+             target_pod_name)
 
 
 def rabbitmq_rotation():
