@@ -402,7 +402,9 @@ WantedBy=multi-user.target
         finally:
             os.unlink(local_tmp)
 
-        sh.execute(f"sudo mv {remote_tmp} {service_file}",
+        sh.execute(f"sudo install -m 644 {remote_tmp} {service_file}",
+                   ssh_client=self.ssh_client)
+        sh.execute(f"rm -f {remote_tmp}",
                    ssh_client=self.ssh_client)
 
         # Reload systemd
