@@ -209,6 +209,50 @@ def list_rabbitmq_user_names():
         return oc.selector("rabbitmquser").qnames()
 
 
+def wait_for_rabbitmq_user_ready(user_name, timeout=300., interval=10.):
+    for attempt in tobiko.retry(timeout=timeout, interval=interval):
+        with oc.project(CONF.tobiko.podified.osp_project):
+            qnames = oc.selector("rabbitmquser").qnames()
+        for qname in qnames:
+            name = qname.split("/")[-1]
+            if user_name in name:
+                with oc.project(CONF.tobiko.podified.osp_project):
+                    obj = oc.selector(f"rabbitmquser/{name}").object()
+                conditions = obj.as_dict().get(
+                    "status", {}).get("conditions", [])
+                if any(c.get("type") == "Ready" and
+                       c.get("status") == "True" for c in conditions):
+                    LOG.info("RabbitMQUser '%s' is ready", name)
+                    return name
+        LOG.debug("RabbitMQUser matching '%s' not ready yet", user_name)
+        if attempt.is_last:
+            tobiko.fail(f"Timed out waiting for RabbitMQUser '{user_name}' "
+                        "to become ready")
+
+
+def wait_for_transporturl_user(service, expected_user,
+                               timeout=300., interval=10.):
+    for attempt in tobiko.retry(timeout=timeout, interval=interval):
+        with oc.project(CONF.tobiko.podified.osp_project):
+            transport_urls = oc.selector("transporturl").objects()
+        for turl in transport_urls:
+            name = turl.as_dict()["metadata"]["name"]
+            if service in name and "notifications" not in name:
+                status = turl.as_dict().get("status", {})
+                active_user = status.get("rabbitmqUsername", "")
+                if expected_user in active_user:
+                    LOG.info("TransportURL '%s' is using user '%s'",
+                             name, active_user)
+                    return name
+                LOG.debug("TransportURL '%s' using '%s', expected '%s'",
+                          name, active_user, expected_user)
+        LOG.debug("No TransportURL for '%s' using '%s' yet",
+                  service, expected_user)
+        if attempt.is_last:
+            tobiko.fail(f"Timed out waiting for {service} TransportURL to use "
+                        f"user '{expected_user}'")
+
+
 def list_edpm_nodes():
     nodes = []
     with oc.project(CONF.tobiko.podified.osp_project):
