@@ -13,8 +13,11 @@
 #    under the License.
 from __future__ import absolute_import
 
+import testtools
+
 from tobiko.openstack import keystone
 from tobiko.openstack import nova
+from tobiko.openstack.nova import _client
 from tobiko.tests.unit import openstack
 from tobiko.tests.unit.openstack import test_client
 
@@ -64,3 +67,27 @@ class NeutronClientTest(openstack.OpenstackTest):
         client = nova.nova_client(fixture)
         self.assertIsInstance(client, nova.CLIENT_CLASSES)
         self.assertIs(client, fixture.client)
+
+
+class IsBootStuckTest(testtools.TestCase):
+
+    def test_empty_output(self):
+        self.assertFalse(_client.is_boot_stuck(''))
+
+    def test_only_io_errors(self):
+        output = 'I/O error, dev vda, sector 4961072 op 0x0:(READ)'
+        self.assertFalse(_client.is_boot_stuck(output))
+
+    def test_only_forced_readonly(self):
+        output = 'BTRFS info (device vda4 state E): forced readonly'
+        self.assertFalse(_client.is_boot_stuck(output))
+
+    def test_both_indicators(self):
+        output = ('I/O error, dev vda, sector 4961072 op 0x0:(READ)\n'
+                  'BTRFS info (device vda4 state E): forced readonly')
+        self.assertTrue(_client.is_boot_stuck(output))
+
+    def test_normal_boot_output(self):
+        output = ('Fedora Linux 42 (Cloud Edition)\n'
+                  'localhost login: ')
+        self.assertFalse(_client.is_boot_stuck(output))

@@ -442,7 +442,18 @@ class CloudInitServerStackFixture(ServerStackFixture, ABC):
                       "steps because the console output may be empty in some "
                       "cases, such as hypervisor reboot")
         else:
-            self.wait_for_guest_os_ready()
+            for attempt in tobiko.retry(count=2, sleep_time=5.):
+                try:
+                    self.wait_for_guest_os_ready()
+                    break
+                except nova.BootStuckError:
+                    if attempt.is_last:
+                        raise
+                    LOG.warning(f"Stack '{self.stack_name}' VM boot stuck "
+                                f"on disk I/O errors, recreating the "
+                                f"stack...")
+                    self.cleanup_stack()
+                    self.create_stack()
 
         if self.has_floating_ip:
             self.assert_is_reachable()

@@ -152,6 +152,11 @@ class ServerNotFoundError(GetServerError, tobiko.ObjectNotFound):
     pass
 
 
+class BootStuckError(tobiko.TobikoException):
+    message = ("Server '{server_id}' boot is stuck due to disk I/O errors "
+               "detected in the console output")
+
+
 def get_server(server: ServerType = None,
                server_id: str = None,
                client: NovaClientType = None,
@@ -317,26 +322,34 @@ def get_console_output(server: typing.Optional[ServerType] = None,
     return None
 
 
+_BOOT_STUCK_INDICATORS = [
+    'I/O error, dev vda',
+    'forced readonly',
+]
+
+
+def is_boot_stuck(console_output: str) -> bool:
+    return all(indicator in console_output
+               for indicator in _BOOT_STUCK_INDICATORS)
+
+
 def wait_for_guest_os_ready(server: typing.Optional[ServerType] = None,
                             server_id: typing.Optional[str] = None,
                             timeout: tobiko.Seconds = 120.,
                             interval: tobiko.Seconds = 5.,
                             client: NovaClientType = None) -> None:
-
-    def system_booted():
-        console_output = get_console_output(
-            server=server, server_id=server_id, client=client) or ''
-        for line in console_output.splitlines():
-            if 'login:' in line.lower():
-                return True
-        return False
+    server_id = get_server_id(server=server, server_id=server_id)
 
     for _ in tobiko.retry(timeout=timeout, interval=interval):
-        if system_booted():
+        console_output = get_console_output(
+            server_id=server_id, client=client) or ''
+        if any('login:' in line.lower()
+               for line in console_output.splitlines()):
             LOG.debug('VM boot completed successfully')
             return
-        else:
-            LOG.debug('VM boot not completed yet')
+        if is_boot_stuck(console_output):
+            raise BootStuckError(server_id=server_id)
+        LOG.debug('VM boot not completed yet')
 
 
 class HasNovaClientMixin(object):
