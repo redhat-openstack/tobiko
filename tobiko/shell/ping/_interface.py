@@ -172,15 +172,14 @@ class PingInterface(object):
 
         interval = parameters.interval
         if interval > 1:
-            if self.has_interval_option:
-                options += self.get_interval_option(interval)
-            else:
-                LOG.warning(f'Interval option with value {interval} ignored '
-                            f'because not supported by ping interface {self}')
+            options += self._get_interval_option_if_supported(interval)
 
         fragment = parameters.fragmentation
         if fragment is not None:
             options += self.get_fragment_option(fragment=fragment)
+
+        if parameters.timestamps:
+            options += self._get_timestamp_option_if_supported()
 
         return options
 
@@ -205,10 +204,26 @@ class PingInterface(object):
 
     has_interval_option = False
 
+    def _get_interval_option_if_supported(self, interval):
+        if self.has_interval_option:
+            return self.get_interval_option(interval)
+        LOG.warning('Interval option with value %s ignored because not '
+                    'supported by ping interface %s', interval, self)
+        return []
+
     def get_interval_option(self, interval):
         details = ("{!r} ping implementation doesn't support "
                    "'interval={!r}' option").format(self, interval)
         raise _exception.UnsupportedPingOption(details=details)
+
+    has_timestamp_option = False
+
+    def _get_timestamp_option_if_supported(self):
+        if self.has_timestamp_option:
+            return ['-D']
+        LOG.debug('Timestamp option ignored because not '
+                  'supported by ping interface %s', self)
+        return []
 
     has_fragment_option = False
 
@@ -247,6 +262,7 @@ class IpUtilsPingInterface(PingInterface):
         return usage.startswith(IPUTILS_PING_USAGE)
 
     has_interval_option = True
+    has_timestamp_option = True
 
     def get_interval_option(self, interval):
         return ['-i', int(interval)]

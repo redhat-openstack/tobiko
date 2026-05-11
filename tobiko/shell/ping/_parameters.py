@@ -37,7 +37,8 @@ class PingParameters(collections.namedtuple('PingParameters',
                                              'packet_size',
                                              'source',
                                              'timeout',
-                                             'network_namespace'])):
+                                             'network_namespace',
+                                             'timestamps'])):
     """Recollect parameters to be used to format ping command line
 
     PingParameters class is a data model recollecting parameters used to
@@ -67,7 +68,8 @@ def ping_parameters(default=None, count=None, deadline=None,
                     fragmentation=None,
                     host: typing.Optional[PingAddressType] = None,
                     interval=None, ip_version=None, packet_size=None,
-                    source=None, timeout=None, network_namespace=None):
+                    source=None, timeout=None, network_namespace=None,
+                    timestamps=None):
     """Validate parameters and initialize a new PingParameters instance
 
     :param default: (PingParameters or None) instance from where to take
@@ -100,6 +102,12 @@ def ping_parameters(default=None, count=None, deadline=None,
         to send ICMP message.
     :param timeout: (int or None) time in seconds after which ping operation
         would raise PingFailed exception.
+    :param network_namespace: (str or None) if not None, it specifies the
+        network namespace in which to execute the ping command.
+    :param timestamps: (bool or None) when True this would tell ping to
+        print timestamps before each line using the -D option. Default
+        value can be configured using 'timestamps' option in [ping]
+        config section.
     :raises TypeError: in case some parameter cannot be converted to right
         expected type
     :raises ValueError: in case some parameter has an unexpected value
@@ -119,7 +127,8 @@ def ping_parameters(default=None, count=None, deadline=None,
         source=get_address('source', source, default),
         timeout=get_positive_integer('timeout', timeout, default),
         network_namespace=get_string('network_namespace', network_namespace,
-                                     default))
+                                     default),
+        timestamps=get_boolean('timestamps', timestamps, default))
 
 
 def default_ping_parameters():
@@ -131,7 +140,8 @@ def default_ping_parameters():
                            fragmentation=CONF.tobiko.ping.fragmentation,
                            interval=CONF.tobiko.ping.interval,
                            packet_size=CONF.tobiko.ping.packet_size,
-                           timeout=CONF.tobiko.ping.timeout)
+                           timeout=CONF.tobiko.ping.timeout,
+                           timestamps=CONF.tobiko.ping.timestamps)
 
 
 def get_ping_ip_version(parameters):

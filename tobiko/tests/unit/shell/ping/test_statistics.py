@@ -47,3 +47,32 @@ class ParsePingStatisticsTest(unit.TobikoUnitTest):
     def test_extract_integer_multi_digit(self):
         self.assertEqual(
             2694, _statistics.extract_integer('2694 packets transmitted'))
+
+
+PING_OUTPUT_WITH_TIMESTAMPS = """\
+PING 192.168.122.1 (192.168.122.1) 56(84) bytes of data.
+[1715000000.123456] 64 bytes from 192.168.122.1: icmp_seq=1 ttl=63 time=1.0 ms
+[1715000001.654321] 64 bytes from 192.168.122.1: icmp_seq=2 ttl=63 time=0.5 ms
+
+--- 192.168.122.1 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1001ms
+rtt min/avg/max/mdev = 0.500/0.750/1.000/0.250 ms
+"""
+
+
+class ParsePingStatisticsWithTimestampsTest(unit.TobikoUnitTest):
+
+    def test_parse_ping_statistics_transmitted(self):
+        stats = _statistics.parse_ping_statistics(
+            PING_OUTPUT_WITH_TIMESTAMPS)
+        self.assertEqual(2, stats.transmitted)
+
+    def test_parse_ping_statistics_received(self):
+        stats = _statistics.parse_ping_statistics(
+            PING_OUTPUT_WITH_TIMESTAMPS)
+        self.assertEqual(2, stats.received)
+
+    def test_parse_ping_statistics_destination(self):
+        stats = _statistics.parse_ping_statistics(
+            PING_OUTPUT_WITH_TIMESTAMPS)
+        self.assertEqual('192.168.122.1', str(stats.destination))
