@@ -55,6 +55,7 @@ NovaServer = _client.NovaServer
 ServerType = _client.ServerType
 GetServerError = _client.GetServerError
 ServerNotFoundError = _client.ServerNotFoundError
+BootStuckError = _client.BootStuckError
 MigrateServerError = _client.MigrateServerError
 PreCheckMigrateServerError = _client.PreCheckMigrateServerError
 NoValidHostFoundMigrateServerError = (
