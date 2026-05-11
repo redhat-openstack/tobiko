@@ -117,15 +117,20 @@ def ping_parameters(default=None, count=None, deadline=None,
         default = default_ping_parameters()
 
     return PingParameters(
-        count=get_positive_integer('count', count, default),
+        count=get_positive_number('count', count, int, default=default),
         host=get_address('host', host, default),
-        deadline=get_positive_integer('deadline', deadline, default),
+        deadline=get_positive_number('deadline', deadline, int,
+                                     default=default),
         fragmentation=get_boolean('fragmentation', fragmentation, default),
-        interval=get_positive_integer('interval', interval, default),
-        ip_version=get_positive_integer('ip_version', ip_version, default),
-        packet_size=get_positive_integer('packet_size', packet_size, default),
+        interval=get_positive_number('interval', interval, float,
+                                     default=default),
+        ip_version=get_positive_number('ip_version', ip_version, int,
+                                       default=default),
+        packet_size=get_positive_number('packet_size', packet_size, int,
+                                        default=default),
         source=get_address('source', source, default),
-        timeout=get_positive_integer('timeout', timeout, default),
+        timeout=get_positive_number('timeout', timeout, int,
+                                    default=default),
         network_namespace=get_string('network_namespace', network_namespace,
                                      default),
         timestamps=get_boolean('timestamps', timestamps, default))
@@ -177,11 +182,12 @@ def get_ping_payload_size(parameters):
     return packet_size - header_size
 
 
-def get_positive_integer(name, value, default=None):
+def get_positive_number(name, value, converter, default=None):
     if value is None and default:
-        return get_positive_integer(name, getattr(default, name))
+        return get_positive_number(
+            name, getattr(default, name), converter)
     if value is not None:
-        value = int(value)
+        value = converter(value)
         if value < 0:
             message = "{!r} value must be zero or greater: {!r}".format(
                 name, value)

@@ -171,7 +171,7 @@ class PingInterface(object):
             options += self.get_size_option(size)
 
         interval = parameters.interval
-        if interval > 1:
+        if interval and interval != 1:
             options += self._get_interval_option_if_supported(interval)
 
         fragment = parameters.fragmentation
@@ -265,7 +265,9 @@ class IpUtilsPingInterface(PingInterface):
     has_timestamp_option = True
 
     def get_interval_option(self, interval):
-        return ['-i', int(interval)]
+        if isinstance(interval, float) and interval.is_integer():
+            interval = int(interval)
+        return ['-i', interval]
 
     has_fragment_option = True
 

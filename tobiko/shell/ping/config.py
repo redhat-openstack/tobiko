@@ -31,10 +31,10 @@ OPTIONS = [
                default=None,
                help="If False it will not allow ICMP messages to "
                     "be delivered in smaller fragments"),
-    cfg.IntOpt('interval',
-               default=1,
-               help="Seconds of time interval between "
-                    "consecutive before ICMP messages"),
+    cfg.FloatOpt('interval',
+                 default=1,
+                 help="Seconds of time interval between "
+                      "consecutive before ICMP messages"),
     cfg.IntOpt('packet_size',
                default=None,
                help="Size in bytes of ICMP messages (including "

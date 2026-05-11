@@ -38,6 +38,37 @@ def _make_parameters(**kwargs):
     return _parameters.PingParameters(**defaults)
 
 
+class IpUtilsIntervalOptionTest(unit.TobikoUnitTest):
+
+    def test_interval_option_with_sub_second(self):
+        interface = _interface.IpUtilsPingInterface()
+        params = _make_parameters(interval=0.2)
+        options = interface.get_ping_options(params)
+        self.assertIn('-i', options)
+        self.assertIn(0.2, options)
+
+    def test_interval_option_skipped_at_default(self):
+        interface = _interface.IpUtilsPingInterface()
+        params = _make_parameters(interval=1)
+        options = interface.get_ping_options(params)
+        self.assertNotIn('-i', options)
+
+    def test_interval_option_with_value_above_one(self):
+        interface = _interface.IpUtilsPingInterface()
+        params = _make_parameters(interval=5)
+        options = interface.get_ping_options(params)
+        self.assertIn('-i', options)
+        self.assertIn(5, options)
+
+    def test_interval_option_whole_float_becomes_int(self):
+        interface = _interface.IpUtilsPingInterface()
+        params = _make_parameters(interval=10.0)
+        options = interface.get_ping_options(params)
+        idx = options.index('-i')
+        self.assertIsInstance(options[idx + 1], int)
+        self.assertEqual(10, options[idx + 1])
+
+
 class IpUtilsTimestampOptionTest(unit.TobikoUnitTest):
 
     def test_timestamp_option_present(self):
