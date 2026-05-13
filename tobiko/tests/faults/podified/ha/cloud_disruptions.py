@@ -184,25 +184,41 @@ def rabbitmq_rotation():
             podified.OSP_CONTROLPLANE
         ).qname().split("/")[-1]
     LOG.info("Using controlplane '%s' for rotation", cp_name)
+
+    # Step 1: Add dedicated RabbitMQ user
     LOG.info("Adding dedicated RabbitMQ user for cinder")
     user = modify_service_messaging_user(cp_name, 'cinder', 'add')
+    LOG.info("Waiting for RabbitMQUser '%s' to become ready", user)
+    podified.wait_for_rabbitmq_user_ready(user)
+    LOG.info("Waiting for cinder TransportURL to use '%s'", user)
+    podified.wait_for_transporturl_user('cinder', user)
+    LOG.info("Waiting for controlplane to be ready")
     podified.wait_for_controlplane_ready(cp_name)
     rabbitmq_users = podified.list_rabbitmq_user_names()
     if not _rabbitmq_user_exists(user, rabbitmq_users):
         raise tobiko.TobikoException(
             f"RabbitMQ user '{user}' was not found in: {rabbitmq_users}")
+
+    # Step 2: Replace with new user
     LOG.info("Replacing RabbitMQ user for cinder")
     new_user = modify_service_messaging_user(cp_name, 'cinder', 'replace')
+    LOG.info("Waiting for RabbitMQUser '%s' to become ready", new_user)
+    podified.wait_for_rabbitmq_user_ready(new_user)
+    LOG.info("Waiting for cinder TransportURL to use '%s'", new_user)
+    podified.wait_for_transporturl_user('cinder', new_user)
+    LOG.info("Waiting for controlplane to be ready")
     podified.wait_for_controlplane_ready(cp_name)
     rabbitmq_users = podified.list_rabbitmq_user_names()
     if not (_rabbitmq_user_exists(user, rabbitmq_users) or
             _rabbitmq_user_exists(new_user, rabbitmq_users)):
         raise tobiko.TobikoException(
-            "RabbitMQ users not found after replace: "
-            f"expected '{user}' or '{new_user}' in {rabbitmq_users}")
+            f"New RabbitMQ user '{new_user}' not found after replace: "
+            f"{rabbitmq_users}")
+
+    # Step 3: Remove safeguard finalizer from old user and wait for cleanup
     LOG.info("Removing safeguard finalizer for old user '%s'", user)
     remove_rabbitmq_user_safeguard(user)
-    podified.wait_for_controlplane_ready(cp_name)
+    LOG.info("Waiting for old user '%s' to be deleted", user)
     try:
         for _ in tobiko.retry(timeout=100., interval=10.):
             rabbitmq_users = podified.list_rabbitmq_user_names()
@@ -211,7 +227,7 @@ def rabbitmq_rotation():
                 return
     except tobiko.RetryTimeLimitError as exc:
         raise tobiko.TobikoException(
-            f"RabbitMQ user '{user}' was still found in: "
+            f"RabbitMQ user '{user}' still found in: "
             f"{rabbitmq_users} after safeguard deletion") from exc
 
 
