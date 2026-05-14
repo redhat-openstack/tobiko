@@ -145,3 +145,19 @@ def get_load_balancer(lb_id: str):
 def get_health_monitor(hm_id: str):
     os_sdk_client = openstacksdkclient.openstacksdk_client()
     return os_sdk_client.load_balancer.get_health_monitor(hm_id)
+
+
+def find_ipv6_vip_on_load_balancer(lb: typing.Any) -> typing.Optional[str]:
+    """Return the IPv6 address from ``additional_vips``, or None."""
+    additional = getattr(lb, 'additional_vips', None) or []
+    for entry in additional:
+        if isinstance(entry, dict):
+            addr = entry.get('ip_address')
+        else:
+            addr = getattr(entry, 'ip_address', None)
+        if not addr:
+            continue
+        addr = str(addr)
+        if ':' in addr:
+            return addr
+    return None

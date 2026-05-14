@@ -19,13 +19,20 @@ import typing
 from oslo_log import log
 
 import tobiko
-from tobiko.openstack import octavia, openstacksdkclient
-from tobiko.openstack.octavia import _constants
 from tobiko import config
+from tobiko.openstack import octavia, openstacksdkclient
+from tobiko.openstack.octavia import _client
+from tobiko.openstack.octavia import _constants
+
+get_load_balancer = _client.get_load_balancer
 
 LOG = log.getLogger(__name__)
 
 CONF = config.CONF
+
+
+def _has_ipv6_vip(lb: typing.Any) -> bool:
+    return _client.find_ipv6_vip_on_load_balancer(lb) is not None
 
 
 def wait_for_status(object_id: str,
@@ -69,6 +76,63 @@ def wait_for_status(object_id: str,
 
         LOG.debug(f"Waiting for {get_client.__name__} {status_key} to get "
                   f"from '{response[status_key]}' to '{status}'...")
+
+
+def wait_for_load_balancer(
+        lb_id: str,
+        ready: typing.Callable[[typing.Any], bool],
+        get_client: typing.Callable = None,
+        interval: tobiko.Seconds = None,
+        timeout: tobiko.Seconds = None,
+        waiting_log: typing.Callable[[], str] = None) -> typing.Any:
+    """Wait until ``ready(load_balancer)`` returns True.
+
+    Uses the same retry defaults as :func:`wait_for_status`.
+    """
+    get_client = get_client or get_load_balancer
+    for attempt in tobiko.retry(timeout=timeout,
+                                interval=interval,
+                                default_timeout=(
+                                        CONF.tobiko.octavia.check_timeout),
+                                default_interval=(
+                                        CONF.tobiko.octavia.check_interval)):
+        lb = get_client(lb_id)
+        if ready(lb):
+            return lb
+        if waiting_log:
+            LOG.debug(waiting_log())
+        else:
+            LOG.debug('Waiting for load balancer %s...', lb_id)
+        attempt.check_limits()
+
+
+def wait_for_ipv6_additional_vip(lb_id: str) -> typing.Optional[typing.Any]:
+    """Wait until the load balancer has an allocated IPv6 additional VIP.
+
+    :returns: Load balancer when an IPv6 ``additional_vips`` address exists,
+        or ``None`` if the timeout is reached (caller should fail the test).
+    """
+    try:
+        return wait_for_load_balancer(
+            lb_id,
+            ready=_has_ipv6_vip,
+            waiting_log=lambda: (
+                'Waiting for IPv6 additional VIP on load balancer %s...'
+                % lb_id),
+        )
+    except tobiko.RetryTimeLimitError:
+        timeout = CONF.tobiko.octavia.check_timeout
+        lb = get_load_balancer(lb_id)
+        LOG.warning(
+            'IPv6 additional VIP not allocated on load balancer %s after %ss; '
+            'additional_vips=%r provisioning_status=%s vip_address=%s',
+            lb_id,
+            timeout,
+            getattr(lb, 'additional_vips', None),
+            getattr(lb, 'provisioning_status', None),
+            getattr(lb, 'vip_address', None),
+        )
+        return None
 
 
 def wait_for_octavia_service(interval: tobiko.Seconds = None,

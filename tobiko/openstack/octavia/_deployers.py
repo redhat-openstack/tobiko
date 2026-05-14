@@ -14,13 +14,17 @@
 #    under the License.
 from __future__ import absolute_import
 
+import typing
+
 from oslo_log import log
 
 import tobiko
 from tobiko import config
 from tobiko.openstack import octavia
 from tobiko.openstack import neutron
+from tobiko.openstack.octavia import _client
 from tobiko.openstack.octavia import _constants
+from tobiko.openstack.octavia import _waiters
 
 CONF = config.CONF
 LOG = log.getLogger(__name__)
@@ -47,6 +51,72 @@ def get_external_subnet(ip_version=4):
             return subnet
 
     LOG.warning('External subnet with IP version %d not found', ip_version)
+
+
+def has_dual_stack_external_network() -> bool:
+    """Return True if the external network has IPv4 and IPv6 subnets."""
+    v4_subnet = get_external_subnet(4)
+    if v4_subnet is None:
+        return False
+    v6_subnet = get_external_subnet(6)
+    if v6_subnet is None:
+        return False
+    return v4_subnet['network_id'] == v6_subnet['network_id']
+
+
+skip_unless_has_dual_stack_external = tobiko.skip_unless(
+    'Dual-stack external network (IPv4 and IPv6 on the same network) '
+    'not available',
+    has_dual_stack_external_network)
+
+
+def ipv6_vip_from_load_balancer(
+        lb: typing.Any) -> typing.Optional[str]:
+    """Return the IPv6 address from an LB's ``additional_vips`` (if any)."""
+    return _client.find_ipv6_vip_on_load_balancer(lb)
+
+
+def _create_dual_stack_ovn_load_balancer(lb_name: str,
+                                         provider: str) -> typing.Any:
+    v4_subnet = get_external_subnet(4)
+    v6_subnet = get_external_subnet(6)
+    lb_kwargs = {
+        'provider': provider,
+        'vip_network_id': v4_subnet['network_id'],
+        'vip_subnet_id': v4_subnet['id'],
+        'additional_vips': [{'subnet_id': v6_subnet['id']}],
+        'name': lb_name,
+    }
+    lb = octavia.create_load_balancer(lb_kwargs)
+    octavia.wait_for_status(object_id=lb.id)
+    LOG.debug('Loadbalancer %s was deployed successfully with id %s',
+              lb.name, lb.id)
+    return lb
+
+
+def ensure_dual_stack_ovn_load_balancer(lb_name: str,
+                                        provider: str) -> typing.Any:
+    lb = octavia.find_load_balancer(lb_name)
+    if lb is None:
+        return _create_dual_stack_ovn_load_balancer(lb_name, provider)
+    lb = octavia.get_load_balancer(lb.id)
+    if _client.find_ipv6_vip_on_load_balancer(lb) is not None:
+        LOG.debug('Loadbalancer %s already exists with IPv6 additional VIP. '
+                  'Skipping its creation', lb.id)
+        return lb
+    lb_id = lb.id
+    LOG.debug(
+        'Existing load balancer %s (%s) has no IPv6 additional VIP yet; '
+        'waiting for allocation', lb_name, lb_id)
+    lb = _waiters.wait_for_ipv6_additional_vip(lb_id)
+    if lb is not None:
+        return lb
+    lb = octavia.get_load_balancer(lb_id)
+    tobiko.fail(
+        'Existing load balancer %s (%s) has no IPv6 additional VIP after '
+        'waiting; additional_vips=%r provisioning_status=%s'
+        % (lb_name, lb_id, getattr(lb, 'additional_vips', None),
+           getattr(lb, 'provisioning_status', None)))
 
 
 def deploy_ipv4_lb(provider: str,
@@ -251,3 +321,113 @@ def deploy_ipv4_ovn_lb(protocol: str = _constants.PROTOCOL_TCP,
                           protocol_port=protocol_port,
                           lb_algorithm=lb_algorithm,
                           servers_stacks=servers_stacks)
+
+
+@tobiko.interworker_synched('deploy_dual_stack_ovn_lb')
+def deploy_dual_stack_ovn_lb(
+        protocol: str = _constants.PROTOCOL_TCP,
+        protocol_port: int = 80,
+        lb_algorithm: str = _constants.LB_ALGORITHM_SOURCE_IP_PORT,
+        servers_stacks=None):
+    """Deploy OVN LB with IPv4 primary VIP and IPv6 additional VIP.
+
+    Adds both IPv4 and IPv6 members for each server stack so that the IPv4
+    VIP routes to IPv4 members and the IPv6 VIP routes to IPv6 members.
+    OVN requires VIP and member addresses to be the same address family.
+    Requires a dual-stack external network (see
+    :func:`has_dual_stack_external_network`).
+
+    Reuses an existing load balancer when it already has an IPv6 additional
+    VIP, or waits for IPv6 VIP allocation on an existing LB. The dual-stack
+    traffic test also waits after deploy.
+
+    :returns: ``(load_balancer, listener, pool)`` with refreshed LB including
+        allocated ``additional_vips``.
+    """
+    lb_name = _constants.LB_OVN_DUAL_NAME
+    listener_name = _constants.LISTENER_OVN_DUAL_NAME
+    pool_name = _constants.POOL_OVN_DUAL_NAME
+    member_prefix = _constants.MEMBER_OVN_DUAL_NAME_PREFIX
+    member_v6_prefix = _constants.MEMBER_OVN_DUAL_V6_NAME_PREFIX
+    provider = octavia.OVN_PROVIDER
+
+    lb = ensure_dual_stack_ovn_load_balancer(lb_name, provider)
+
+    listener = octavia.find_listener(listener_name)
+    if listener:
+        LOG.debug('Listener %s already exists. Skipping its creation',
+                  listener.id)
+    else:
+        listener_kwargs = {
+            'protocol': protocol,
+            'protocol_port': protocol_port,
+            'loadbalancer_id': lb.id,
+            'name': listener_name,
+        }
+        listener = octavia.create_listener(listener_kwargs)
+        octavia.wait_for_status(object_id=lb.id)
+        LOG.debug('Listener %s was deployed successfully with id %s',
+                  listener.name, listener.id)
+
+    pool = octavia.find_pool(pool_name)
+    if pool:
+        LOG.debug('Pool %s already exists. Skipping its creation', pool.id)
+    else:
+        pool_kwargs = {
+            'listener_id': listener.id,
+            'lb_algorithm': lb_algorithm,
+            'protocol': protocol,
+            'name': pool_name,
+        }
+        pool = octavia.create_pool(pool_kwargs)
+        octavia.wait_for_status(object_id=lb.id)
+        LOG.debug('Pool %s was deployed successfully with id %s',
+                  pool.name, pool.id)
+
+    if servers_stacks:
+        for idx, server_stack in enumerate(servers_stacks):
+            member_name = member_prefix + str(idx)
+            member = octavia.find_member(member_name=member_name,
+                                         pool=pool.id)
+            if member:
+                LOG.debug('Member %s already exists. Skipping its creation',
+                          member.id)
+            else:
+                member_kwargs = {
+                    'address': str(server_stack.fixed_ipv4),
+                    'protocol_port': protocol_port,
+                    'name': member_name,
+                    'subnet_id': server_stack.network_stack.ipv4_subnet_id,
+                    'pool': pool.id,
+                }
+                member = octavia.create_member(member_kwargs)
+                octavia.wait_for_status(object_id=lb.id)
+                LOG.debug('Member %s was deployed successfully with id %s',
+                          member.name, member.id)
+
+            member_v6_name = member_v6_prefix + str(idx)
+            member_v6 = octavia.find_member(member_name=member_v6_name,
+                                            pool=pool.id)
+            if member_v6:
+                LOG.debug('IPv6 member %s already exists. Skipping its '
+                          'creation', member_v6.id)
+            else:
+                member_v6_kwargs = {
+                    'address': str(server_stack.fixed_ipv6),
+                    'protocol_port': protocol_port,
+                    'name': member_v6_name,
+                    'subnet_id': server_stack.network_stack.ipv6_subnet_id,
+                    'pool': pool.id,
+                }
+                member_v6 = octavia.create_member(member_v6_kwargs)
+                octavia.wait_for_status(object_id=lb.id)
+                LOG.debug('IPv6 member %s was deployed successfully with '
+                          'id %s', member_v6.name, member_v6.id)
+
+    refreshed = _waiters.wait_for_ipv6_additional_vip(lb.id)
+    if refreshed is None:
+        tobiko.fail(
+            'Octavia OVN did not allocate an IPv6 additional VIP on load '
+            'balancer %s (id=%s)' % (lb_name, lb.id))
+    lb = refreshed
+    return lb, listener, pool

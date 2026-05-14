@@ -62,6 +62,13 @@ POOL_OVN_NAME = 'tobiko_octavia_tcp_pool'
 MEMBER_OVN_NAME_PREFIX = 'tobiko_octavia_tcp_member'
 HM_OVN_NAME = 'tobiko_octavia_ovn_hm'
 
+# Octavia ovn provider dual-stack (IPv4 primary VIP + IPv6 additional VIP)
+LB_OVN_DUAL_NAME = 'tobiko_octavia_ovn_dual_lb'
+LISTENER_OVN_DUAL_NAME = 'tobiko_octavia_tcp_dual_listener'
+POOL_OVN_DUAL_NAME = 'tobiko_octavia_tcp_dual_pool'
+MEMBER_OVN_DUAL_NAME_PREFIX = 'tobiko_octavia_tcp_dual_member'
+MEMBER_OVN_DUAL_V6_NAME_PREFIX = 'tobiko_octavia_tcp_dual_member_v6_'
+
 # Providers/lb-names dictionary
 OCTAVIA_PROVIDERS_NAMES = {
     'lb': {
