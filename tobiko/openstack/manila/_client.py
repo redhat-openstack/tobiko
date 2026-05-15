@@ -30,8 +30,7 @@ CONF = config.CONF
 # Minimum API version required for:
 # - access_list (2.45+)
 # - share_export_locations.list (2.47+)
-# - LP 1967312 requires 2.69+
-MANILA_API_VERSION = manila_api_versions.APIVersion('2.69')
+MANILA_API_VERSION = manila_api_versions.APIVersion('2.63')
 
 
 def to_dict(obj):
@@ -107,6 +106,7 @@ def create_share(share_protocol=None, size=None, client=None, **kwargs):
 
 
 def list_shares(client=None, **kwargs):
+    kwargs.setdefault('search_opts', {})
     return to_dict(manila_client(client).shares.list(**kwargs))
 
 
