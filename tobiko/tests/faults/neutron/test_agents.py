@@ -845,17 +845,20 @@ class OvnControllerTest(BaseAgentTest):
 class MetadataAgentTest(BaseAgentTest):
 
     #: Resources stack with Nova server to send messages to
-    stack = tobiko.required_fixture(stacks.CirrosServerStackFixture)
+    #: Advanced image is required for IPv6 metadata tests on OVS (LP#2148649)
+    stack = tobiko.required_fixture(stacks.AdvancedServerStackFixture)
 
     _agent_name: typing.Union[str, typing.List[str]] = neutron.METADATA_AGENT
 
     def wait_for_metadata_status(self, count=None, timeout=60., interval=2.,
-                                 is_reachable: typing.Optional[bool] = None):
+                                 is_reachable: typing.Optional[bool] = None,
+                                 curl_cmd: str = None):
         for attempt in tobiko.retry(timeout=timeout, interval=interval,
                                     count=count):
             if is_reachable is not None:
                 try:
-                    self.assert_metadata_is_reachable(is_reachable)
+                    self.assert_metadata_is_reachable(
+                        is_reachable, curl_cmd=curl_cmd)
                 except self.failureException:
                     # re-raises failureException when reaching retry limits
                     attempt.check_limits()
@@ -863,7 +866,8 @@ class MetadataAgentTest(BaseAgentTest):
                     break
 
     def assert_metadata_is_reachable(self, is_reachable: bool,
-                                     metadata_url: str = None):
+                                     metadata_url: str = None,
+                                     curl_cmd: str = None):
         """Test if metadata agent is acting as proxy to nova metadata
 
         Expected response code from metadata agent is "HTTP/1.1 200 OK"
@@ -874,11 +878,14 @@ class MetadataAgentTest(BaseAgentTest):
         if is_reachable not in [True, False]:
             raise TypeError("'is_reachable' parameter is not a bool: "
                             f"{is_reachable!r}")
-        metadata_url = (metadata_url or
-                        'http://%s/latest/meta-data/' % neutron.METADATA_IPv4)
+        if curl_cmd is None:
+            metadata_url = (metadata_url or
+                            'http://%s/latest/meta-data/'
+                            % neutron.METADATA_IPv4)
+            curl_cmd = f"curl '{metadata_url}' -I"
 
         try:
-            result = sh.execute(f"curl '{metadata_url}' -I",
+            result = sh.execute(curl_cmd,
                                 ssh_client=self.stack.ssh_client)
         except sh.ShellCommandFailed as ex:
             # Cant reach the server
@@ -905,6 +912,38 @@ class MetadataAgentTest(BaseAgentTest):
                     "Metadata server reached from Nova server:\n"
                     f"{curl_output}")
 
+    def _get_vm_default_interface(self):
+        """Get the default network interface name inside the VM."""
+        result = sh.execute(
+            "ip route show default",
+            ssh_client=self.stack.ssh_client)
+        words = result.stdout.strip().split()
+        for i, word in enumerate(words):
+            if word == 'dev' and i + 1 < len(words):
+                return words[i + 1]
+        self.fail("Could not determine default network interface "
+                  "inside the VM")
+
+    def _get_metadata_ipv6_curl_cmd(self, interface=None):
+        """Build curl command for IPv6 metadata."""
+        interface = interface or self._get_vm_default_interface()
+        return ('curl -g -6 --interface %s '
+                'http://[%s]:80/latest/meta-data/ -I'
+                % (interface, neutron.METADATA_IPv6))
+
+    def _skip_if_no_ipv6_address(self):
+        """Skip if the VM has no global IPv6 address.
+
+        Returns the IPv6 curl command for reuse by the caller.
+        """
+        interface = self._get_vm_default_interface()
+        result = sh.execute(
+            f"ip -6 addr show dev {interface} scope global",
+            ssh_client=self.stack.ssh_client)
+        if 'inet6' not in result.stdout:
+            self.skipTest("VM has no global IPv6 address")
+        return self._get_metadata_ipv6_curl_cmd(interface)
+
     def test_metadata_service_restart(self):
         # Ensure service is up
         self.start_agent()
@@ -918,6 +957,25 @@ class MetadataAgentTest(BaseAgentTest):
         self.start_agent()
         self.wait_for_metadata_status(is_reachable=True)
 
+    def test_metadata_service_restart_ipv6(self):
+        """Test metadata service restart using IPv6."""
+        self.start_agent()
+        ipv6_curl = self._skip_if_no_ipv6_address()
+
+        # Ensure service is up
+        self.wait_for_metadata_status(is_reachable=True,
+                                      curl_cmd=ipv6_curl)
+
+        # Ensure the service gets down
+        self.stop_agent()
+        self.wait_for_metadata_status(is_reachable=False,
+                                      curl_cmd=ipv6_curl)
+
+        # Ensure service gets up again
+        self.start_agent()
+        self.wait_for_metadata_status(is_reachable=True,
+                                      curl_cmd=ipv6_curl)
+
     def test_vm_reachability_when_metadata_agent_is_down(self):
         self.stop_agent()
         self.wait_for_metadata_status(is_reachable=False)
@@ -929,8 +987,17 @@ class MetadataAgentTest(BaseAgentTest):
         self.restart_agent_container()
         self.wait_for_metadata_status(is_reachable=True)
 
+    def test_restart_metadata_containers_ipv6(self):
+        """Test metadata containers restart using IPv6."""
+        ipv6_curl = self._skip_if_no_ipv6_address()
+        self.restart_agent_container()
+        self.wait_for_metadata_status(is_reachable=True,
+                                      curl_cmd=ipv6_curl)
+
 
 class OvnMetadataAgentTest(MetadataAgentTest):
+
+    stack = tobiko.required_fixture(stacks.CirrosServerStackFixture)
 
     _agent_name = [
         neutron.NEUTRON_OVN_METADATA_AGENT,

@@ -28,6 +28,7 @@ from tobiko.openstack.neutron import _subnet_pool
 
 SERVER = 'neutron-server'
 METADATA_IPv4 = '169.254.169.254'
+METADATA_IPv6 = 'fe80::a9fe:a9fe'
 DHCP_AGENT = _agent.DHCP_AGENT
 L3_AGENT = _agent.L3_AGENT
 METADATA_AGENT = _agent.METADATA_AGENT
