@@ -75,3 +75,8 @@ class DisruptPodifiedNodesTest(testtools.TestCase):
         PodifiedCloudHealthCheck.run_before()
         cloud_disruptions.rabbitmq_rotation()
         PodifiedCloudHealthCheck.run_after()
+
+    def test_rabbitmq_kill_random_pod(self):
+        PodifiedCloudHealthCheck.run_before()
+        cloud_disruptions.kill_random_rabbitmq_pod_and_recover()
+        PodifiedCloudHealthCheck.run_after()
