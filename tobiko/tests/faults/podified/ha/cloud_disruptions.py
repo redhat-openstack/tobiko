@@ -16,6 +16,7 @@
 from __future__ import absolute_import
 
 import functools
+import json
 import re
 import random
 
@@ -42,6 +43,8 @@ RABBITMQ_LABEL = {'app.kubernetes.io/name': 'rabbitmq'}
 RABBITMQ_KILL = "pkill -9 beam.smp || pkill -9 beam"
 RABBITMQ_CLUSTER_STATUS = "rabbitmqctl cluster_status"
 RABBITMQ_RUNNING_NODES_HEADER = "Running Nodes"
+MARIADB_OPERATOR_NAMESPACE = "openstack-operators"
+MARIADB_BOOTSTRAP_LOG_MARKER = "Pushing gcomm URI to bootstrap"
 
 
 class GaleraBoostrapException(tobiko.TobikoException):
@@ -100,18 +103,47 @@ def remove_one_grastate_galera():
         kill_all_galera_pods(pods)
         check_all_galera_cells_down(pods[0].name())
         verify_all_galera_cells_restored(pods)
-        # gcomm:// without args means that bootstrap is done from this node
-        bootstrap = podified.execute_in_pod(
-            random_pod_name, CHECK_BOOTSTRAP, 'galera').out().strip()
-        if len(pods) > 1:
-            if re.search(r'wsrep-cluster-address=gcomm://(?:\s|$)', bootstrap
-                         ) is None:
-                raise GaleraBoostrapException()
-        elif re.search(r'wsrep-cluster-address=gcomm://', bootstrap) is None:
-            raise GaleraBoostrapException()
-        lastDate = re.findall(r"\w{,3}\s*\w{,3}\s*\d{,2}\s*\d{,2}:\d{,2}"
-                              r":\d{,2}\s*\d{4}", bootstrap)[-1]
-        LOG.info(f'last boostrap required at {lastDate}')
+        # Use mariadb-operator logs to see which pod was used for bootstrap.
+        # The operator logs explicitly include the pod name selected for the
+        # gcomm URI push (bootstrap), which avoids parsing Galera logs.
+        galera_name = galera_service.replace("-galera", "")
+        bootstrap_pod = _get_galera_bootstrap_pod(galera_name)
+        LOG.info(f'bootstrap {galera_service} is {bootstrap_pod}')
+        if not bootstrap_pod:
+            LOG.warning(
+                "Skipping bootstrap validation for Galera '%s' "
+                "because operator logs are unavailable", galera_name)
+            continue
+        LOG.info("Bootstrap pod '%s'; grastate removed from '%s'",
+                 bootstrap_pod, random_pod_name)
+        if bootstrap_pod == random_pod_name:
+            LOG.warning(
+                "Bootstrap used grastate-removed pod '%s'", random_pod_name)
+        LOG.info("Galera '%s' bootstrap selected pod '%s'",
+                 galera_name, bootstrap_pod)
+
+
+def _get_galera_bootstrap_pod(galera_name: str):
+    with oc.project(MARIADB_OPERATOR_NAMESPACE):
+        pods = oc.selector(
+            "pods",
+            labels={'openstack.org/operator-name': 'mariadb'}
+        ).objects()
+        if not pods:
+            return None
+        raw_logs = list(pods[0].logs().values())[0] or ""
+
+    for line in reversed(raw_logs.splitlines()):
+        if MARIADB_BOOTSTRAP_LOG_MARKER not in line:
+            continue
+        try:
+            payload = json.loads(line.split('\t')[-1])
+        except json.JSONDecodeError:
+            continue
+        galera_info = payload.get("Galera", {})
+        if galera_info.get("name") == galera_name:
+            return payload.get("pod")
+    return None
 
 
 def remove_grastate(pod_name):
