@@ -178,6 +178,30 @@ def wait_for_controlplane_ready(cp_name: str, timeout: int = 600):
                 success_func=is_controlplane_ready)
 
 
+def get_controlplane_name() -> str:
+    with project_context():
+        return oc.selector(OSP_CONTROLPLANE).qname().split("/")[-1]
+
+
+class OcpControlPlaneNotReady(tobiko.TobikoException):
+    message = "OpenStackControlPlane {name!r} is not Ready"
+
+
+def assert_controlplane_ready():
+    """Assert the OpenStackControlPlane CR reports Ready.
+
+    Uses the same is_controlplane_ready() check used while waiting for
+    control plane recovery after a disruption. Raises
+    OcpControlPlaneNotReady if the CR's Ready condition is not True.
+    """
+    cp_name = get_controlplane_name()
+    with project_context():
+        cp_obj = oc.selector(f"{OSP_CONTROLPLANE}/{cp_name}").objects()[0]
+    if not is_controlplane_ready(cp_obj):
+        raise OcpControlPlaneNotReady(name=cp_name)
+    LOG.debug(f"OpenStackControlPlane {cp_name!r} is Ready.")
+
+
 def get_dataplane_ssh_keypair():
     private_key = ""
     public_key = ""
@@ -784,16 +808,152 @@ def check_or_start_tobiko_http_ping_command(
         cmd_args, pod_name, _check_http_ping_results_from_pod)
 
 
-def get_ocp_node_uptime(node_name: str):
-    # timeout is needed to avoid that the `oc debug` command gets stuck forever
-    output = sh.execute(f"timeout 10 oc debug node/{node_name} -- "
-                        "chroot /host cat /proc/uptime").stdout
-    uptime_line = output.splitlines()[0]
-    uptime_string = uptime_line.split()[0]
-    return float(uptime_string)
+def get_ocp_node_boot_id(node_name: str) -> str:
+    """Return the node's current bootID from the Kubernetes API.
+
+    This does not require scheduling a pod on the node.
+    """
+    # oc.selector("nodes") does not need to run on a specific OCP project
+    node = oc.selector(f'{OCP_NODES}/{node_name}').objects()[0]
+    return node.as_dict()['status']['nodeInfo']['bootID']
 
 
-def reboot_ocp_node(node_name: str):
-    LOG.debug(f"Rebooting OCP node {node_name}...")
-    sh.execute(f"oc debug node/{node_name} -- chroot /host reboot")
-    LOG.debug(f"Reboot command sent to OCP node {node_name}.")
+def wait_for_ocp_node_rebooted(node_name: str, previous_boot_id: str,
+                               timeout: float = 600):
+    """Wait until the node's bootID changes, indicating a completed reboot.
+
+    Checks the Kubernetes API directly — no pod scheduling required.
+    """
+    LOG.debug(f"Waiting for OCP node {node_name} to reboot "
+              f"(previous bootID: {previous_boot_id})...")
+    for _ in tobiko.retry(timeout=timeout, interval=10):
+        try:
+            boot_id = get_ocp_node_boot_id(node_name)
+        except Exception:
+            LOG.debug(f"Unable to get bootID from node {node_name}, "
+                      f"waiting...")
+            continue
+        if boot_id and boot_id != previous_boot_id:
+            LOG.debug(f"OCP node {node_name} has rebooted "
+                      f"(new bootID: {boot_id}).")
+            return
+        LOG.debug(f"Waiting for OCP node {node_name} reboot...")
+
+
+def _is_pod_healthy(pod: typing.Any) -> bool:
+    """Return True if the pod is in a healthy, terminal-ready state.
+
+    A pod is considered healthy when:
+    - Its phase is 'Succeeded' (completed job pods), or
+    - Its phase is 'Running' and the 'Ready' condition is True (all
+      containers have passed their readiness probes).
+
+    Checking only the phase is not enough: a pod enters 'Running' as soon
+    as its containers start, but readiness probes may still be failing.
+    """
+    status = pod.as_dict().get('status', {})
+    phase = status.get('phase')
+    if phase == 'Succeeded':
+        return True
+    if phase != 'Running':
+        return False
+    for cond in status.get('conditions', []):
+        if cond.get('type') == 'Ready':
+            return cond.get('status') == 'True'
+    return False
+
+
+def wait_for_ocp_node_pods_running(node_name: str, timeout: float = 1200):
+    """Wait until all OSP pods scheduled on the node are healthy and ready.
+
+    A pod is considered ready when it is in Succeeded phase (completed jobs)
+    or in Running phase with all containers passing their readiness probes.
+    Polls the Kubernetes API — no pod scheduling on the node is required.
+    """
+    LOG.debug(f"Waiting for pods on OCP node {node_name} to be ready...")
+    for _ in tobiko.retry(timeout=timeout, interval=15):
+        pods = get_pods()
+        node_pods = [
+            p for p in pods
+            if p.as_dict()['spec'].get('nodeName') == node_name
+        ]
+        if not node_pods:
+            LOG.debug(f"No pods found yet on OCP node {node_name}, "
+                      f"waiting...")
+            continue
+        not_ready = [p.name() for p in node_pods if not _is_pod_healthy(p)]
+        if not not_ready:
+            LOG.debug(f"All pods on OCP node {node_name} are ready.")
+            return
+        LOG.debug(f"Waiting for pods on OCP node {node_name}: "
+                  f"{not_ready}")
+
+
+class OcpPodsNotRunning(tobiko.TobikoException):
+    message = ("The following pods in project {project!r} are not "
+               "running:\n{pods}")
+
+
+def _get_unhealthy_pods() -> typing.List[str]:
+    """Return a list of pod descriptions for pods that are not healthy.
+
+    Shared by assert_ocp_pods_running() and wait_for_all_ocp_pods_running().
+    Each entry is '<name> (<phase>)' for easy logging and error reporting.
+    """
+    return [
+        f"{p.name()} ({p.as_dict()['status'].get('phase', 'Unknown')})"
+        for p in get_pods()
+        if not _is_pod_healthy(p)
+    ]
+
+
+def assert_ocp_pods_running():
+    """Assert all pods in the OSP namespace are healthy and ready.
+
+    A pod is considered healthy when it is in Succeeded phase (completed
+    jobs) or in Running phase with all containers passing their readiness
+    probes. Raises OcpPodsNotRunning if any pod fails this check.
+
+    Used both in podified_health_checks() (before/after disruption tests)
+    and as a standalone sanity test assertion.
+    """
+    project = CONF.tobiko.podified.osp_project
+    unhealthy = _get_unhealthy_pods()
+    if unhealthy:
+        raise OcpPodsNotRunning(project=project,
+                                pods='\n'.join(f'  - {p}' for p in unhealthy))
+    LOG.debug(f"All pods in project {project!r} are ready.")
+
+
+def wait_for_all_ocp_pods_running(timeout: float = 600):
+    """Wait until all OSP pods in the namespace are healthy and ready.
+
+    Retries the same check as assert_ocp_pods_running() until all pods
+    pass _is_pod_healthy(). Called after a node reboot to ensure the whole
+    cluster (not just the rebooted node's pods) has fully recovered before
+    returning control to the test.
+    """
+    project = CONF.tobiko.podified.osp_project
+    LOG.debug(f"Waiting for all pods in project {project!r} to be ready...")
+    for _ in tobiko.retry(timeout=timeout, interval=15):
+        unhealthy = _get_unhealthy_pods()
+        if not unhealthy:
+            LOG.debug(f"All pods in project {project!r} are ready.")
+            return
+        LOG.debug(f"Waiting for pods in {project!r}: {unhealthy}")
+
+
+def disrupt_ocp_node(node_name: str, disrupt_method: sh.RebootHostMethod):
+    assert isinstance(disrupt_method, sh.RebootHostMethod)
+    command = disrupt_method.command
+    LOG.debug(f"Executing {command} on OCP node {node_name}...")
+    # Use systemd-run to schedule the reboot as a transient host unit.
+    # Unlike nohup inside a container, systemd-run creates a unit that
+    # lives in the host's systemd and survives the debug pod exiting.
+    # The debug pod exits cleanly, then systemd fires the reboot command.
+    delay = CONF.tobiko.podified.ocp_node_disrupt_delay
+    sh.execute(['oc', 'debug', f'node/{node_name}', '--',
+                'chroot', '/host',
+                'systemd-run', f'--on-active={delay}s',
+                '/bin/sh', '-c', command])
+    LOG.debug(f"Command {command} sent to OCP node {node_name}.")

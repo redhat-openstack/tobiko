@@ -327,24 +327,32 @@ class EdpmNode(rhosp.RhospNode):
 
 
 class OcpNode(rhosp.RhospNode):
-    def reboot_node(self, reactivate_servers=True):
-        start_time = tobiko.time()
-        _openshift.reboot_ocp_node(self.name)
-        for _ in tobiko.retry(timeout=600, interval=10):
-            try:
-                uptime = _openshift.get_ocp_node_uptime(self.name)
-            except Exception:
-                LOG.warning(f"Unable to get uptime from node {self.name}")
-            else:
-                elapsed_time = tobiko.time() - start_time
-                if uptime < elapsed_time:
-                    LOG.debug(f"OCP node {self.name} rebooted in "
-                              f"{elapsed_time} seconds.")
-                    break
-                else:
-                    LOG.debug(f"OCP node {self.name} still not rebooted "
-                              f"{elapsed_time} seconds after reboot operation "
-                              f"(uptime={uptime})")
+    # TODO(reviewers): consider promoting get_boot_id(), wait_for_rebooted(),
+    # and wait_for_pods_running() to proper OcpNode methods (thin wrappers
+    # around the _openshift module-level functions) so that disrupt_node()
+    # reads as self.get_boot_id() / self.wait_for_rebooted() / etc., and
+    # subclasses can override individual steps if needed.
+    def disrupt_node(self, disrupt_method=sh.hard_reset_method):
+        """Disrupt the OCP node and wait for full recovery.
+
+        Captures the bootID before disruption, triggers the reboot via
+        systemd-run (so the debug pod exits cleanly before the reboot fires),
+        then waits for:
+        1. The bootID to change (node has rebooted).
+        2. All pods on the rebooted node to be Ready — mainly DaemonSet and
+           StatefulSet pods that are pinned to this node.
+        3. All pods in the OSP namespace to be Ready — catches both pods that
+           stayed on this node and Deployment-managed pods that Kubernetes
+           evicted and rescheduled to other nodes during the outage.
+        4. The openstackcontrolplane CR to report Ready again.
+        """
+        previous_boot_id = _openshift.get_ocp_node_boot_id(self.name)
+        _openshift.disrupt_ocp_node(self.name, disrupt_method)
+        _openshift.wait_for_ocp_node_rebooted(self.name, previous_boot_id)
+        _openshift.wait_for_ocp_node_pods_running(self.name)
+        _openshift.wait_for_all_ocp_pods_running()
+        cp_name = _openshift.get_controlplane_name()
+        _openshift.wait_for_controlplane_ready(cp_name)
 
 
 def setup_podified_topology():

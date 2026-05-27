@@ -87,7 +87,15 @@ OPTIONS = [
     cfg.ListOpt('compute_dp_service_names',
                 default=['nova', 'nova-custom', 'nova-custom-ceph'],
                 help='List of compute dataplane service names used to '
-                     'identify compute nodes in the dataplane nodesets.')
+                     'identify compute nodes in the dataplane nodesets.'),
+    cfg.IntOpt('ocp_node_disrupt_delay',
+               default=5,
+               help='Delay in seconds, scheduled via `systemd-run '
+                    '--on-active`, between the OCP node disruption command '
+                    '(reboot/crash) being handed off to the host systemd '
+                    'and it actually being executed. This gives the `oc '
+                    'debug` pod used to schedule the command enough time '
+                    'to exit cleanly before the node goes down.')
 ]
 
 
