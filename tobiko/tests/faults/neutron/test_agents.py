@@ -842,6 +842,43 @@ class OvnControllerTest(BaseAgentTest):
         ping.ping_until_received(self.stack.ip_address).assert_replied()
 
 
+class NeutronOvnAgentTest(BaseAgentTest):
+
+    _agent_name = neutron.NEUTRON_OVN_AGENT
+
+    #: Resources stack with Nova server to send messages to
+    stack = tobiko.required_fixture(stacks.CirrosServerStackFixture)
+
+    def setUp(self):
+        super(NeutronOvnAgentTest, self).setUp()
+        self.get_ovn_agents_from_containers()
+        ping.ping_until_received(self.stack.ip_address).assert_replied()
+
+    def test_vm_reachability_during_stop_ovn_agent(self):
+        '''Test that VM is reachable during OVN agent stop
+
+        Dataplane traffic should not be affected when the OVN agent is
+        stopped for VMs that were created before the agent was stopped.
+        '''
+        self.stop_agent()
+        ping.ping_until_received(self.stack.ip_address).assert_replied()
+
+        self.start_agent()
+        ping.ping_until_received(self.stack.ip_address).assert_replied()
+
+    def test_restart_ovn_agent(self):
+        '''Test that OVN agent can be restarted successfully
+        '''
+        self.restart_agent()
+        ping.ping_until_received(self.stack.ip_address).assert_replied()
+
+    def test_restart_ovn_agent_containers(self):
+        '''Test that OVN agent containers can be restarted successfully
+        '''
+        self.restart_agent_container()
+        ping.ping_until_received(self.stack.ip_address).assert_replied()
+
+
 class MetadataAgentTest(BaseAgentTest):
 
     #: Resources stack with Nova server to send messages to
@@ -1015,6 +1052,66 @@ class OvnMetadataAgentTest(MetadataAgentTest):
             # Let's check if that is maybe older version with networking-ovn
             cls.agents: AgentListType = neutron.list_networking_agents(
                 binary=neutron.OVN_METADATA_AGENT)
+
+
+class FrrServiceTest(BaseAgentTest):
+    '''Test FRR (Free Range Routing) service fault scenarios.
+
+    FRR is not a neutron agent but a 3rd-party routing service used by
+    the OVN BGP agent on EDPM nodes.
+
+    Because FRR is not listed in the neutron agent API, the parent
+    setUpClass is overridden to discover FRR hosts from the topology
+    via systemd inspection instead.
+
+    NOTE: attributes like ``_agent_name``, ``agent_name`` and ``agents``
+    refer to the FRR service rather than a neutron agent here, but they
+    cannot be renamed because the inherited BaseAgentTest methods
+    (setUp, stop_agent, start_agent, _do_agent_action, etc.) rely on
+    those exact attribute names.
+    '''
+
+    _agent_name = neutron.FRR
+
+    #: Resources stack with Nova server to send messages to
+    stack = tobiko.required_fixture(stacks.CirrosServerStackFixture)
+
+    @classmethod
+    def setUpClass(cls):
+        cls.agent_name = cls._agent_name
+        cls.service_name = topology.get_agent_service_name(cls.agent_name)
+        cls.container_name = ''
+        cls.agents = cls._discover_frr_hosts()
+
+    @classmethod
+    def _discover_frr_hosts(cls) -> AgentListType:
+        agents: AgentListType = []
+        groups = ['compute']
+        if 'networker' in topology.list_openstack_node_groups():
+            groups.append('networker')
+        for group in groups:
+            nodes = topology.list_openstack_nodes(group=group)
+            for node in nodes:
+                if topology.check_systemd_monitors_agent(
+                        node.hostname, neutron.FRR):
+                    agents.append({'host': node.hostname})
+        return agents
+
+    def setUp(self):
+        super(FrrServiceTest, self).setUp()
+        ping.ping_until_received(self.stack.ip_address).assert_replied()
+
+    def test_restart_frr(self):
+        '''Test that FRR service can be restarted successfully
+        '''
+        self.restart_agent()
+        ping.ping_until_received(self.stack.ip_address).assert_replied()
+
+    def test_restart_frr_containers(self):
+        '''Test that FRR containers can be restarted successfully
+        '''
+        self.restart_agent_container()
+        ping.ping_until_received(self.stack.ip_address).assert_replied()
 
 
 def parse_http_status(curl_output: str) -> int:
