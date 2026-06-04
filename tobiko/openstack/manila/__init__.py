@@ -47,6 +47,7 @@ create_share_from_snapshot = _client.create_share_from_snapshot
 # Waiters
 wait_for_access_rule_status = _waiters.wait_for_access_rule_status
 wait_for_share_status = _waiters.wait_for_share_status
+wait_for_share_size = _waiters.wait_for_share_size
 wait_for_resource_deletion = _waiters.wait_for_resource_deletion
 wait_for_snapshot_status = _waiters.wait_for_snapshot_status
 wait_for_snapshot_deletion = _waiters.wait_for_snapshot_deletion
@@ -56,6 +57,7 @@ ShareNotFound = _exceptions.ShareNotFound
 ShareReleaseFailed = _exceptions.ShareReleaseFailed
 SnapshotNotFound = _exceptions.SnapshotNotFound
 SnapshotReleaseFailed = _exceptions.SnapshotReleaseFailed
+ShareStatusError = _exceptions.ShareStatusError
 
 # Skip decorators
 skip_if_missing_manila_service = _skip.skip_if_missing_manila_service

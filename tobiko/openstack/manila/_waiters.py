@@ -70,6 +70,20 @@ def wait_for_share_status(share_id):
     wait_for_status(object_id=share_id)
 
 
+def wait_for_share_size(share_id, expected_size):
+    for attempt in tobiko.retry(timeout=300., interval=3.):
+        share = _client.get_share(share_id)
+        if share[_constants.RESOURCE_STATUS] == _constants.STATUS_ERROR:
+            raise _exceptions.ShareStatusError(id=share_id)
+        if (share['size'] == expected_size and
+                share[_constants.RESOURCE_STATUS] ==
+                _constants.STATUS_AVAILABLE):
+            return share
+        attempt.check_limits()
+        LOG.debug(f"Waiting for share {share_id} size to change "
+                  f"from {share['size']} to {expected_size}...")
+
+
 def _is_share_deleted(share_id):
     try:
         res = _client.get_share(share_id)

@@ -52,7 +52,7 @@ class ManilaApiTestCase(testtools.TestCase):
     @config.skip_unless_prevent_create()
     def test_2_extend_share(self):
         share_id = self.share['id']
-        manila.extend_share(share_id, new_size=CONF.tobiko.manila.size + 1)
-        manila.wait_for_share_status(share_id)
-        share_size = manila.get_share(share_id)['size']
-        self.assertEqual(CONF.tobiko.manila.size + 1, share_size)
+        new_size = CONF.tobiko.manila.size + 1
+        manila.extend_share(share_id, new_size=new_size)
+        share = manila.wait_for_share_size(share_id, new_size)
+        self.assertEqual(new_size, share['size'])

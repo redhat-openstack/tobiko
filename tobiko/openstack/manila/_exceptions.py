@@ -30,3 +30,7 @@ class SnapshotNotFound(tobiko.ObjectNotFound):
 
 class SnapshotReleaseFailed(tobiko.ObjectNotFound):
     message = "Snapshot has 'error_deleting' status and can not be deleted"
+
+
+class ShareStatusError(tobiko.TobikoException):
+    message = "share {id} reached error status"
