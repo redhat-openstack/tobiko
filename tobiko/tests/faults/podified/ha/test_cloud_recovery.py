@@ -19,6 +19,7 @@ import testtools
 
 from tobiko.tests.faults.ha import test_cloud_recovery
 from tobiko.tests.faults.podified.ha import cloud_disruptions
+from tobiko.tests.faults.podified.ha import rotate_galera_root_password
 from tobiko.openstack import tests
 from tobiko import podified
 from tobiko.openstack import nova
@@ -79,4 +80,9 @@ class DisruptPodifiedNodesTest(testtools.TestCase):
     def test_rabbitmq_kill_random_pod(self):
         PodifiedCloudHealthCheck.run_before()
         cloud_disruptions.kill_random_rabbitmq_pod_and_recover()
+        PodifiedCloudHealthCheck.run_after()
+
+    def test_galera_root_password_rotation(self):
+        PodifiedCloudHealthCheck.run_before()
+        rotate_galera_root_password.rotate_galera_root_password()
         PodifiedCloudHealthCheck.run_after()
