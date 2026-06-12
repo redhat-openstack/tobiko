@@ -449,15 +449,6 @@ def reboot_controller_galera_main_vip():
         disrupt_method=sh.soft_reset_method)
 
 
-def reset_controller_main_vip():
-    disrupt_controller_main_vip(disrupt_method=sh.hard_reset_method)
-
-
-def reset_controllers_non_main_vip():
-    disrupt_controller_main_vip(disrupt_method=sh.hard_reset_method,
-                                inverse=True)
-
-
 def crash_controller_main_vip():
     disrupt_controller_main_vip(disrupt_method=sh.crash_method)
 
