@@ -46,6 +46,12 @@ wait_for_controlplane_ready = _openshift.wait_for_controlplane_ready
 list_rabbitmq_user_names = _openshift.list_rabbitmq_user_names
 wait_for_rabbitmq_user_ready = _openshift.wait_for_rabbitmq_user_ready
 wait_for_transporturl_user = _openshift.wait_for_transporturl_user
+wait_for_transporturl_setup_complete = (
+    _openshift.wait_for_transporturl_setup_complete)
+get_rabbitmq_user_labels = _openshift.get_rabbitmq_user_labels
+list_nodeset_names = _openshift.list_nodeset_names
+trigger_edpm_deployment = _openshift.trigger_edpm_deployment
+wait_for_edpm_deployment_ready = _openshift.wait_for_edpm_deployment_ready
 get_ovndbcluter = _openshift.get_ovndbcluter
 execute_in_pod = _openshift.execute_in_pod
 get_openstack_config_secret = _openshift.get_openstack_config_secret

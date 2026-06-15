@@ -16,6 +16,7 @@ from __future__ import absolute_import
 import base64
 import glob
 import json
+import random
 import typing
 
 import netaddr
@@ -34,6 +35,7 @@ LOG = log.getLogger(__name__)
 
 OSP_CONTROLPLANE = 'openstackcontrolplane'
 OSP_DP_NODESET = 'openstackdataplanenodeset'
+OSP_DP_DEPLOYMENT = 'openstackdataplanedeployment'
 OSP_CONFIG_SECRET_NAME = 'secret/openstack-config-secret'
 OSP_BM_HOST = 'baremetalhost.metal3.io'
 OSP_BM_CRD = 'baremetalhosts.metal3.io'
@@ -301,6 +303,78 @@ def wait_for_transporturl_user(service, expected_user,
         if attempt.is_last:
             tobiko.fail(f"Timed out waiting for {service} TransportURL to use "
                         f"user '{expected_user}'")
+
+
+def wait_for_transporturl_setup_complete(service, timeout=300.,
+                                         interval=10.):
+    for attempt in tobiko.retry(timeout=timeout, interval=interval):
+        with project_context():
+            transport_urls = oc.selector("transporturl").objects()
+        for turl in transport_urls:
+            name = turl.as_dict()["metadata"]["name"]
+            if service in name and "notifications" not in name:
+                conditions = turl.as_dict().get(
+                    "status", {}).get("conditions", [])
+                if any(c.get("type") == "Ready" and
+                       c.get("status") == "True" for c in conditions):
+                    LOG.info("TransportURL '%s' setup complete", name)
+                    return name
+                LOG.debug("TransportURL '%s' not ready yet", name)
+        LOG.debug("No ready TransportURL for '%s' yet", service)
+        if attempt.is_last:
+            tobiko.fail(f"Timed out waiting for {service} TransportURL "
+                        "to become ready")
+
+
+def get_rabbitmq_user_labels(user_name):
+    with project_context():
+        qnames = oc.selector("rabbitmquser").qnames()
+    for qname in (qnames or []):
+        name = qname.split("/")[-1]
+        if user_name in name:
+            with project_context():
+                obj = oc.selector(f"rabbitmquser/{name}").object()
+            return obj.as_dict().get("metadata", {}).get("labels", {})
+    return None
+
+
+def list_nodeset_names():
+    with project_context():
+        return [obj.name() for obj in
+                oc.selector(OSP_DP_NODESET).objects()]
+
+
+def trigger_edpm_deployment(nodeset_names):
+    deploy_name = f"rotation-deploy-{random.randrange(1000000)}"
+    deploy_def = {
+        'apiVersion': 'dataplane.openstack.org/v1beta1',
+        'kind': 'OpenStackDataPlaneDeployment',
+        'metadata': {
+            'name': deploy_name,
+            'namespace': CONF.tobiko.podified.osp_project,
+        },
+        'spec': {
+            'nodeSets': list(nodeset_names),
+        },
+    }
+    with project_context():
+        oc.create(deploy_def)
+    return deploy_name
+
+
+def is_deployment_ready(deployment_obj):
+    conditions = deployment_obj.as_dict().get(
+        "status", {}).get("conditions", [])
+    return any(
+        c.get("type") == "Ready" and c.get("status") == "True"
+        for c in conditions)
+
+
+def wait_for_edpm_deployment_ready(deploy_name, timeout=1200):
+    with project_context():
+        sel = oc.selector(f"{OSP_DP_DEPLOYMENT}/{deploy_name}")
+        with oc.timeout(timeout):
+            sel.until_all(success_func=is_deployment_ready)
 
 
 def list_edpm_nodes():
