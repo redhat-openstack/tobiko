@@ -53,7 +53,14 @@ class BaseAgentTest(testtools.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.agent_name: str = cls._get_agent_name()
-        cls.service_name: str = topology.get_agent_service_name(cls.agent_name)
+        try:
+            cls.service_name: str = \
+                topology.get_agent_service_name(cls.agent_name)
+        except topology.UnknowOpenStackServiceNameError:
+            cls.service_name = ''
+            cls.container_name = ''
+            cls.agents = []
+            return
         cls.container_name: str = ''
         cls.agents: AgentListType = \
             neutron.list_networking_agents(binary=cls.agent_name)
