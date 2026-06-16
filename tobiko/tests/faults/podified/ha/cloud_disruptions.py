@@ -329,6 +329,8 @@ def rabbitmq_rotation():
     podified.wait_for_rabbitmq_user_ready(new_user)
     LOG.info("Waiting for cinder TransportURL to use '%s'", new_user)
     podified.wait_for_transporturl_user('cinder', new_user)
+    LOG.info("Waiting for cinder TransportURL to be fully reconciled")
+    podified.wait_for_transporturl_setup_complete('cinder')
     LOG.info("Waiting for controlplane to be ready")
     podified.wait_for_controlplane_ready(cp_name)
     rabbitmq_users = podified.list_rabbitmq_user_names()
@@ -338,20 +340,31 @@ def rabbitmq_rotation():
             f"New RabbitMQ user '{new_user}' not found after replace: "
             f"{rabbitmq_users}")
 
-    # Step 3: Remove safeguard finalizer from old user and wait for cleanup
-    LOG.info("Removing safeguard finalizer for old user '%s'", user)
-    remove_rabbitmq_user_safeguard(user)
-    LOG.info("Waiting for old user '%s' to be deleted", user)
+    # Step 3: Wait for auto-cleanup of old user
+    # The infra-operator determines EDPM status from the TransportURL's
+    # ownerReference Kind: for controlplane-only services (like cinder),
+    # the old user is released immediately without waiting for NodeSet
+    # deployment. NodeSet sync is only required for services that run
+    # agents on EDPM nodes (Nova, Neutron).
+    LOG.info("Waiting for operator to auto-clean old user '%s'", user)
+
     try:
-        for _ in tobiko.retry(timeout=100., interval=10.):
+        for _ in tobiko.retry(timeout=300., interval=15.):
             rabbitmq_users = podified.list_rabbitmq_user_names()
             if not _rabbitmq_user_exists(user, rabbitmq_users):
                 LOG.info("RabbitMQ rotation flow completed successfully")
                 return
+            labels = podified.get_rabbitmq_user_labels(user)
+            if labels and labels.get(
+                    "rabbitmq.openstack.org/orphaned") == "true":
+                LOG.info("Old user '%s' marked as orphaned, waiting "
+                         "for deletion", user)
+            else:
+                LOG.debug("Old user '%s' not yet orphaned", user)
     except tobiko.RetryTimeLimitError as exc:
         raise tobiko.TobikoException(
-            f"RabbitMQ user '{user}' still found in: "
-            f"{rabbitmq_users} after safeguard deletion") from exc
+            f"RabbitMQ user '{user}' was not auto-cleaned after "
+            f"rotation. Still found in: {rabbitmq_users}") from exc
 
 
 def modify_service_messaging_user(cp_name: str, service: str,
@@ -373,29 +386,3 @@ def modify_service_messaging_user(cp_name: str, service: str,
         return new_user_name
     else:
         raise ValueError(f"Unsupported modification: {modification}")
-
-
-def remove_rabbitmq_user_safeguard(user_name: str):
-    with oc.project(CONF.tobiko.podified.osp_project):
-        qnames = oc.selector("rabbitmquser").qnames()
-        full_name = _rabbitmq_user_full_name(user_name, qnames)
-        if not full_name:
-            raise tobiko.TobikoException(
-                f"RabbitMQ user '{user_name}' not found in: {qnames}")
-        rabbitmq_user = oc.selector(
-            f"rabbitmquser/{full_name}"
-        ).object()
-        finalizers = rabbitmq_user.as_dict().get(
-            "metadata", {}).get("finalizers", [])
-        if "rabbitmq.openstack.org/cleanup-blocked" not in finalizers:
-            return
-        new_finalizers = [
-            finalizer for finalizer in finalizers
-            if finalizer != "rabbitmq.openstack.org/cleanup-blocked"
-        ]
-        patch = [{
-            "op": "replace",
-            "path": "/metadata/finalizers",
-            "value": new_finalizers
-        }]
-        rabbitmq_user.patch(patch, "json")
