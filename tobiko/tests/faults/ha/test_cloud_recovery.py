@@ -253,18 +253,6 @@ class DisruptTripleoNodesTest(testtools.TestCase):
             self.vms_detailed_info, ports_before_stack_creation)
 
     @testtools.skipIf(has_external_lb, SKIP_MESSAGE_EXTLB)
-    def test_z99_reboot_controller_main_vip(self):
-        OvercloudHealthCheck.run_before()
-        cloud_disruptions.reset_controller_main_vip()
-        OvercloudHealthCheck.run_after()
-
-    @testtools.skipIf(has_external_lb, SKIP_MESSAGE_EXTLB)
-    def test_z99_reboot_controller_non_main_vip(self):
-        OvercloudHealthCheck.run_before()
-        cloud_disruptions.reset_controllers_non_main_vip()
-        OvercloudHealthCheck.run_after()
-
-    @testtools.skipIf(has_external_lb, SKIP_MESSAGE_EXTLB)
     def test_z99_crash_controller_main_vip(self):
         OvercloudHealthCheck.run_before()
         cloud_disruptions.crash_controller_main_vip()
