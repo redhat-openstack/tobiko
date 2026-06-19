@@ -23,11 +23,13 @@ from tobiko.openstack import keystone
 from tobiko.openstack import topology
 from tobiko.openstack import stacks
 from tobiko.shell import ip
+from tobiko import tripleo
 
 LOG = log.getLogger(__name__)
 
 
 @keystone.skip_if_missing_service(name='designate')
+@tripleo.skip_if_missing_undercloud
 class DesignateBasicScenarioTest(testtools.TestCase):
     """Designate sanity scenario test.
     In this test we'll create a Zone and A type recordset
