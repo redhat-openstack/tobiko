@@ -25,6 +25,7 @@ from oslo_log import log
 import testtools
 
 import tobiko
+from tobiko import config
 from tobiko.shell import ping
 from tobiko.shell import ip
 from tobiko.shell import sh
@@ -33,6 +34,8 @@ from tobiko.openstack.neutron import neutron_log_reader
 from tobiko.openstack import stacks
 from tobiko.openstack import topology
 from tobiko.tripleo import overcloud
+
+CONF = config.CONF
 
 
 LOG = log.getLogger(__name__)
@@ -127,6 +130,24 @@ class AdvancedExternalPortTest(PortTest):
     #: Resources stack with Nova server to send messages to
     stack = tobiko.required_fixture(
         stacks.AdvancedExternalServerStackFixture)
+
+    def test_ping_subnet_gateways(self):
+        """Checks server can ping its gateway IPs
+
+        When neutron.external_ping_ip is configured, that IP is used
+        instead of the subnet gateway IPs. This is needed for BGP
+        deployments where the subnet gateway IP is not reachable
+        (see OSPRH-30905).
+        """
+        external_ping_ip = CONF.tobiko.neutron.external_ping_ip
+        if external_ping_ip:
+            LOG.debug(f"Using configured external_ping_ip: "
+                      f"{external_ping_ip}")
+            ping.assert_reachable_hosts(
+                [netaddr.IPAddress(external_ping_ip)],
+                ssh_client=self.stack.ssh_client)
+        else:
+            super().test_ping_subnet_gateways()
 
 
 # --- Test la-h3 extension ----------------------------------------------------

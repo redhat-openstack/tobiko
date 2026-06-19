@@ -75,6 +75,13 @@ OPTIONS = [
                default=None,
                help=("Interface that the test_ping_dscp uses to capture "
                      "traffic")),
+    cfg.StrOpt('external_ping_ip',
+               default=None,
+               help=("IP address to ping for testing external network "
+                     "connectivity. When not set, the external network "
+                     "subnet gateway IP is used. This is useful for BGP "
+                     "deployments where the subnet gateway IP is not "
+                     "reachable (see OSPRH-30905).")),
 ]
 
 
