@@ -20,9 +20,11 @@ from oslo_log import log
 
 import tobiko
 from tobiko import config
-from tobiko.openstack import octavia, openstacksdkclient
+from tobiko.openstack import octavia, openstacksdkclient, topology
 from tobiko.openstack.octavia import _client
 from tobiko.openstack.octavia import _constants
+from tobiko.shell import sh
+from tobiko.tripleo import containers
 
 get_load_balancer = _client.get_load_balancer
 
@@ -151,3 +153,131 @@ def wait_for_octavia_service(interval: tobiko.Seconds = None,
         else:
             LOG.info('Octavia service is available!')
             break
+
+
+def _get_ovn_sb_connection(controller_ssh_client):
+    """Get OVN Southbound database connection string
+
+    Tries multiple methods to obtain the connection:
+    1. From octavia.conf [ovn] section using topology infrastructure
+    2. From ovs-vsctl as fallback (for environments without config file)
+
+    :param controller_ssh_client: SSH client to controller node
+    :return: OVN SB connection string or None if cannot be determined
+    """
+    # Method 1: Try to get from octavia.conf using topology
+    try:
+        sb_connection = topology.get_config_setting(
+            file_name='octavia.conf',
+            ssh_client=controller_ssh_client,
+            param='ovn_sb_connection',
+            section='ovn')
+        if sb_connection:
+            LOG.debug("Found OVN SB connection from octavia.conf")
+            return sb_connection
+    except Exception as e:
+        LOG.debug(f"Could not read from octavia.conf: {e}")
+
+    # Method 2: Try ovs-vsctl as fallback
+    try:
+        LOG.debug("Trying ovs-vsctl to get OVN SB connection")
+        cmd = ("ovs-vsctl get open . external_ids:ovn-remote | "
+               "sed 's/\"//g'")
+        output = sh.execute(cmd, ssh_client=controller_ssh_client, sudo=True)
+        connection = output.stdout.strip()
+        if connection:
+            LOG.debug("Found OVN SB connection using ovs-vsctl")
+            return connection
+    except sh.ShellCommandFailed as e:
+        LOG.debug(f"ovs-vsctl method failed: {e}")
+
+    LOG.debug("Could not determine OVN SB connection string")
+    return None
+
+
+def wait_for_ovn_service_monitor_status(
+        member_ip: str,
+        expected_status: str = 'online',
+        protocol_port: int = 80,
+        interval: tobiko.Seconds = None,
+        timeout: tobiko.Seconds = None):
+    """Wait for a specific OVN Service_Monitor to reach expected status
+
+    This function queries the OVN Southbound database to check the status
+    of a Service_Monitor entry for a specific member IP and port. It waits
+    until that specific entry reaches the expected status.
+
+    If OVN DB connection cannot be obtained, this function returns without
+    verification (graceful degradation).
+
+    :param member_ip: The IP address of the load balancer member
+    :param expected_status: Expected status (online, offline, error, etc.)
+    :param protocol_port: The protocol port of the load balancer member
+    :param interval: How often to check the status, in seconds
+    :param timeout: The maximum time to wait, in seconds
+    :raises TimeoutException: If status doesn't match within timeout
+    """
+    try:
+        current_topology = topology.get_openstack_topology()
+        controller = topology.list_openstack_nodes(group='controller')[0]
+    except Exception as ex:
+        LOG.warning(
+            f"Cannot get controller node to verify Service_Monitor status "
+            f"for {member_ip}: {ex}. Skipping verification.")
+        return
+
+    # Get OVN SB connection string using multiple methods
+    sb_connection = _get_ovn_sb_connection(controller.ssh_client)
+    if sb_connection is None:
+        LOG.warning(
+            f"Cannot get OVN SB connection string to verify Service_Monitor "
+            f"status for {member_ip}. Skipping verification.")
+        return
+
+    # Build the ovn-sbctl command to query the specific Service_Monitor
+    # Filter by ip=member_ip AND port=protocol_port
+    # TODO(froyo): When OVN schema 26.x is the minimum supported version,
+    # add type=load-balancer to the filter for more precise matching:
+    # find Service_Monitor type=load-balancer ip={member_ip} port={port}
+    ovn_sbctl_cmd = (
+        f'ovn-sbctl --db={sb_connection} --format=csv --no-headings '
+        f'--data=bare --columns=status '
+        f'find Service_Monitor ip={member_ip} port={protocol_port}'
+    )
+
+    # Wrap command for containerized or direct execution
+    if current_topology.has_containers:
+        runtime_name = containers.get_container_runtime_name()
+        cmd = f'{runtime_name} exec ovn_controller {ovn_sbctl_cmd}'
+        LOG.debug("Using containerized ovn-sbctl command")
+    else:
+        cmd = ovn_sbctl_cmd
+        LOG.debug("Using direct ovn-sbctl command")
+
+    for attempt in tobiko.retry(
+            timeout=timeout,
+            interval=interval,
+            default_timeout=360.,
+            default_interval=5.):
+
+        output = sh.execute(cmd, ssh_client=controller.ssh_client, sudo=True)
+        status = output.stdout.strip()
+
+        if not status:
+            LOG.debug(
+                f"No Service_Monitor found for member IP {member_ip} yet, "
+                "waiting...")
+            attempt.check_limits()
+            continue
+
+        # Check if status matches expected
+        if status == expected_status:
+            LOG.info(
+                f"Service_Monitor for {member_ip} has expected status: "
+                f"{status}")
+            return
+
+        LOG.debug(
+            f"Waiting for Service_Monitor {member_ip} to reach "
+            f"'{expected_status}' - Current: '{status}'")
+        attempt.check_limits()

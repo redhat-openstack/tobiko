@@ -81,6 +81,24 @@ class OctaviaOVNProviderHealthMonitorTest(testtools.TestCase):
         )
         LOG.info(f"Load balancer {self.lb.name} is ONLINE")
 
+        # Get member IPs and port from the server stacks and listener
+        server_one_ip = str(self.server_stack.fixed_ipv4)
+        other_server_ip = str(self.other_server_stack.fixed_ipv4)
+        protocol_port = self.listener.protocol_port
+
+        # Wait for OVN Service_Monitor entries to be online
+        # This ensures ovn-controller has completed initial health checks
+        octavia.wait_for_ovn_service_monitor_status(
+            member_ip=server_one_ip,
+            protocol_port=protocol_port,
+            expected_status='online')
+        octavia.wait_for_ovn_service_monitor_status(
+            member_ip=other_server_ip,
+            protocol_port=protocol_port,
+            expected_status='online')
+        LOG.info(f"Service_Monitor for {server_one_ip}:{protocol_port} and "
+                 f"{other_server_ip}:{protocol_port} are online")
+
         # Stop first server and wait for DEGRADED status
         server_one = nova.find_server(
             id=self.server_stack.outputs.server_id)
@@ -90,26 +108,44 @@ class OctaviaOVNProviderHealthMonitorTest(testtools.TestCase):
         server_one.stop()
         nova.wait_for_server_status(server=server_one.id, timeout=900,
                                     status='SHUTOFF')
+
+        # Wait for Service_Monitor to reflect the change
+        octavia.wait_for_ovn_service_monitor_status(
+            member_ip=server_one_ip,
+            protocol_port=protocol_port,
+            expected_status='offline')
+        LOG.info(f"Service_Monitor for {server_one_ip}:{protocol_port} is "
+                 "offline")
+
         octavia.wait_for_status(
             object_id=self.lb.id,
             status_key=octavia.OPERATING_STATUS,
             status=octavia.DEGRADED,
             get_client=octavia.get_load_balancer
         )
-        LOG.info(f"Load balancer {self.lb.name} is DEGRADED after pausing "
+        LOG.info(f"Load balancer {self.lb.name} is DEGRADED after stopping "
                  "first server")
 
         # Stop second server and wait for ERROR status
         other_server.stop()
         nova.wait_for_server_status(server=other_server.id,  timeout=900,
                                     status='SHUTOFF')
+
+        # Wait for Service_Monitor to reflect the change
+        octavia.wait_for_ovn_service_monitor_status(
+            member_ip=other_server_ip,
+            protocol_port=protocol_port,
+            expected_status='offline')
+        LOG.info(f"Service_Monitor for {other_server_ip}:{protocol_port} is "
+                 "offline")
+
         octavia.wait_for_status(
             object_id=self.lb.id,
             status_key=octavia.OPERATING_STATUS,
             status=octavia.ERROR,
             get_client=octavia.get_load_balancer
         )
-        LOG.info(f"Load balancer {self.lb.name} is ERROR after pausing both "
+        LOG.info(f"Load balancer {self.lb.name} is ERROR after stopping both "
                  "servers")
 
         # Start second server and wait for DEGRADED status
@@ -117,24 +153,41 @@ class OctaviaOVNProviderHealthMonitorTest(testtools.TestCase):
         nova.wait_for_server_status(server=other_server.id,  timeout=900,
                                     status='ACTIVE')
 
+        # Wait for Service_Monitor to reflect the change
+        octavia.wait_for_ovn_service_monitor_status(
+            member_ip=other_server_ip,
+            protocol_port=protocol_port,
+            expected_status='online')
+        LOG.info(f"Service_Monitor for {other_server_ip}:{protocol_port} is "
+                 "online")
+
         octavia.wait_for_status(
             object_id=self.lb.id,
             status_key=octavia.OPERATING_STATUS,
             status=octavia.DEGRADED,
             get_client=octavia.get_load_balancer
         )
-        LOG.info(f"Load balancer {self.lb.name} is DEGRADED after unpausing "
+        LOG.info(f"Load balancer {self.lb.name} is DEGRADED after starting "
                  "second server")
 
         # Start first server and wait for ONLINE status
         server_one.start()
         nova.wait_for_server_status(server=server_one.id,  timeout=900,
                                     status='ACTIVE')
+
+        # Wait for Service_Monitor to reflect the change
+        octavia.wait_for_ovn_service_monitor_status(
+            member_ip=server_one_ip,
+            protocol_port=protocol_port,
+            expected_status='online')
+        LOG.info(f"Service_Monitor for {server_one_ip}:{protocol_port} is "
+                 "online")
+
         octavia.wait_for_status(
             object_id=self.lb.id,
             status_key=octavia.OPERATING_STATUS,
             status=octavia.ONLINE,
             get_client=octavia.get_load_balancer
         )
-        LOG.info(f"Load balancer {self.lb.name} is ONLINE after unpausing "
+        LOG.info(f"Load balancer {self.lb.name} is ONLINE after starting "
                  "both servers")

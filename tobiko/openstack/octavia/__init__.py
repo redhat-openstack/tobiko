@@ -55,6 +55,8 @@ wait_for_status = _waiters.wait_for_status
 wait_for_load_balancer = _waiters.wait_for_load_balancer
 wait_for_octavia_service = _waiters.wait_for_octavia_service
 wait_for_ipv6_additional_vip = _waiters.wait_for_ipv6_additional_vip
+wait_for_ovn_service_monitor_status = (
+    _waiters.wait_for_ovn_service_monitor_status)
 
 # Validators
 check_members_balanced = _validators.check_members_balanced

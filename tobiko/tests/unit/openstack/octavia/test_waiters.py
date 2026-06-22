@@ -48,3 +48,40 @@ class WaitForIpv6AdditionalVipTest(testtools.TestCase):
         wait_for_lb.return_value = lb
         self.assertIs(
             _waiters.wait_for_ipv6_additional_vip('lb-1'), lb)
+
+
+class WaitForOvnServiceMonitorStatusTest(testtools.TestCase):
+
+    @mock.patch.object(_waiters.topology, 'get_config_setting')
+    @mock.patch.object(_waiters.sh, 'execute')
+    @mock.patch.object(_waiters.topology, 'get_openstack_topology')
+    @mock.patch.object(_waiters.topology, 'list_openstack_nodes')
+    def test_waits_for_expected_status(
+            self, mock_list_nodes, mock_get_topology,
+            mock_execute, mock_get_config):
+        # Setup mocks
+        mock_get_config.return_value = 'tcp:127.0.0.1:6642'
+        mock_topology = mock.Mock()
+        mock_topology.has_containers = False
+        mock_get_topology.return_value = mock_topology
+        mock_controller = mock.Mock()
+        mock_controller.ssh_client = mock.Mock()
+        mock_list_nodes.return_value = [mock_controller]
+
+        # First call returns 'offline', second call returns 'online'
+        mock_result1 = mock.Mock()
+        mock_result1.stdout = "offline"
+        mock_result2 = mock.Mock()
+        mock_result2.stdout = "online"
+        mock_execute.side_effect = [mock_result1, mock_result2]
+
+        # Call function
+        _waiters.wait_for_ovn_service_monitor_status(
+            member_ip='192.168.100.10',
+            protocol_port=80,
+            expected_status='online',
+            timeout=10,
+            interval=1)
+
+        # Verify execute was called twice (for ovn-sbctl queries)
+        self.assertEqual(2, mock_execute.call_count)
