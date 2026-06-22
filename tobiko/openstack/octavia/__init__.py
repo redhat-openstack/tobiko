@@ -52,7 +52,9 @@ get_health_monitor = _client.get_health_monitor
 
 # Waiters
 wait_for_status = _waiters.wait_for_status
+wait_for_load_balancer = _waiters.wait_for_load_balancer
 wait_for_octavia_service = _waiters.wait_for_octavia_service
+wait_for_ipv6_additional_vip = _waiters.wait_for_ipv6_additional_vip
 
 # Validators
 check_members_balanced = _validators.check_members_balanced
@@ -106,6 +108,14 @@ MEMBER_OVN_NAME_PREFIX = _constants.MEMBER_OVN_NAME_PREFIX
 HM_OVN_NAME = _constants.HM_OVN_NAME
 
 # Deployers
+get_external_subnet = _deployers.get_external_subnet
 deploy_ipv4_amphora_lb = _deployers.deploy_ipv4_amphora_lb
 deploy_ipv4_ovn_lb = _deployers.deploy_ipv4_ovn_lb
+deploy_dual_stack_ovn_lb = _deployers.deploy_dual_stack_ovn_lb
+has_dual_stack_external_network = _deployers.has_dual_stack_external_network
+skip_unless_has_dual_stack_external = (
+    _deployers.skip_unless_has_dual_stack_external)
+ensure_dual_stack_ovn_load_balancer = (
+    _deployers.ensure_dual_stack_ovn_load_balancer)
+ipv6_vip_from_load_balancer = _deployers.ipv6_vip_from_load_balancer
 deploy_hm = _deployers.deploy_hm

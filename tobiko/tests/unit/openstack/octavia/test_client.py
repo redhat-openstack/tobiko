@@ -14,13 +14,16 @@
 from __future__ import absolute_import
 
 import inspect
+from types import SimpleNamespace
 from unittest import mock
 
 from keystoneclient.v3 import endpoints
 from octaviaclient.api.v2 import octavia as octaviaclient
+import testtools
 
 from tobiko.openstack import keystone
 from tobiko.openstack import octavia
+from tobiko.openstack.octavia import _client
 from tobiko.tests import unit
 from tobiko.tests.unit import openstack
 from tobiko.tests.unit.openstack import test_client
@@ -110,3 +113,38 @@ class OctaviaClientTest(openstack.OpenstackTest):
         client = self._get_octavia_client(fixture)
         self.assertIsInstance(client, octaviaclient.OctaviaAPI)
         self.assertIs(client, fixture.client)
+
+
+class FindIpv6VipOnLoadBalancerTest(testtools.TestCase):
+
+    def test_dict_entry_ipv6(self):
+        lb = SimpleNamespace(additional_vips=[
+            {'subnet_id': 's1', 'ip_address': '2001:db8::1'},
+        ])
+        self.assertEqual(
+            _client.find_ipv6_vip_on_load_balancer(lb),
+            '2001:db8::1')
+
+    def test_object_entry_ipv6(self):
+        vip = SimpleNamespace(ip_address='2001:db8::2')
+        lb = SimpleNamespace(additional_vips=[vip])
+        self.assertEqual(
+            _client.find_ipv6_vip_on_load_balancer(lb),
+            '2001:db8::2')
+
+    def test_skips_ipv4_uses_next(self):
+        lb = SimpleNamespace(additional_vips=[
+            {'ip_address': '203.0.113.1'},
+            {'ip_address': '2001:db8::3'},
+        ])
+        self.assertEqual(
+            _client.find_ipv6_vip_on_load_balancer(lb),
+            '2001:db8::3')
+
+    def test_none_additional_vips_returns_none(self):
+        lb = SimpleNamespace(additional_vips=None)
+        self.assertIsNone(_client.find_ipv6_vip_on_load_balancer(lb))
+
+    def test_empty_additional_vips_returns_none(self):
+        lb = SimpleNamespace(additional_vips=[])
+        self.assertIsNone(_client.find_ipv6_vip_on_load_balancer(lb))
