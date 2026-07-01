@@ -43,7 +43,12 @@ OPTIONS = [
                default=300.,
                help="Maximum time in seconds a sequence of ICMP "
                     "messages is sent to a destination host before "
-                    "reporting as a failure")]
+                    "reporting as a failure"),
+    cfg.BoolOpt('timestamps',
+                default=True,
+                help="If True it will add the -D option to ping "
+                     "commands to print timestamps before each "
+                     "line. Only supported by iputils ping.")]
 
 
 def register_tobiko_options(conf):
