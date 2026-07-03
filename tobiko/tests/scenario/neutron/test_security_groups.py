@@ -34,6 +34,66 @@ from tobiko import tripleo
 
 LOG = log.getLogger(__name__)
 
+ConntrackEntry = typing.NamedTuple(
+    'ConntrackEntry',
+    [
+        ('line', str),
+        ('orig_src', str),
+        ('orig_dst', str),
+        ('reply_src', str),
+        ('reply_dst', str),
+        ('zone', typing.Optional[int]),
+    ],
+)
+
+
+def _parse_conntrack_line(line: str) -> typing.Optional[ConntrackEntry]:
+    """Parse a single ``conntrack -L`` output line."""
+    line = line.strip()
+    if not line:
+        return None
+    pairs = re.findall(r'(src|dst)=([^\s]+)', line)
+    if len(pairs) < 4:
+        LOG.warning('Unable to parse conntrack line: %s', line)
+        return None
+    zone_match = re.search(r'zone=(\d+)', line)
+    return ConntrackEntry(
+        line=line,
+        orig_src=pairs[0][1],
+        orig_dst=pairs[1][1],
+        reply_src=pairs[2][1],
+        reply_dst=pairs[3][1],
+        zone=int(zone_match.group(1)) if zone_match else None,
+    )
+
+
+def _parse_conntrack_output(output: str) -> typing.List[ConntrackEntry]:
+    entries = []
+    for line in output.splitlines():
+        entry = _parse_conntrack_line(line)
+        if entry is not None:
+            entries.append(entry)
+    return entries
+
+
+def _classify_conntrack_entry(entry: ConntrackEntry) -> str:
+    """Classify a conntrack entry by comparing original and reply tuples.
+
+    Security groups track connection state without changing IP addresses, so
+    both tuples use the same endpoints (orig_src == reply_dst and
+    orig_dst == reply_src).  NAT entries rewrite source and/or destination
+    addresses, which shows up as a mismatch between the tuples.
+    """
+    if (entry.orig_src == entry.reply_dst and
+            entry.orig_dst == entry.reply_src):
+        return 'security_group'
+    kinds = []
+    if entry.orig_src != entry.reply_dst:
+        kinds.append('snat')
+    if entry.orig_dst != entry.reply_src:
+        kinds.append('dnat')
+    return '+'.join(kinds)
+
 
 class BaseSecurityGroupTest(testtools.TestCase):
 
@@ -343,33 +403,43 @@ class StatelessSecurityGroupInstanceTest(BaseSecurityGroupTest):
         stacks.OctaviaServerStackFixture)
 
     def test_no_conntrack_entries_related_to_stateless_sg(self):
-        """ Test that there is no conntrack entry related to stateless SG.
+        """Test that there is no SG-related conntrack entry for stateless SG.
 
-        This test ensures that there is no conntrack entry for connection
-        that passes stateless security group.
+        Stateful security groups create conntrack entries when tracking
+        connection state.  Stateless SGs must not.  NAT (SNAT/DNAT) also
+        creates conntrack entries; those are distinguished by comparing
+        original and reply IP addresses in conntrack tuples:
+
+        - Security group: orig_src == reply_dst and orig_dst == reply_src
+        - SNAT: orig_src != reply_dst
+        - DNAT: orig_dst != reply_src
 
         Steps:
         1. Create server with stateless SG,
         2. Allow SSH to that instance
         3. Make SSH connection to the instance,
-        4. Ensure on compute node that there are no conntrack entries
-           related to that connection there,
+        4. Ensure on compute node that there are no SG-related conntrack
+           entries for that connection.
         """
         host_ssh_client = topology.get_openstack_node(
             hostname=self.vm.hypervisor_hostname).ssh_client
         vm_ip_address = self.vm.find_fixed_ip(ip_version=4)
 
-        # Now lets make ssh connection to the vm and then check in conntrack if
-        # entry is there or not (it shouldn't be)
         sh.execute('hostname', ssh_client=self.vm.ssh_client)
         conntrack_list_result = sh.execute(
             "conntrack -L --proto tcp --dport 22 --dst %s "
             "--status ASSURED" % vm_ip_address,
             ssh_client=host_ssh_client, sudo=True)
-        # And ensure that there is no entry found in conntrack
-        self.assertEqual("", conntrack_list_result.stdout)
-        self.assertTrue(
-            "0 flow entries have been shown" in conntrack_list_result.stderr)
+        entries = _parse_conntrack_output(conntrack_list_result.stdout)
+        sg_entries = [
+            entry for entry in entries
+            if _classify_conntrack_entry(entry) == 'security_group'
+        ]
+        if sg_entries:
+            self.fail(
+                'Unexpected SG-related conntrack entries: %s' % [
+                    entry.line for entry in sg_entries
+                ])
 
     @neutron.skip_unless_is_ovn()
     @keystone.skip_if_missing_service(name='octavia')
