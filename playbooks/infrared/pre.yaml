@@ -5,6 +5,55 @@
     - tobiko-ensure-ssh-keys
 
 - hosts: primary
+  pre_tasks:
+    # Workaround: OpenSSL > 3.5.6 introduced strict DER validation
+    # that rejects some real-world CA root certs (openssl/openssl#25023),
+    # breaking Ansible's get_url module used by tobiko-download-images.
+    # Install the latest available openssl < 3.5.7 until fixed upstream.
+    - name: Find available OpenSSL versions below 3.5.7
+      become: true
+      register: _openssl_query
+      failed_when: false
+      changed_when: false
+      ansible.builtin.shell:
+        cmd: |
+          dnf repoquery --refresh --showduplicates openssl 2>/dev/null | \
+            sed 's/openssl-[0-9]*://' | \
+            sed 's/\.[^.]*$//' | \
+            awk -F'-' '{
+              split($1, ver, ".")
+              if (ver[1] < 3 || \
+                  (ver[1] == 3 && ver[2] < 5) || \
+                  (ver[1] == 3 && ver[2] == 5 && ver[3] < 7)) {
+                print $0
+              }
+            }' | \
+            tail -1
+
+    - name: Install OpenSSL version below 3.5.7
+      become: true
+      when: _openssl_query.stdout | default("") | length > 0
+      register: _openssl_install
+      changed_when: >-
+        _openssl_install.rc == 0 and
+        "Nothing to do." not in
+        (_openssl_install.stdout | default(""))
+      failed_when: false
+      ansible.builtin.command:
+        argv:
+          - dnf
+          - install
+          - -y
+          - --allowerasing
+          - "openssl-{{ _openssl_query.stdout }}"
+          - "openssl-libs-{{ _openssl_query.stdout }}"
+
+    - name: Warn if no OpenSSL below 3.5.7 is available
+      when: _openssl_query.stdout | default("") | length == 0
+      ansible.builtin.debug:
+        msg: >-
+          No openssl version < 3.5.7 found in repositories.
+          Skipping openssl downgrade.
   roles:
     - tobiko-ensure-python3
     - tobiko-inventory
