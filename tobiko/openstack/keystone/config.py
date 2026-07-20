@@ -63,6 +63,10 @@ OPTIONS = [
     cfg.ListOpt('clouds_file_names',
                 default=['clouds.yaml', 'clouds.yml', 'clouds.json'],
                 help="Clouds file names"),
+    cfg.ListOpt('secure_file_names',
+                default=['secure.yaml', 'secure.yml', 'secure.json'],
+                help="Secure clouds file names (merged with clouds "
+                     "files to provide passwords and other secrets)"),
     cfg.StrOpt('interface',
                default=None,
                help="default value in case keystone interface is needed")]
