@@ -38,7 +38,13 @@ class RebootTrunkServerStackFixture(stacks.AdvancedServerStackFixture):
         # network devices gets persistent after reboots
         stack = super().validate_created_stack()
         nova.activate_server(server=self.server_id)
-        self.wait_for_cloud_init_done()
+        if not config.get_bool_env('TOBIKO_PREVENT_CREATE'):
+            # Skip cloud-init check during verify_resources: on
+            # some cloud-init versions (e.g. v25.2), a cc_users_groups
+            # race condition on /etc/shadow.lock during server reboot
+            # can leave cloud-init in a failed state and break sudo,
+            # making the status check fail permanently.
+            self.wait_for_cloud_init_done()
         return stack
 
 

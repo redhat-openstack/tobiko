@@ -457,7 +457,12 @@ class CloudInitServerStackFixture(ServerStackFixture, ABC):
 
         if self.has_floating_ip:
             self.assert_is_reachable()
-            self.wait_for_cloud_init_done()
+            if not config.get_bool_env('TOBIKO_PREVENT_CREATE'):
+                # Skip cloud-init check during verify_resources:
+                # cloud-init may be in a failed state after server
+                # reboots due to race conditions (e.g. cloud-init
+                # v25.2 cc_users_groups /etc/shadow.lock contention)
+                self.wait_for_cloud_init_done()
 
     def wait_for_guest_os_ready(self, timeout=900.):
         super(CloudInitServerStackFixture, self).wait_for_guest_os_ready(
