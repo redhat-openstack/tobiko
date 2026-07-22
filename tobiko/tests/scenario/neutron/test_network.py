@@ -18,12 +18,15 @@ import pytest
 import testtools
 
 import tobiko
+from tobiko import config
 from tobiko.openstack import neutron
 from tobiko.openstack import nova
 from tobiko.openstack import stacks
 from tobiko.openstack import topology
 from tobiko.shell import ping
 from tobiko.shell import sh
+
+CONF = config.CONF
 
 
 class BaseNetworkTest(testtools.TestCase):
@@ -88,21 +91,30 @@ class BackgroundProcessTest(BaseNetworkTest):
 
     def test_check_background_vm_ping_snat(self):
         """Ping from a VM without FIP to an external IP,
-        validating north-south connectivity with SNAT (source NAT)."""
+        validating north-south connectivity with SNAT (source NAT).
+
+        When neutron.external_ping_ip is configured, that IP is used
+        instead of the subnet gateway IP. This is needed for BGP
+        deployments where the subnet gateway IP is not reachable
+        (see OSPRH-30905).
+        """
         # make sure the VM does not have any FIP
         self.assertFalse(self.stack.has_floating_ip)
 
-        try:
-            ext_subnet = neutron.list_subnets(
-                network=self.stack.network_stack.gateway_network_id,
-                ip_version=4)[0]
-        except IndexError:
-            ext_subnet = neutron.list_subnets(
-                network=self.stack.network_stack.gateway_network_id,
-                ip_version=6)[0]
+        external_ping_ip = CONF.tobiko.neutron.external_ping_ip
+        if not external_ping_ip:
+            try:
+                ext_subnet = neutron.list_subnets(
+                    network=self.stack.network_stack.gateway_network_id,
+                    ip_version=4)[0]
+            except IndexError:
+                ext_subnet = neutron.list_subnets(
+                    network=self.stack.network_stack.gateway_network_id,
+                    ip_version=6)[0]
+            external_ping_ip = ext_subnet['gateway_ip']
 
         self.topology.check_or_start_background_vm_ping(
-            ext_subnet['gateway_ip'],
+            external_ping_ip,
             ssh_client=self.stack.ssh_client)
 
     def test_check_background_vm_ping_east_west(self):
