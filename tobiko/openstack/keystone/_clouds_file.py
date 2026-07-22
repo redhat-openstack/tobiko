@@ -13,6 +13,7 @@
 #    under the License.
 from __future__ import absolute_import
 
+import copy
 import functools
 import json
 import os
@@ -34,6 +35,21 @@ CLOUDS_FILE_SUFFIXES = JSON_SUFFIXES + YAML_SUFFIXES
 
 
 CloudsFileContentType = typing.Mapping[str, typing.Any]
+
+
+def deep_merge(base: typing.Dict[str, typing.Any],
+               override: typing.Mapping[str, typing.Any],
+               ) -> typing.Dict[str, typing.Any]:
+    """Deep-merge override into a copy of base (override wins)."""
+    result = copy.deepcopy(base)
+    for key, value in override.items():
+        if (key in result and
+                isinstance(result[key], dict) and
+                isinstance(value, typing.Mapping)):
+            result[key] = deep_merge(result[key], value)
+        else:
+            result[key] = copy.deepcopy(value)
+    return result
 
 
 class CloudsFileKeystoneCredentialsFixture(
@@ -79,31 +95,62 @@ class CloudsFileKeystoneCredentialsFixture(
             self._filenames = self._get_filenames()
         return self._filenames
 
-    def _get_credentials(self) -> _credentials.KeystoneCredentials:
+    def _find_and_load_files(
+            self,
+            filenames: typing.List[str],
+    ) -> typing.List[typing.Tuple[str, CloudsFileContentType]]:
         try:
-            filenames = find.find_files(path=self.directories,
-                                        name=self.filenames,
-                                        max_depth=1,
-                                        type='f',
-                                        ssh_client=self.connection.ssh_client)
-        except find.FilesNotFound as ex:
+            found = find.find_files(
+                path=self.directories,
+                name=filenames,
+                max_depth=1,
+                type='f',
+                ssh_client=self.connection.ssh_client)
+        except find.FilesNotFound:
+            return []
+        result = []
+        for filepath in found:
+            content = load_clouds_file_content(
+                connection=self.connection,
+                filename=filepath)
+            if content:
+                result.append((filepath, content))
+        return result
+
+    def _load_secure_content(self) \
+            -> typing.Optional[CloudsFileContentType]:
+        secure_filenames = self._get_secure_filenames()
+        if not secure_filenames:
+            return None
+        secure_files = self._find_and_load_files(secure_filenames)
+        if not secure_files:
+            LOG.debug('No secure clouds files found in %s',
+                      self.directories)
+            return None
+        filename, content = secure_files[0]
+        LOG.debug('Loaded secure clouds file: %s', filename)
+        return content
+
+    def _get_credentials(self) -> _credentials.KeystoneCredentials:
+        clouds_files = self._find_and_load_files(self.filenames)
+        if not clouds_files:
             raise _credentials.NoSuchKeystoneCredentials(
                 reason=('Cloud files not found:\n'
                         f"  login: {self.login}\n"
                         f"  directories: {self.directories}\n"
-                        f"  filenames: {self.filenames}\n"
-                        f"  error: {ex}\n")) from ex
+                        f"  filenames: {self.filenames}\n"))
 
         if self.cloud_name is None:
             raise _credentials.NoSuchKeystoneCredentials(
                 reason=(f"[{self.fixture_name}] Clouds name not found at"
                         f" {self.login!r}"))
 
-        for filename in filenames:
+        secure_content = self._load_secure_content()
+
+        for filename, content in clouds_files:
+            if secure_content is not None:
+                content = deep_merge(dict(content), secure_content)
             file_spec = f"{self.login}:{filename}"
-            content = load_clouds_file_content(
-                connection=self.connection,
-                filename=filename)
             try:
                 return parse_credentials(
                     file_spec=file_spec,
@@ -115,7 +162,8 @@ class CloudsFileKeystoneCredentialsFixture(
         raise _credentials.NoSuchKeystoneCredentials(
             reason=(f"[{self.fixture_name}] Keystone credentials not found "
                     f"for cloud name {self.cloud_name!r} in files "
-                    f"{filenames!r} (login={self.login})"))
+                    f"{[f for f, _ in clouds_files]!r} "
+                    f"(login={self.login})"))
 
     def _get_cloud_name(self) -> typing.Optional[str]:
         for var_name in ['OS_CLOUD', 'OS_CLOUDNAME']:
@@ -137,6 +185,10 @@ class CloudsFileKeystoneCredentialsFixture(
     @staticmethod
     def _get_filenames() -> typing.List[str]:
         return tobiko.tobiko_config().keystone.clouds_file_names
+
+    @staticmethod
+    def _get_secure_filenames() -> typing.List[str]:
+        return tobiko.tobiko_config().keystone.secure_file_names
 
 
 def parse_credentials(file_spec: str,
@@ -180,9 +232,9 @@ def parse_credentials(file_spec: str,
 
     cacert = clouds_config.get('cacert')
     project_name = (auth.get('project_name') or
-                    auth.get('tenant_namer') or
+                    auth.get('tenant_name') or
                     auth.get('project_id') or
-                    auth.get_env('tenant_id'))
+                    auth.get('tenant_id'))
 
     api_version = (int(clouds_config.get("identity_api_version", 0)) or
                    _credentials.api_version_from_url(auth_url))
