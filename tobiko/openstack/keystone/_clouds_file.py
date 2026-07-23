@@ -110,9 +110,14 @@ class CloudsFileKeystoneCredentialsFixture(
             return []
         result = []
         for filepath in found:
-            content = load_clouds_file_content(
-                connection=self.connection,
-                filename=filepath)
+            try:
+                content = load_clouds_file_content(
+                    connection=self.connection,
+                    filename=filepath)
+            except OSError as ex:
+                LOG.debug('Skipping unreadable file %s: %s',
+                          filepath, ex)
+                continue
             if content:
                 result.append((filepath, content))
         return result
