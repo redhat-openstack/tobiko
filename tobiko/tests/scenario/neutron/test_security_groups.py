@@ -28,9 +28,7 @@ from tobiko.openstack import neutron
 from tobiko.openstack import octavia
 from tobiko.openstack import stacks
 from tobiko.openstack import topology
-from tobiko import podified
 from tobiko.shell import sh
-from tobiko import tripleo
 
 LOG = log.getLogger(__name__)
 
@@ -97,120 +95,23 @@ def _classify_conntrack_entry(entry: ConntrackEntry) -> str:
 
 class BaseSecurityGroupTest(testtools.TestCase):
 
-    _ovn_nb_db = None
-    _host_ssh_client = None
-    _container_runtime_name = None
-    _container_name = None
-
     def setUp(self):
         super(BaseSecurityGroupTest, self).setUp()
-        self.ovn_controller_agents = neutron.list_networking_agents(
+        ovn_controller_agents = neutron.list_networking_agents(
             binary=neutron.OVN_CONTROLLER)
-        if len(self.ovn_controller_agents) < 1:
+        if len(ovn_controller_agents) < 1:
             self.skip(f"No running {neutron.OVN_CONTROLLER} agents found. "
                       f"Stateless Security Group tests requires ML2/OVN "
                       f"deployment.")
 
-    @property
-    def ovn_nb_db(self):
-
-        def get_podified_ovn_nb_db():
-            nb_db = podified.get_ovndbcluter(
-                'ovndbcluster-nb')['status']['dbAddress']
-            ssl_params = ''
-            if 'ssl' in nb_db:
-                # SSL options obtained from the container under test
-                command = ""
-                if topology.get_openstack_topology().has_containers:
-                    command += (f"{self.container_runtime_name} exec "
-                                f"{self.container_name} ")
-                command += "ps -o command -C ovn-controller --no-headers -ww"
-                command_result = sh.execute(command,
-                                            ssh_client=self.host_ssh_client,
-                                            sudo=True).stdout.strip()
-                for param in ('p', 'c', 'C'):
-                    # the matched strings start with a space
-                    ssl_params += re.search(r' -{} [^\s]+'.format(param),
-                                            command_result).group()
-            return nb_db + ssl_params
-
-        def get_ovn_nb_db():
-            command_result = sh.execute(
-                "ovs-vsctl get open . external_ids:ovn-remote | "
-                "sed -e 's/\"//g' | sed 's/6642/6641/g'",
-                ssh_client=self.host_ssh_client,
-                sudo=True)
-            if 'ovsdbserver-sb' in command_result.stdout:
-                nb_db = command_result.stdout.replace('ovsdbserver-sb',
-                                                      'ovsdbserver-nb')
-            else:
-                nb_db = command_result.stdout
-            ssl_params = ''
-            if 'ssl' in command_result.stdout:
-                ssl_params = ' -p {} -c {} -C {} '.format(
-                    '/etc/pki/tls/private/ovn_controller.key',
-                    '/etc/pki/tls/certs/ovn_controller.crt',
-                    '/etc/ipa/ca.crt')
-            return nb_db + ssl_params
-
-        if not self._ovn_nb_db:
-            if podified.has_podified_cp():
-                self._ovn_nb_db = get_podified_ovn_nb_db()
-            else:
-                self._ovn_nb_db = get_ovn_nb_db()
-        return self._ovn_nb_db
-
-    @property
-    def host_ssh_client(self):
-        if not self._host_ssh_client:
-            for ovn_controller_agent in self.ovn_controller_agents:
-                candidate_ssh_client = topology.get_openstack_node(
-                        hostname=ovn_controller_agent['host']).ssh_client
-                # some of the ovn-controller hosts may be not ssh'able
-                # (specifically, this happens with Podified Controlplane hosts)
-                if candidate_ssh_client is not None:
-                    self._host_ssh_client = candidate_ssh_client
-                    break
-        return self._host_ssh_client
-
-    @property
-    def container_runtime_name(self):
-        if not self._container_runtime_name:
-            if tripleo.has_overcloud():
-                self._container_runtime_name = (
-                    tripleo.get_container_runtime_name())
-            elif podified.has_podified_cp():
-                self._container_runtime_name = (
-                    podified.get_container_runtime_name())
-            else:
-                self._container_runtime_name = 'podman'
-        return self._container_runtime_name
-
-    @property
-    def container_name(self):
-        if self._container_name is None:
-            os_topology = topology.get_openstack_topology()
-            if os_topology.has_containers:
-                self._container_name = topology.get_agent_container_name(
-                    neutron.OVN_CONTROLLER
-                )
-            else:
-                self._container_name = ""
-        return self._container_name
-
     def _check_sg_rule_in_ovn_nb_db(self, rule_id: str, expected_action: str):
-        os_topology = topology.get_openstack_topology()
-        command = ""
-        if os_topology.has_containers:
-            command += (
-                f"{self.container_runtime_name} exec {self.container_name} ")
-        command += (
-            f"ovn-nbctl --format json --no-leader-only --db={self.ovn_nb_db} "
-            f"find ACL external_ids:\"neutron\\:security_group_rule_id\"="
-            f"\"{rule_id}\""
-        )
+        query = (
+            f'find ACL external_ids:"neutron\\:security_group_rule_id"'
+            f'="{rule_id}"')
+        command = neutron.build_ovndb_command(
+            neutron.NBDB, query, output_format='json')
         command_result = sh.execute(
-            command, ssh_client=self.host_ssh_client, sudo=True)
+            command, ssh_client=neutron.get_ovndb_ssh_client(), sudo=True)
         acl_rule = json.loads(command_result.stdout)
         self._assert_acl_action(acl_rule, expected_action)
 

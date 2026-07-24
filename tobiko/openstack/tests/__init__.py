@@ -19,8 +19,6 @@ from __future__ import absolute_import
 from tobiko.openstack.tests import _neutron
 from tobiko.openstack.tests import _nova
 
-InvalidDBConnString = _neutron.InvalidDBConnString
-RAFTStatusError = _neutron.RAFTStatusError
 test_neutron_agents_are_alive = _neutron.test_neutron_agents_are_alive
 test_alive_agents_are_consistent_along_time = (
     _neutron.test_alive_agents_are_consistent_along_time)

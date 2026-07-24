@@ -23,6 +23,7 @@ from tobiko.openstack.neutron import _network
 from tobiko.openstack.neutron import _router
 from tobiko.openstack.neutron import _security_group
 from tobiko.openstack.neutron import _subnet
+from tobiko.openstack.neutron import _ovn
 from tobiko.openstack.neutron import _subnet_pool
 
 
@@ -43,6 +44,31 @@ NEUTRON = _agent.NEUTRON
 DEFAULT_SG_NAME = _security_group.DEFAULT_SG_NAME
 STATEFUL_OVN_ACTION = _security_group.STATEFUL_OVN_ACTION
 STATELESS_OVN_ACTION = _security_group.STATELESS_OVN_ACTION
+NBDB = _ovn.NBDB
+SBDB = _ovn.SBDB
+OVNDBS = _ovn.OVNDBS
+DBNAMES = _ovn.DBNAMES
+OVN_RAFT = _ovn.OVN_RAFT
+OVN_HA = _ovn.OVN_HA
+InvalidDBConnString = _ovn.InvalidDBConnString
+InvalidDBServiceModel = _ovn.InvalidDBServiceModel
+RAFTStatusError = _ovn.RAFTStatusError
+build_ovndb_command = _ovn.build_ovndb_command
+check_raft_timers = _ovn.check_raft_timers
+collect_raft_cluster_details = _ovn.collect_raft_cluster_details
+dump_ovn_databases = _ovn.dump_ovn_databases
+find_ovn_db_ctl_files = _ovn.find_ovn_db_ctl_files
+get_leader_ovsdb = _ovn.get_leader_ovsdb
+get_ovn_db_connections = _ovn.get_ovn_db_connections
+get_ovn_db_service_model = _ovn.get_ovn_db_service_model
+get_ovn_db_sync_status = _ovn.get_ovn_db_sync_status
+get_ovndb_ssh_client = _ovn.get_ovndb_ssh_client
+get_raft_cluster_details = _ovn.get_raft_cluster_details
+get_raft_ports = _ovn.get_raft_ports
+is_ovn_using_ha = _ovn.is_ovn_using_ha
+is_ovn_using_raft = _ovn.is_ovn_using_raft
+parse_ips_from_db_connections = _ovn.parse_ips_from_db_connections
+transfer_leadership_ovsdb = _ovn.transfer_leadership_ovsdb
 
 AgentNotFoundOnHost = _agent.AgentNotFoundOnHost
 NotFound = _client.NotFound
