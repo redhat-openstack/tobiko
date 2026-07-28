@@ -25,8 +25,8 @@ from oslo_log import log
 
 import tobiko
 from tobiko import config
+from tobiko.podified import galera as galera_utils
 from tobiko import podified
-from tobiko.openstack import keystone
 
 CONF = config.CONF
 LOG = log.getLogger(__name__)
@@ -158,10 +158,9 @@ def kill_all_galera_pods(galera_pods):
 
 
 def check_all_galera_cells_down(pod_name):
-    pw = keystone.keystone_credentials().password
-
     retry = tobiko.retry(timeout=30, interval=5)
     for _ in retry:
+        pw = _get_galera_root_password(pod_name)
         try:
             cluster_size = podified.execute_in_pod(
                 pod_name, GALERA_CLUSTER_SIZE.format(passwd=pw), 'galera')
@@ -178,11 +177,10 @@ def check_all_galera_cells_down(pod_name):
 
 
 def verify_all_galera_cells_restored(pods):
-    pw = keystone.keystone_credentials().password
-
     retry = tobiko.retry(timeout=160, interval=10)
     for _ in retry:
         pod_name = pods[0].name()
+        pw = _get_galera_root_password(pod_name)
         try:
             cluster_size = podified.execute_in_pod(
                 pod_name, GALERA_CLUSTER_SIZE.format(passwd=pw), 'galera')
@@ -196,6 +194,14 @@ def verify_all_galera_cells_restored(pods):
             return
 
     raise RestoredException()
+
+
+def _get_galera_root_password(pod_name: str):
+    galera_name = galera_utils.get_galera_name_from_pod(pod_name)
+    if not galera_name:
+        raise tobiko.TobikoException(
+            f"Unable to determine Galera name from pod '{pod_name}'")
+    return galera_utils.get_root_database_password(galera_name)
 
 
 def _rabbitmq_user_full_name(user_name: str, rabbitmq_users=None):
