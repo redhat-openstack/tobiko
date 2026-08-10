@@ -397,7 +397,7 @@ def get_ovn_db_connections() -> typing.Dict[str, str]:
     """Fetch OVN DB connection strings.
 
     For podified deployments, reads from a neutron pod.
-    For TripleO/devstack, reads from ml2_conf.ini via SSH.
+    For TripleO/devstack, reads from ml2_conf.ini via SSH on a controller node.
 
     Returns a dict keyed by 'nb' and 'sb'.
     """
@@ -406,13 +406,13 @@ def get_ovn_db_connections() -> typing.Dict[str, str]:
         return _get_podified_ovn_db_connections()
     from tobiko.openstack import topology
     ml2_conf = topology.get_config_file_path('ml2_conf.ini')
-    ssh_client = get_ovndb_ssh_client()
+    node = topology.list_openstack_nodes(group='controller')[0]
     con_strs: typing.Dict[str, str] = {}
     for db in OVNDBS:
         cmd = 'crudini --get {} ovn ovn_{}_connection'.format(
             ml2_conf, db)
         output = sh.execute(
-            cmd, ssh_client=ssh_client, sudo=True).stdout
+            cmd, ssh_client=node.ssh_client, sudo=True).stdout
         con_strs[db] = output.splitlines()[0]
     LOG.debug('OVN DB connection string fetched from %s: %s',
               ml2_conf, con_strs)
