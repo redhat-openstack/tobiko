@@ -33,6 +33,7 @@ PodifiedTopology = _topology.PodifiedTopology
 
 skip_if_not_podified = _topology.skip_if_not_podified
 skip_if_podified = _topology.skip_if_podified
+skip_if_compact_ocp_cluster = _topology.skip_if_compact_ocp_cluster
 
 project_context = _openshift.project_context
 get_secret = _openshift.get_secret
