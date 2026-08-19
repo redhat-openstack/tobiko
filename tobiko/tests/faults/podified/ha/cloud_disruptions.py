@@ -249,6 +249,84 @@ def get_ocp_controller_nodes() -> typing.List:
     return topology.list_openstack_nodes(group='controller')
 
 
+def _get_main_vip_node():
+    """Return the single OCP node currently hosting the main API VIP.
+
+    The VIP IP can be obtained the same way as in the non-podified
+    implementation — by parsing the Keystone auth_url:
+
+        import urllib.parse
+        from tobiko.openstack import keystone
+        auth_url = keystone.default_keystone_credentials().auth_url
+        main_vip = urllib.parse.urlsplit(auth_url).hostname
+        # resolve hostname → IP if needed (see cloud_disruptions.get_main_vip)
+
+    In TripleO this is then mapped to a node via pacemaker
+    (get_overcloud_nodes_running_pcs_resource). For OCP/podified, the
+    equivalent is to find which controller node has that IP assigned —
+    e.g. via 'oc get node -o wide' or by inspecting node addresses from
+    topology.list_openstack_nodes(group='controller').
+    """
+    raise NotImplementedError(
+        "Main VIP node detection is not yet implemented. "
+        "Implement this function before enabling VIP-based disruption tests.")
+
+
+def _get_non_main_vip_nodes() -> typing.List:
+    """Return all OCP controller nodes NOT hosting the main API VIP.
+
+    TODO: implement once _get_main_vip_node() is available — return all
+    controller nodes except the one returned by _get_main_vip_node().
+    """
+    raise NotImplementedError(
+        "Non-main VIP node detection is not yet implemented.")
+
+
+def hard_reboot_ocp_node_main_vip():
+    """Hard reboot the OCP controller node hosting the main API VIP."""
+    disrupt_ocp_nodes(nodes=[_get_main_vip_node()],
+                      disrupt_method=sh.hard_reset_method)
+
+
+def hard_reboot_ocp_nodes_non_main_vip():
+    """Hard reboot all OCP controller nodes NOT hosting the main API VIP.
+
+    All target nodes are rebooted simultaneously (default).
+    """
+    disrupt_ocp_nodes(nodes=_get_non_main_vip_nodes(),
+                      disrupt_method=sh.hard_reset_method)
+
+
+def soft_reboot_ocp_node_main_vip():
+    """Soft reboot the OCP controller node hosting the main API VIP."""
+    disrupt_ocp_nodes(nodes=[_get_main_vip_node()],
+                      disrupt_method=sh.soft_reset_method)
+
+
+def soft_reboot_ocp_nodes_non_main_vip():
+    """Soft reboot all OCP controller nodes NOT hosting the main API VIP.
+
+    All target nodes are rebooted simultaneously (default).
+    """
+    disrupt_ocp_nodes(nodes=_get_non_main_vip_nodes(),
+                      disrupt_method=sh.soft_reset_method)
+
+
+def crash_ocp_node_main_vip():
+    """Crash (kernel panic) the OCP controller node hosting the main VIP."""
+    disrupt_ocp_nodes(nodes=[_get_main_vip_node()],
+                      disrupt_method=sh.crash_method)
+
+
+def crash_ocp_nodes_non_main_vip():
+    """Crash all OCP controller nodes NOT hosting the main API VIP.
+
+    All target nodes are crashed simultaneously (default).
+    """
+    disrupt_ocp_nodes(nodes=_get_non_main_vip_nodes(),
+                      disrupt_method=sh.crash_method)
+
+
 def hard_reboot_all_ocp_nodes():
     """Hard reboot all OCP controller nodes simultaneously (default)."""
     disrupt_ocp_nodes(nodes=get_ocp_controller_nodes(),

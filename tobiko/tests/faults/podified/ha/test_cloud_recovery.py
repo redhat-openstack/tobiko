@@ -102,6 +102,42 @@ class DisruptPodifiedNodesTest(testtools.TestCase):
             nodes=[node], disrupt_method=sh.hard_reset_method)
         PodifiedCloudHealthCheck.run_after()
 
+    @testtools.skip("VIP-based node selection not yet implemented")
+    def test_hard_reboot_ocp_node_main_vip(self):
+        PodifiedCloudHealthCheck.run_before()
+        cloud_disruptions.hard_reboot_ocp_node_main_vip()
+        PodifiedCloudHealthCheck.run_after()
+
+    @testtools.skip("VIP-based node selection not yet implemented")
+    def test_hard_reboot_ocp_nodes_non_main_vip(self):
+        PodifiedCloudHealthCheck.run_before()
+        cloud_disruptions.hard_reboot_ocp_nodes_non_main_vip()
+        PodifiedCloudHealthCheck.run_after()
+
+    @testtools.skip("VIP-based node selection not yet implemented")
+    def test_soft_reboot_ocp_node_main_vip(self):
+        PodifiedCloudHealthCheck.run_before()
+        cloud_disruptions.soft_reboot_ocp_node_main_vip()
+        PodifiedCloudHealthCheck.run_after()
+
+    @testtools.skip("VIP-based node selection not yet implemented")
+    def test_soft_reboot_ocp_nodes_non_main_vip(self):
+        PodifiedCloudHealthCheck.run_before()
+        cloud_disruptions.soft_reboot_ocp_nodes_non_main_vip()
+        PodifiedCloudHealthCheck.run_after()
+
+    @testtools.skip("VIP-based node selection not yet implemented")
+    def test_crash_ocp_node_main_vip(self):
+        PodifiedCloudHealthCheck.run_before()
+        cloud_disruptions.crash_ocp_node_main_vip()
+        PodifiedCloudHealthCheck.run_after()
+
+    @testtools.skip("VIP-based node selection not yet implemented")
+    def test_crash_ocp_nodes_non_main_vip(self):
+        PodifiedCloudHealthCheck.run_before()
+        cloud_disruptions.crash_ocp_nodes_non_main_vip()
+        PodifiedCloudHealthCheck.run_after()
+
     # Commented out until this test skips compact OCP clusters (master
     # nodes also labeled as workers): rebooting every controller node at
     # once would reboot all masters simultaneously, breaking etcd quorum
