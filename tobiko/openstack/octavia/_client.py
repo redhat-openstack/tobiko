@@ -147,6 +147,68 @@ def get_health_monitor(hm_id: str):
     return os_sdk_client.load_balancer.get_health_monitor(hm_id)
 
 
+# The load balancer ``additional_vips`` attribute (used for dual-stack VIPs)
+# was introduced in the Octavia API version 2.26.
+LB_ADDITIONAL_VIPS_API_VERSION = '2.26'
+
+
+def _to_version_string(value: typing.Any) -> str:
+    if isinstance(value, (tuple, list)):
+        return '.'.join(str(part) for part in value)
+    return str(value)
+
+
+def get_octavia_max_api_version() -> typing.Optional[tobiko.Version]:
+    """Return the Octavia (load-balancer) API max version.
+
+    Octavia uses an additive minor-version model rather than negotiated
+    microversions, so its version discovery document may either expose a
+    single object holding ``min_version``/``max_version`` or a list with one
+    entry per supported minor version (each carrying an ``id`` such as
+    ``2.24``). Both layouts are handled here.
+
+    Returns None when the maximum version cannot be determined.
+    """
+    os_sdk_client = openstacksdkclient.openstacksdk_client()
+    lb_proxy = os_sdk_client.load_balancer
+
+    # openstacksdk may already have discovered the microversion range
+    try:
+        endpoint_data = lb_proxy.get_endpoint_data()
+    except Exception:  # pylint: disable=broad-except
+        endpoint_data = None
+    if endpoint_data is not None:
+        max_microversion = getattr(endpoint_data, 'max_microversion', None)
+        if max_microversion:
+            return tobiko.parse_version(_to_version_string(max_microversion))
+
+    # Fall back to reading Octavia's version discovery document. Take the
+    # highest version advertised, reading ``max_version`` when present and
+    # otherwise the per-entry ``id`` (e.g. '2.24').
+    endpoint = lb_proxy.get_endpoint()
+    root = endpoint.split('/v2', 1)[0].rstrip('/') + '/'
+    versions = lb_proxy.get(root).json().get('versions', [])
+    candidates = [version.get('max_version') or version.get('id')
+                  for version in versions]
+    parsed = [tobiko.parse_version(_to_version_string(value))
+              for value in candidates if value]
+    if not parsed:
+        return None
+    return max(parsed)
+
+
+def has_lb_additional_vips_support() -> bool:
+    """Return True if the Octavia API supports load balancer additional_vips.
+
+    The ``additional_vips`` attribute (used for dual-stack VIPs) was added in
+    the Octavia API version 2.26.
+    """
+    max_version = get_octavia_max_api_version()
+    return (max_version is not None and
+            tobiko.match_version(
+                max_version, min_version=LB_ADDITIONAL_VIPS_API_VERSION))
+
+
 def find_ipv6_vip_on_load_balancer(lb: typing.Any) -> typing.Optional[str]:
     """Return the IPv6 address from ``additional_vips``, or None."""
     additional = getattr(lb, 'additional_vips', None) or []

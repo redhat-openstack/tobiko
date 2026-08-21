@@ -49,6 +49,8 @@ create_member = _client.create_member
 create_health_monitor = _client.create_health_monitor
 find_health_monitor = _client.find_health_monitor
 get_health_monitor = _client.get_health_monitor
+has_lb_additional_vips_support = _client.has_lb_additional_vips_support
+get_octavia_max_api_version = _client.get_octavia_max_api_version
 
 # Waiters
 wait_for_status = _waiters.wait_for_status
@@ -117,6 +119,8 @@ deploy_dual_stack_ovn_lb = _deployers.deploy_dual_stack_ovn_lb
 has_dual_stack_external_network = _deployers.has_dual_stack_external_network
 skip_unless_has_dual_stack_external = (
     _deployers.skip_unless_has_dual_stack_external)
+skip_unless_lb_supports_additional_vips = (
+    _deployers.skip_unless_lb_supports_additional_vips)
 ensure_dual_stack_ovn_load_balancer = (
     _deployers.ensure_dual_stack_ovn_load_balancer)
 ipv6_vip_from_load_balancer = _deployers.ipv6_vip_from_load_balancer

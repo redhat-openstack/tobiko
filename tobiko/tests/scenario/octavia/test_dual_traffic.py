@@ -27,9 +27,14 @@ from tobiko.openstack import stacks
 LOG = log.getLogger(__name__)
 
 
-@octavia.skip_unless_has_dual_stack_external
-@neutron.skip_unless_is_ovn()
+# NOTE: decorators are evaluated top-to-bottom at runtime, so the outermost
+# (topmost) predicate runs first. Keep skip_if_missing_service first so the
+# test is skipped when Octavia is absent before any Octavia API is queried
+# (e.g. by skip_unless_lb_supports_additional_vips).
 @keystone.skip_if_missing_service(name='octavia')
+@neutron.skip_unless_is_ovn()
+@octavia.skip_unless_has_dual_stack_external
+@octavia.skip_unless_lb_supports_additional_vips
 class OctaviaOVNDualStackTrafficTest(testtools.TestCase):
     """Octavia OVN dual-stack VIP traffic test.
 

@@ -21,6 +21,7 @@ from keystoneclient.v3 import endpoints
 from octaviaclient.api.v2 import octavia as octaviaclient
 import testtools
 
+import tobiko
 from tobiko.openstack import keystone
 from tobiko.openstack import octavia
 from tobiko.openstack.octavia import _client
@@ -113,6 +114,113 @@ class OctaviaClientTest(openstack.OpenstackTest):
         client = self._get_octavia_client(fixture)
         self.assertIsInstance(client, octaviaclient.OctaviaAPI)
         self.assertIs(client, fixture.client)
+
+
+class HasLbAdditionalVipsSupportTest(testtools.TestCase):
+
+    def _patch_lb_proxy(self, lb_proxy):
+        os_sdk_client = SimpleNamespace(load_balancer=lb_proxy)
+        return mock.patch(
+            'tobiko.openstack.octavia._client.openstacksdkclient.'
+            'openstacksdk_client',
+            return_value=os_sdk_client)
+
+    def test_max_version_from_endpoint_data(self):
+        lb_proxy = mock.Mock()
+        lb_proxy.get_endpoint_data.return_value = SimpleNamespace(
+            max_microversion='2.27')
+        with self._patch_lb_proxy(lb_proxy):
+            self.assertEqual(
+                _client.get_octavia_max_api_version(),
+                tobiko.parse_version('2.27'))
+            self.assertTrue(_client.has_lb_additional_vips_support())
+
+    def test_max_version_from_endpoint_data_as_tuple(self):
+        lb_proxy = mock.Mock()
+        lb_proxy.get_endpoint_data.return_value = SimpleNamespace(
+            max_microversion=(2, 26))
+        with self._patch_lb_proxy(lb_proxy):
+            self.assertTrue(_client.has_lb_additional_vips_support())
+
+    def test_older_api_not_supported(self):
+        lb_proxy = mock.Mock()
+        lb_proxy.get_endpoint_data.return_value = SimpleNamespace(
+            max_microversion='2.25')
+        with self._patch_lb_proxy(lb_proxy):
+            self.assertFalse(_client.has_lb_additional_vips_support())
+
+    def test_fallback_to_version_document(self):
+        lb_proxy = mock.Mock()
+        lb_proxy.get_endpoint_data.return_value = SimpleNamespace(
+            max_microversion=None)
+        lb_proxy.get_endpoint.return_value = 'https://host:13876/v2.0'
+        lb_proxy.get.return_value = SimpleNamespace(
+            json=lambda: {'versions': [
+                {'id': 'v2.0', 'min_version': '2.0',
+                 'max_version': '2.28'}]})
+        with self._patch_lb_proxy(lb_proxy):
+            self.assertEqual(
+                _client.get_octavia_max_api_version(),
+                tobiko.parse_version('2.28'))
+            self.assertTrue(_client.has_lb_additional_vips_support())
+        lb_proxy.get.assert_called_with('https://host:13876/')
+
+    def test_fallback_version_list_by_id(self):
+        # Octavia deployments that list one entry per minor version (each
+        # carrying an 'id' but no 'max_version'), as seen in the field.
+        lb_proxy = mock.Mock()
+        lb_proxy.get_endpoint_data.return_value = SimpleNamespace(
+            max_microversion=None)
+        lb_proxy.get_endpoint.return_value = 'https://host:13876/v2'
+        lb_proxy.get.return_value = SimpleNamespace(
+            json=lambda: {'versions': [
+                {'id': '2.0', 'status': 'SUPPORTED'},
+                {'id': '2.24', 'status': 'CURRENT'}]})
+        with self._patch_lb_proxy(lb_proxy):
+            self.assertEqual(
+                _client.get_octavia_max_api_version(),
+                tobiko.parse_version('2.24'))
+            # 2.24 < 2.26 -> additional_vips not supported
+            self.assertFalse(_client.has_lb_additional_vips_support())
+        lb_proxy.get.assert_called_with('https://host:13876/')
+
+    def test_fallback_version_list_by_id_supported(self):
+        lb_proxy = mock.Mock()
+        lb_proxy.get_endpoint_data.return_value = SimpleNamespace(
+            max_microversion=None)
+        lb_proxy.get_endpoint.return_value = 'https://host:13876/v2'
+        lb_proxy.get.return_value = SimpleNamespace(
+            json=lambda: {'versions': [
+                {'id': 'v2.0', 'status': 'SUPPORTED'},
+                {'id': 'v2.26', 'status': 'CURRENT'}]})
+        with self._patch_lb_proxy(lb_proxy):
+            self.assertEqual(
+                _client.get_octavia_max_api_version(),
+                tobiko.parse_version('2.26'))
+            self.assertTrue(_client.has_lb_additional_vips_support())
+
+    def test_fallback_older_api_not_supported(self):
+        lb_proxy = mock.Mock()
+        lb_proxy.get_endpoint_data.return_value = SimpleNamespace(
+            max_microversion=None)
+        lb_proxy.get_endpoint.return_value = 'https://host:13876/v2.0'
+        lb_proxy.get.return_value = SimpleNamespace(
+            json=lambda: {'versions': [
+                {'id': 'v2.0', 'min_version': '2.0',
+                 'max_version': '2.11'}]})
+        with self._patch_lb_proxy(lb_proxy):
+            self.assertFalse(_client.has_lb_additional_vips_support())
+
+    def test_unknown_version_not_supported(self):
+        lb_proxy = mock.Mock()
+        lb_proxy.get_endpoint_data.return_value = SimpleNamespace(
+            max_microversion=None)
+        lb_proxy.get_endpoint.return_value = 'https://host:13876/v2.0'
+        lb_proxy.get.return_value = SimpleNamespace(
+            json=lambda: {'versions': []})
+        with self._patch_lb_proxy(lb_proxy):
+            self.assertIsNone(_client.get_octavia_max_api_version())
+            self.assertFalse(_client.has_lb_additional_vips_support())
 
 
 class FindIpv6VipOnLoadBalancerTest(testtools.TestCase):

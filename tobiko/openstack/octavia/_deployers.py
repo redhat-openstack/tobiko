@@ -70,6 +70,12 @@ skip_unless_has_dual_stack_external = tobiko.skip_unless(
     has_dual_stack_external_network)
 
 
+skip_unless_lb_supports_additional_vips = tobiko.skip_unless(
+    'Octavia API does not support load balancer additional_vips '
+    '(requires API microversion 2.26 or newer)',
+    _client.has_lb_additional_vips_support)
+
+
 def ipv6_vip_from_load_balancer(
         lb: typing.Any) -> typing.Optional[str]:
     """Return the IPv6 address from an LB's ``additional_vips`` (if any)."""
