@@ -17,6 +17,7 @@ from __future__ import absolute_import
 from unittest import mock
 
 from tobiko.openstack import tests
+from tobiko.openstack.tests import _neutron
 from tobiko.tests.unit import openstack
 
 
@@ -53,3 +54,18 @@ class NeutronAgentTest(openstack.OpenstackTest):
                          '        "alive": false\n'
                          "    }\n"
                          "]\n", str(ex))
+
+
+class OvnDbsSyncTest(openstack.OpenstackTest):
+
+    def test_skips_when_ovn_not_configured(self):
+        self.patch(_neutron.neutron, 'has_ovn', return_value=False)
+        sync = self.patch(_neutron, 'ovn_dbs_are_synchronized')
+        tests.test_ovn_dbs_are_synchronized()
+        sync.assert_not_called()
+
+    def test_runs_sync_check_when_ovn_configured(self):
+        self.patch(_neutron.neutron, 'has_ovn', return_value=True)
+        sync = self.patch(_neutron, 'ovn_dbs_are_synchronized')
+        tests.test_ovn_dbs_are_synchronized()
+        sync.assert_called_once()

@@ -127,13 +127,17 @@ class OvercloudHealthCheck(tobiko.SharedFixture):
         cls.run(after=True, **params)
 
     @classmethod
-    def run(cls, after: bool, **params):
-        fixture = tobiko.get_fixture(cls)
-        params.setdefault('passive_checks_only', False)
+    def set_version_dependent_skips(cls, params):
         # In version OSP17.0 and highier,
         # 'test_ovs_bridges_mac_table_size()' test can run.
         if topology.verify_osp_version('17.0', lower=True):
             params.setdefault('skip_mac_table_size_test', True)
+
+    @classmethod
+    def run(cls, after: bool, **params):
+        fixture = tobiko.get_fixture(cls)
+        params.setdefault('passive_checks_only', False)
+        cls.set_version_dependent_skips(params)
         skips = frozenset(k for k, v in params.items() if v)
         if after or skips < fixture.skips:
             # Force re-check

@@ -368,6 +368,12 @@ def list_nodeset_names():
                 oc.selector(OSP_DP_NODESET).objects()]
 
 
+def list_dataplane_deployment_names():
+    with project_context():
+        return [obj.name() for obj in
+                oc.selector(OSP_DP_DEPLOYMENT).objects()]
+
+
 def trigger_edpm_deployment(nodeset_names):
     deploy_name = f"rotation-deploy-{random.randrange(1000000)}"
     deploy_def = {
