@@ -103,21 +103,26 @@ def _select_container(
         container_itr = [container_itr]
 
     # Get selected container attrs tabledata.
-    for _name in container_itr:
+    for candidate in container_itr:
         if full_name:
             _attrs = containers_list_td.query(
-                'container_name == "{}"'.format(_name))
+                'container_name == "{}"'.format(candidate))
         else:
             container_attrs_rows = []
             for row in containers_list_td:
-                if _name in row['container_name']:
+                if candidate in row['container_name']:
                     container_attrs_rows.append(row)
             _attrs = tobiko.TableData(container_attrs_rows)
         if _attrs.empty:
             _fail.append(
                 'expected container {} not found on node {} ! : \n\n'.
-                format(_name, node_name))
+                format(candidate, node_name))
         else:
+            # Only report a selected container name when a matching entry was
+            # actually found. Leaving _name as None otherwise lets callers
+            # (e.g. bool_check=True) treat an absent container as "not found"
+            # instead of dereferencing empty attrs (item() on empty data).
+            _name = candidate
             break
 
     return _name, _attrs, _fail
