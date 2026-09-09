@@ -16,6 +16,7 @@
 from __future__ import absolute_import
 
 import shlex
+import re
 
 import openshift_client as oc
 from oslo_log import log
@@ -58,9 +59,34 @@ def select_galera_name():
 def get_galera():
     """Return the selected Galera CR as a dict."""
     galera_name = select_galera_name()
+    return get_galera_by_name(galera_name)
+
+
+def get_galera_by_name(galera_name):
+    """Return a specific Galera CR as a dict."""
     with podified.project_context():
         selector = oc.selector(f'galera/{galera_name}')
         return selector.object().as_dict()
+
+
+def get_galera_name_from_pod(pod_name):
+    """Extract Galera CR name from a Galera pod name."""
+    match = re.match(r"^(.*)-galera-\d+$", pod_name)
+    if match:
+        return match.group(1)
+    return None
+
+
+def get_root_database_password(galera_name):
+    """Return Galera root database password from rootDatabaseSecret."""
+    galera = get_galera_by_name(galera_name)
+    secret_name = galera.get('status', {}).get('rootDatabaseSecret')
+    if not secret_name:
+        tobiko.fail(f"rootDatabaseSecret not found in galera/{galera_name}")
+    secret = podified.get_secret(secret_name)
+    if not secret:
+        tobiko.fail(f"Secret '{secret_name}' not found")
+    return podified.get_secret_password(secret, SECRET_PASSWORD_KEYS)
 
 
 def get_root_account_name(galera):
