@@ -23,6 +23,7 @@ from tobiko.openstack import nova
 from tobiko.openstack import topology
 from tobiko.rhosp import _version_utils
 from tobiko.shell import ssh
+from tobiko.shell import sh
 
 LOG = log.getLogger(__name__)
 
@@ -107,6 +108,13 @@ class RhospNode(topology.OpenStackTopologyNode):
 
     def power_off_node(self):
         pass
+
+    def disrupt_node(self, disrupt_method: sh.RebootHostMethod):
+        """
+        This method executes disruptive action on the node
+        It may be either hard reboot, soft reboot or crash command
+        """
+        pass  # pylint: disable=unnecessary-pass
 
     def reboot_node(self, reactivate_servers=True):
         """Reboot node

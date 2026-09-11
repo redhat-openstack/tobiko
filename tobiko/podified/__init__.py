@@ -43,6 +43,7 @@ create_secret = _openshift.create_secret
 get_dataplane_ssh_keypair = _openshift.get_dataplane_ssh_keypair
 has_podified_cp = _openshift.has_podified_cp
 wait_for_controlplane_ready = _openshift.wait_for_controlplane_ready
+assert_controlplane_ready = _openshift.assert_controlplane_ready
 list_rabbitmq_user_names = _openshift.list_rabbitmq_user_names
 wait_for_rabbitmq_user_ready = _openshift.wait_for_rabbitmq_user_ready
 wait_for_transporturl_user = _openshift.wait_for_transporturl_user
@@ -57,5 +58,7 @@ execute_in_pod = _openshift.execute_in_pod
 get_openstack_config_secret = _openshift.get_openstack_config_secret
 get_pods = _openshift.get_pods
 get_pod_names = _openshift.get_pod_names
+assert_ocp_pods_running = _openshift.assert_ocp_pods_running
+wait_for_all_ocp_pods_running = _openshift.wait_for_all_ocp_pods_running
 
 get_container_runtime_name = containers.get_container_runtime_name

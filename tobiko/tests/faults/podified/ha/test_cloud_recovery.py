@@ -14,6 +14,8 @@
 #    License for the specific language governing permissions and limitations
 from __future__ import absolute_import
 
+import random
+
 from oslo_log import log
 import testtools
 
@@ -23,12 +25,14 @@ from tobiko.tests.faults.podified.ha import rotate_galera_root_password
 from tobiko.openstack import tests
 from tobiko import podified
 from tobiko.openstack import nova
+from tobiko.shell import sh
 
 
 LOG = log.getLogger(__name__)
 
 
 def podified_health_checks():
+    podified.assert_ocp_pods_running()
     nova.check_nova_services_health()
     tests.test_alive_agents_are_consistent_along_time()
     # create a unique stack that will be cleaned up at the end of each test
@@ -42,9 +46,12 @@ def podified_health_checks():
 
 class PodifiedCloudHealthCheck(test_cloud_recovery.OvercloudHealthCheck):
     def setup_fixture(self):
-        # run validations
         LOG.info("Start executing Podified health checks.")
-        podified_health_checks()
+        try:
+            podified_health_checks()
+        except Exception:
+            LOG.exception("Podified health checks failed.")
+            raise
         LOG.info("Podified health checks successfully executed.")
 
 
@@ -86,3 +93,22 @@ class DisruptPodifiedNodesTest(testtools.TestCase):
         PodifiedCloudHealthCheck.run_before()
         rotate_galera_root_password.rotate_galera_root_password()
         PodifiedCloudHealthCheck.run_after()
+
+    def test_hard_reboot_ocp_node(self):
+        """Temporary test — remove once the VIP-based tests below are ready."""
+        node = random.choice(cloud_disruptions.get_ocp_controller_nodes())
+        PodifiedCloudHealthCheck.run_before()
+        cloud_disruptions.disrupt_ocp_nodes(
+            nodes=[node], disrupt_method=sh.hard_reset_method)
+        PodifiedCloudHealthCheck.run_after()
+
+    # Commented out until this test skips compact OCP clusters (master
+    # nodes also labeled as workers): rebooting every controller node at
+    # once would reboot all masters simultaneously, breaking etcd quorum
+    # and corrupting the OCP cluster. To be re-enabled in a follow-up
+    # change.
+    # @podified.skip_if_compact_ocp_cluster
+    # def test_hard_reboot_all_ocp_nodes(self):
+    #     PodifiedCloudHealthCheck.run_before()
+    #     cloud_disruptions.hard_reboot_all_ocp_nodes()
+    #     PodifiedCloudHealthCheck.run_after()

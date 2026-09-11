@@ -19,6 +19,9 @@ import functools
 import json
 import re
 import random
+import threading
+import time
+import typing
 
 import openshift_client as oc
 from oslo_log import log
@@ -27,6 +30,8 @@ import tobiko
 from tobiko import config
 from tobiko.podified import galera as galera_utils
 from tobiko import podified
+from tobiko.openstack import topology
+from tobiko.shell import sh
 
 CONF = config.CONF
 LOG = log.getLogger(__name__)
@@ -174,6 +179,80 @@ def check_all_galera_cells_down(pod_name):
             LOG.info('all galera cells down')
             return
     raise DownException()
+
+
+class OcpNodeDisruptionError(tobiko.TobikoException):
+    message = ("One or more OCP nodes failed to recover after "
+               "disruption:\n{details}")
+
+
+def disrupt_ocp_nodes(nodes: typing.List,
+                      disrupt_method=sh.hard_reset_method,
+                      sequentially=False):
+    """Disrupt every OCP node in the list and wait for full recovery.
+
+    nodes:          list of OcpNode objects to disrupt. The caller is
+                    responsible for building this list — pass a single-element
+                    list to disrupt one node, or a multi-element list to
+                    disrupt several. Use the _get_*_nodes() helpers below.
+    disrupt_method: the disruption to apply — sh.hard_reset_method (sysrq b),
+                    sh.soft_reset_method (/sbin/reboot), or sh.crash_method
+                    (sysrq c / kernel panic).
+    sequentially:   if False (default), disrupt all nodes simultaneously (each
+                    node's disrupt_node() runs in its own thread) — tests
+                    whether services survive losing multiple nodes at once.
+                    If True, disrupt nodes one at a time, waiting for full
+                    cluster recovery between each.
+    """
+    if not nodes:
+        raise tobiko.SkipException("No OCP nodes provided for disruption")
+
+    if not sequentially and len(nodes) > 1:
+        LOG.info(f"Simultaneously disrupting OCP nodes: "
+                 f"{[n.name for n in nodes]} "
+                 f"(command: {disrupt_method.value})...")
+        errors: typing.List[str] = []
+
+        def _disrupt(node):
+            try:
+                t0 = time.time()
+                node.disrupt_node(disrupt_method)
+                elapsed = time.time() - t0
+                LOG.info(f"OCP node {node.name} has recovered "
+                         f"after {elapsed:.0f} seconds.")
+            except Exception as exc:
+                LOG.exception(f"OCP node {node.name} failed to recover.")
+                errors.append(f"  {node.name}: {exc}")
+
+        threads = [threading.Thread(target=_disrupt, args=(n,),
+                                    name=f"disrupt-{n.name}")
+                   for n in nodes]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        if errors:
+            raise OcpNodeDisruptionError(details='\n'.join(errors))
+    else:
+        for node in nodes:
+            LOG.info(f"Disrupting OCP node {node.name} "
+                     f"(command: {disrupt_method.value})...")
+            t0 = time.time()
+            node.disrupt_node(disrupt_method)
+            elapsed = time.time() - t0
+            LOG.info(f"OCP node {node.name} has recovered "
+                     f"after {elapsed:.0f} seconds.")
+
+
+def get_ocp_controller_nodes() -> typing.List:
+    """Return all OCP nodes running the OpenStack control plane."""
+    return topology.list_openstack_nodes(group='controller')
+
+
+def hard_reboot_all_ocp_nodes():
+    """Hard reboot all OCP controller nodes simultaneously (default)."""
+    disrupt_ocp_nodes(nodes=get_ocp_controller_nodes(),
+                      disrupt_method=sh.hard_reset_method)
 
 
 def verify_all_galera_cells_restored(pods):
