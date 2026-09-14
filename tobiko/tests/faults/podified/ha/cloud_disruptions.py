@@ -333,10 +333,44 @@ def hard_reboot_all_ocp_nodes():
                       disrupt_method=sh.hard_reset_method)
 
 
+def _galera_cr_ready(galera_name: str) -> bool:
+    """Return True when the Galera CR reports recovery complete.
+
+    Uses the mariadb-operator's own view: status.bootstrapped plus a
+    Ready=True condition, which the operator sets once the cluster has
+    re-bootstrapped after an outage.
+    """
+    try:
+        galera = galera_utils.get_galera_by_name(galera_name)
+    except oc.OpenShiftPythonException:
+        return False
+    status = galera.get('status', {})
+    if not status.get('bootstrapped'):
+        return False
+    for condition in status.get('conditions', []):
+        if condition.get('type') == 'Ready':
+            return condition.get('status') == 'True'
+    return False
+
+
 def verify_all_galera_cells_restored(pods):
-    retry = tobiko.retry(timeout=160, interval=10)
+    # After a full-cluster kill the mariadb-operator must wait for every
+    # pod to restart and report its grastate seqno before it can pick a
+    # safe bootstrap node, so recovery routinely takes longer than the
+    # previous flat 160s poll allowed. Wait on the operator's own Galera
+    # CR readiness signal, then confirm the live wsrep_cluster_size.
+    pod_name = pods[0].name()
+    galera_name = galera_utils.get_galera_name_from_pod(pod_name)
+    if galera_name is None:
+        LOG.warning('Could not determine Galera CR name from pod %r; '
+                    'skipping CR readiness gate and relying on '
+                    'wsrep_cluster_size only.', pod_name)
+    retry = tobiko.retry(timeout=300, interval=10)
     for _ in retry:
-        pod_name = pods[0].name()
+        # First gate: let the operator tell us the cluster is healthy.
+        if galera_name and not _galera_cr_ready(galera_name):
+            continue
+        # Second gate: confirm actual cluster membership from mysql.
         pw = _get_galera_root_password(pod_name)
         try:
             cluster_size = podified.execute_in_pod(
@@ -344,9 +378,12 @@ def verify_all_galera_cells_restored(pods):
         except oc.OpenShiftPythonException:
             continue
 
-        wsrep_cluster_size = int(re.search(r'wsrep_cluster_size\s+(\d+)',
-                                           cluster_size.out()).group(1))
-        if wsrep_cluster_size == len(pods):
+        # During bootstrap mysqld may answer without a wsrep row; keep
+        # retrying instead of raising AttributeError on .group(1).
+        match = re.search(r'wsrep_cluster_size\s+(\d+)', cluster_size.out())
+        if match is None:
+            continue
+        if int(match.group(1)) == len(pods):
             LOG.info('all galera cells are restored')
             return
 
