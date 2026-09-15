@@ -33,6 +33,17 @@ REPORT_NAME = (
     'tobiko_results')
 
 
+def git_output(*args):
+    try:
+        return subprocess.check_output(
+            ['git'] + list(args),
+            stderr=subprocess.DEVNULL,
+            universal_newlines=True).replace('\n', '<br>')
+    except (subprocess.SubprocessError, OSError) as ex:
+        LOG.debug(f"Unable to collect git metadata {args}: {ex}")
+        return ''
+
+
 @pytest.hookimpl
 def pytest_configure(config):
     configure_metadata(config)
@@ -43,17 +54,16 @@ def pytest_configure(config):
 
 def configure_metadata(config):
     metadata = config.stash[metadata_key]
-    # pylint: disable=protected-access
     from tobiko import version
     metadata["Tobiko Version"] = version.release
-    git_commit = subprocess.check_output(
-        ['git', 'log', '-n', '1'],
-        universal_newlines=True).replace('\n', '<br>')
-    metadata["Tobiko Git Commit"] = git_commit
-    git_release = subprocess.check_output(
-        ['git', 'describe', '--tags'],
-        universal_newlines=True).replace('\n', '<br>')
-    metadata["Tobiko Git Release"] = git_release
+    git_commit = (os.environ.get('TOBIKO_GIT_COMMIT') or
+                  git_output('log', '-n', '1'))
+    if git_commit:
+        metadata["Tobiko Git Commit"] = git_commit
+    git_release = (os.environ.get('TOBIKO_GIT_RELEASE') or
+                   git_output('describe', '--tags'))
+    if git_release:
+        metadata["Tobiko Git Release"] = git_release
 
 
 def configure_caplog(config):
