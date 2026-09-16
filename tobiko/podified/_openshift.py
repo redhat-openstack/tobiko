@@ -445,6 +445,16 @@ def list_ocp_nodes():
     return ocp_nodes
 
 
+def has_compact_ocp_cluster() -> bool:
+    """Return True if any OCP node is both a master and a worker."""
+    for node_data in list_ocp_nodes():
+        roles = node_data['roles']
+        if (any("master" in role for role in roles) and
+                any("worker" in role for role in roles)):
+            return True
+    return False
+
+
 def power_on_edpm_node(nodename):
     _set_edpm_node_online_status(nodename, online=True)
 

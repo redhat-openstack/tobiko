@@ -138,13 +138,8 @@ class DisruptPodifiedNodesTest(testtools.TestCase):
         cloud_disruptions.crash_ocp_nodes_non_main_vip()
         PodifiedCloudHealthCheck.run_after()
 
-    # Commented out until this test skips compact OCP clusters (master
-    # nodes also labeled as workers): rebooting every controller node at
-    # once would reboot all masters simultaneously, breaking etcd quorum
-    # and corrupting the OCP cluster. To be re-enabled in a follow-up
-    # change.
-    # @podified.skip_if_compact_ocp_cluster
-    # def test_hard_reboot_all_ocp_nodes(self):
-    #     PodifiedCloudHealthCheck.run_before()
-    #     cloud_disruptions.hard_reboot_all_ocp_nodes()
-    #     PodifiedCloudHealthCheck.run_after()
+    @podified.skip_if_compact_ocp_cluster
+    def test_hard_reboot_all_ocp_nodes(self):
+        PodifiedCloudHealthCheck.run_before()
+        cloud_disruptions.hard_reboot_all_ocp_nodes()
+        PodifiedCloudHealthCheck.run_after()

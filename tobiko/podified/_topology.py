@@ -41,6 +41,12 @@ skip_if_not_podified = tobiko.skip_unless(
 skip_if_podified = tobiko.skip_if(
     "This test cannot run on a Podified deployment", _openshift.has_podified_cp
 )
+skip_if_compact_ocp_cluster = tobiko.skip_if(
+    "This test cannot run on a compact OCP cluster (master nodes also "
+    "act as workers); rebooting every controller node at once would break "
+    "etcd quorum and corrupt the OCP cluster",
+    _openshift.has_compact_ocp_cluster
+)
 
 # In Podified topology there are groups like 'edpm-compute', 'edpm-networker'
 # and 'edpm-other' but we need to provide also "virtual" group which will
