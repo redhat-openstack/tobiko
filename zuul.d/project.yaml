@@ -22,6 +22,12 @@
       jobs:
         - requirements-check:
             voting: true
+    check:
+      jobs:
+        - tobiko-tox-linters-py314
+    gate:
+      jobs:
+        - tobiko-tox-linters-py314
     post:
       jobs:
         - tobiko-upload-git-mirror
@@ -31,3 +37,13 @@
     pre-release:
       jobs:
         - tobiko-upload-git-mirror
+
+- job:
+    name: tobiko-tox-linters-py314
+    parent: openstack-tox-py314
+    description: Run Tobiko linters with Python 3.14.
+    voting: true
+    vars:
+      tox_envlist: linters
+      tox_environment:
+        TOX_PYTHON: python3.14
