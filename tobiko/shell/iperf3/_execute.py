@@ -140,22 +140,9 @@ def execute_iperf3_client_in_background(
     # failure in the previous run, it may report that is still "busy" thus
     # iperf3 client will not start properly
     if iperf3_server_ssh_client:
-        _stop_iperf3_server(
+        ensure_iperf3_server(
             port=port, protocol=protocol,
             ssh_client=iperf3_server_ssh_client)
-        start_iperf3_server(
-            port=port, protocol=protocol,
-            ssh_client=iperf3_server_ssh_client)
-
-        # if iperf3 server does not start properly, fail the test
-        for attempt in tobiko.retry(count=5, sleep_time=.5):
-            if _iperf3_server_alive(
-                    port=port, protocol=protocol,
-                    ssh_client=iperf3_server_ssh_client):
-                break
-            elif attempt.is_last:
-                tobiko.fail('iperf3 server did not start properly '
-                            f'on the server {iperf3_server_ssh_client}')
 
     # Now, finally iperf3 client should be ready to start
     execute_iperf3_client(
@@ -332,6 +319,29 @@ def start_iperf3_server(
     command = _interface.get_iperf3_server_command(parameters)
     process = sh.process(command, ssh_client=ssh_client)
     process.execute()
+
+
+def ensure_iperf3_server(
+        port: typing.Union[int, None],
+        protocol: typing.Union[str, None],
+        ssh_client: ssh.SSHClientType):
+    """Stop any existing server, start a fresh one, wait until it is alive.
+
+    Used by both the SSH-backed and pod-backed iperf3 client paths so the
+    client does not race ahead of the server listen socket (connection
+    refused).
+    """
+    _stop_iperf3_server(
+        port=port, protocol=protocol, ssh_client=ssh_client)
+    start_iperf3_server(
+        port=port, protocol=protocol, ssh_client=ssh_client)
+    for attempt in tobiko.retry(count=5, sleep_time=.5):
+        if _iperf3_server_alive(
+                port=port, protocol=protocol, ssh_client=ssh_client):
+            return
+        elif attempt.is_last:
+            tobiko.fail('iperf3 server did not start properly '
+                        f'on the server {ssh_client}')
 
 
 def _iperf3_server_alive(

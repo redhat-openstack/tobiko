@@ -764,8 +764,12 @@ def start_iperf3(
         **kwargs):  # noqa; pylint: disable=W0613
 
     if iperf3_server_ssh_client:
-        iperf3.start_iperf3_server(
-            port, protocol, iperf3_server_ssh_client)
+        # Wait until the server is listening before starting the client
+        # POD. Otherwise iperf3 exits with "Connection refused" and the
+        # POD (restartPolicy: Never) goes to Error/Failed.
+        iperf3.ensure_iperf3_server(
+            port=port, protocol=protocol,
+            ssh_client=iperf3_server_ssh_client)
 
     parameters = iperf3.iperf3_client_parameters(
         address=address, bitrate=bitrate,
