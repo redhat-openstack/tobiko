@@ -27,6 +27,7 @@ EDPM_COMPUTE_GROUP = _openshift.EDPM_COMPUTE_GROUP
 EDPM_NETWORKER_GROUP = _openshift.EDPM_NETWORKER_GROUP
 EDPM_OTHER_GROUP = _openshift.EDPM_OTHER_GROUP
 OSP_CONTROLPLANE = _openshift.OSP_CONTROLPLANE
+OSP_DP_DEPLOYMENT = _openshift.OSP_DP_DEPLOYMENT
 ALL_COMPUTES_GROUP_NAME = _topology.ALL_COMPUTES_GROUP_NAME
 
 PodifiedTopology = _topology.PodifiedTopology
@@ -52,6 +53,7 @@ wait_for_transporturl_setup_complete = (
     _openshift.wait_for_transporturl_setup_complete)
 get_rabbitmq_user_labels = _openshift.get_rabbitmq_user_labels
 list_nodeset_names = _openshift.list_nodeset_names
+list_dataplane_deployment_names = _openshift.list_dataplane_deployment_names
 trigger_edpm_deployment = _openshift.trigger_edpm_deployment
 wait_for_edpm_deployment_ready = _openshift.wait_for_edpm_deployment_ready
 get_ovndbcluter = _openshift.get_ovndbcluter

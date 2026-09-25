@@ -183,6 +183,21 @@ def ovn_dbs_are_synchronized(test_case):
         LOG.debug('OVN %s database dump: %s', ovndb, dumps[ovndb])
 
 
+def test_ovn_dbs_are_synchronized():
+    """Validate OVN DBs are synchronized across all OVN DB hosts.
+
+    Unlike test_ovn_dbs_validations(), this check does not inspect the OVN DB
+    VIP listening sockets on controller nodes, so it is safe to run on
+    podified deployments where OVN runs inside ovsdbserver pods.
+    """
+    if not neutron.has_ovn():
+        LOG.debug('OVN not configured. OVN DB sync validations skipped')
+        return
+
+    test_case = tobiko.get_test_case()
+    ovn_dbs_are_synchronized(test_case)
+
+
 def test_ovn_dbs_validations():
     if not neutron.has_ovn():
         LOG.debug('OVN not configured. OVN DB sync validations skipped')
