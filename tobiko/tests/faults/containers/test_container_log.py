@@ -14,15 +14,20 @@
 #    under the License.
 from __future__ import absolute_import
 
+import uuid
+
 from oslo_log import log
 import testtools
 
+import tobiko
+from tobiko import podified
 from tobiko.tests.faults.containers import container_ops
 
 
 LOG = log.getLogger(__name__)
 
 
+@podified.skip_if_podified
 @container_ops.skip_unless_has_podman
 class LogFilesTest(testtools.TestCase):
 
@@ -101,3 +106,56 @@ class LogFilesTest(testtools.TestCase):
                                                                node_logfile,
                                                                msg,
                                                                rotated=True))
+
+
+@podified.skip_if_not_podified
+class PodifiedLogFilesTest(testtools.TestCase):
+
+    def check_edpm_logs(self, node, container):
+        """Verify the output of a container reaches the journal"""
+        marker = f'tobiko-{uuid.uuid4().hex}'
+        container_ops.print_to_container_stdout(node, container, marker)
+        for attempt in tobiko.retry(timeout=30., interval=2.):
+            logs = '\n'.join(container_ops.get_journal_log_lines(
+                node, container, since='1m'))
+            if marker in logs:
+                break
+            if attempt.is_last:
+                self.fail(f'Marker not found in the journal of {container} '
+                          f'container of {node.name} node')
+
+    def test_neutron_edpm_logs_exist(self):
+        for node in container_ops.get_edpm_nodes():
+            containers = set(container_ops.get_node_neutron_containers(node) +
+                             container_ops.get_node_ovn_containers(node))
+            self.assertNotEqual(set(), containers,
+                                f'No neutron/OVN containers found on '
+                                f'{node.name} node')
+            for container in containers:
+                self.check_edpm_logs(node, container)
+
+    def check_pod_logs(self, pod):
+        """Verify the output of every container of a pod reaches its logs"""
+        markers = {}
+        for container in pod.model.spec.containers:
+            marker = f'tobiko-{uuid.uuid4().hex}'
+            podified.execute_in_pod(
+                pod.name(), f'echo {marker} > /proc/1/fd/1', container.name)
+            markers[container.name] = marker
+        for attempt in tobiko.retry(timeout=30., interval=2.):
+            logs = '\n'.join(pod.logs(since='1m').values())
+            missing = [c for c, m in markers.items() if m not in logs]
+            if not missing:
+                break
+            if attempt.is_last:
+                self.fail(f'Marker not found in the logs of {missing} '
+                          f'container(s) of {pod.name()} pod')
+
+    def test_neutron_pod_logs_exist(self):
+        services = ('neutron', 'ovn-northd', 'ovsdbserver-nb',
+                    'ovsdbserver-sb')
+        for service in services:
+            pods = podified.get_pods(labels={'service': service})
+            self.assertNotEqual([], pods, f'No {service} pods found')
+            for pod in pods:
+                self.check_pod_logs(pod)

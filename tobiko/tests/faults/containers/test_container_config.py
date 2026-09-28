@@ -17,6 +17,7 @@ from __future__ import absolute_import
 from oslo_log import log
 import testtools
 
+from tobiko import podified
 from tobiko.shell import sh
 from tobiko.tests.faults.containers import container_ops
 
@@ -24,6 +25,7 @@ from tobiko.tests.faults.containers import container_ops
 LOG = log.getLogger(__name__)
 
 
+@podified.skip_if_podified
 @container_ops.skip_unless_has_podman
 class ConfigurationFilesTest(testtools.TestCase):
 
@@ -95,3 +97,76 @@ class ConfigurationFilesTest(testtools.TestCase):
             self.assertTrue(
                     self.check_config(node, containers_ovn,
                                       config_ovn, 'ovn_controller'))
+
+
+@podified.skip_if_not_podified
+class PodifiedConfigurationFilesTest(testtools.TestCase):
+
+    def check_edpm_config(self, node, container):
+        """Verify the config directories are mounted into the container
+
+        It compares the file names of every config directory bind mounted
+        into the container with the file names of its mount source on the
+        node.
+        """
+        mounts = container_ops.get_container_config_mounts(node, container)
+        if not mounts:
+            LOG.debug(f'No config directory is mounted into {container} '
+                      f'container of {node.name} node')
+            return True
+        verified = True
+        for host_dir, container_dir in mounts.items():
+            host_files = container_ops.list_files_on_node(node, host_dir)
+            container_files = container_ops.list_files_in_container(
+                node, container, container_dir)
+            if not container_files:
+                LOG.error(f'{node.name}: {container_dir} of {container} '
+                          f'container is empty ({host_dir} holds '
+                          f'{host_files})')
+                verified = False
+            elif host_files != container_files:
+                LOG.error(f'{node.name}: {container_dir} of {container} '
+                          f'container holds {container_files} while '
+                          f'{host_dir} holds {host_files}')
+                verified = False
+        return verified
+
+    def test_neutron_edpm_config_files(self):
+        for node in container_ops.get_edpm_nodes():
+            containers = set(container_ops.get_node_neutron_containers(node) +
+                             container_ops.get_node_ovn_containers(node))
+            self.assertNotEqual(set(), containers,
+                                f'No neutron/OVN containers found on '
+                                f'{node.name} node')
+            for container in containers:
+                self.assertTrue(
+                    self.check_edpm_config(node, container),
+                    f'Invalid config directory of {container} container of '
+                    f'{node.name} node')
+
+    def check_pod_config(self, pod_name, container):
+        """Verify the files copied by kolla match their source"""
+        verified = True
+        for source, dest in container_ops.get_pod_kolla_config_files(
+                pod_name, container):
+            source_md5 = container_ops.get_pod_file_md5(
+                pod_name, container, source)
+            if source_md5 is None:
+                continue  # optional file that was not provided
+            dest_md5 = container_ops.get_pod_file_md5(
+                pod_name, container, dest)
+            if source_md5 != dest_md5:
+                LOG.error(f'{pod_name}: {dest} of {container} container '
+                          f'differs from {source}')
+                verified = False
+        return verified
+
+    def test_neutron_pod_config_files(self):
+        pods = podified.get_pods(labels={'service': 'neutron'})
+        self.assertNotEqual([], pods, 'No neutron pods found')
+        for pod in pods:
+            for container in pod.model.spec.containers:
+                self.assertTrue(
+                    self.check_pod_config(pod.name(), container.name),
+                    f'Invalid config files of {container.name} container '
+                    f'of {pod.name()} pod')
