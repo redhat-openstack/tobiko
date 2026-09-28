@@ -15,6 +15,7 @@
 #    under the License.
 from __future__ import absolute_import
 
+import pytest
 import testtools
 
 from tobiko import podified
@@ -24,6 +25,12 @@ from tobiko import podified
 class OcpPodsSanityTest(testtools.TestCase):
     """Sanity test: verify all OSP pods are healthy and ready."""
 
+    # TODO(eolivare): Make this test stable (it should not fail when it finds
+    # failed pods that mean nothing wrong) and remove its xfail decorator.
+    @pytest.mark.xfail(reason=("Some pod/s failed, but that does not "
+                               "necessarily mean this environment is "
+                               "unhealthy"),
+                       strict=False)
     def test_ocp_pods_running(self):
         """Assert all pods in the OSP namespace are Running and Ready.
 

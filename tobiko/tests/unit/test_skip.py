@@ -16,6 +16,8 @@ from __future__ import absolute_import
 
 import typing
 
+import pytest
+
 import tobiko
 from tobiko.tests import unit
 
@@ -268,3 +270,9 @@ class NegativeSkipOnErrorMethodTest(NegativeSkipBase):
                           error_type=ValueError)
     def test_skip_on_error(self):
         self.test_method_called = True
+
+
+class XfailedTest(unit.TobikoUnitTest):
+    @pytest.mark.xfail(reason="Skip this test when it fails", strict=False)
+    def test_xfailed_test(self):
+        self.fail('Test fails')
