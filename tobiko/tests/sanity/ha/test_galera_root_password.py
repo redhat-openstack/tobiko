@@ -18,7 +18,6 @@ from __future__ import absolute_import
 from oslo_log import log
 import testtools
 
-import tobiko
 from tobiko import podified
 from tobiko.podified import galera as galera_utils
 
@@ -34,57 +33,42 @@ class GaleraRootPasswordSanityTest(testtools.TestCase):
         LOG.info("Using Galera CR: %s", galera['metadata']['name'])
         return galera
 
-    def _assert_secret_login(self, secret_name):
+    def _assert_secret_login(self, galera_name, secret_name):
         secret = podified.get_secret(secret_name)
         self.assertIsNotNone(secret, f"Secret {secret_name} missing")
-        pod_name = galera_utils.get_galera_pod_name()
+        pod_name = galera_utils.get_galera_pod_name(galera_name)
         LOG.debug("Checking mysql login on pod %s with secret %s",
                   pod_name, secret_name)
         galera_utils.assert_mysql_login(
             pod_name, podified.get_secret_password(
                 secret, galera_utils.SECRET_PASSWORD_KEYS))
 
-    def test_default_root_account_created(self):
+    def test_root_account_and_password(self):
         galera = self._get_galera()
-        if galera.get('spec', {}).get('rootDatabaseAccount'):
-            tobiko.skip_test("Custom rootDatabaseAccount is configured")
 
         account_name = galera_utils.get_root_account_name(galera)
         LOG.info("Using MariaDBAccount: %s", account_name)
+
+        spec_account = galera.get('spec', {}).get('rootDatabaseAccount')
+        if spec_account:
+            LOG.info("Galera spec.rootDatabaseAccount: %s", spec_account)
+            self.assertEqual(
+                spec_account, account_name,
+                "status.rootDatabaseAccount does not match the configured "
+                "spec.rootDatabaseAccount")
+
         account = galera_utils.get_mariadb_account(account_name)
         self.assertIsNotNone(account, f"{account_name} MariaDBAccount missing")
         self.assertEqual('System', account.get('spec', {}).get('accountType'))
 
-        root_secret = galera.get('status', {}).get('rootDatabaseSecret')
-        LOG.info("Galera rootDatabaseSecret: %s", root_secret)
-        self.assertTrue(root_secret, "rootDatabaseSecret is empty")
-        self._assert_secret_login(root_secret)
+        galera_secret_name = galera.get('status', {}).get(
+            'rootDatabaseSecret')
+        LOG.info("Galera rootDatabaseSecret: %s", galera_secret_name)
+        self.assertTrue(galera_secret_name, "rootDatabaseSecret is empty")
 
-    def test_custom_root_account_respected(self):
-        galera = self._get_galera()
-        custom_account = galera.get('spec', {}).get('rootDatabaseAccount')
-        if not custom_account:
-            tobiko.skip_test("No custom rootDatabaseAccount configured")
-        LOG.info("Using custom MariaDBAccount: %s", custom_account)
+        account_secret_name = account.get('status', {}).get('currentSecret')
+        LOG.info("MariaDBAccount currentSecret: %s", account_secret_name)
+        self.assertEqual(galera_secret_name, account_secret_name)
 
-        default_account = galera_utils.get_default_root_account_name(galera)
-        if custom_account == default_account:
-            tobiko.skip_test("Custom rootDatabaseAccount matches default name")
-
-        default_account_obj = galera_utils.get_mariadb_account(default_account)
-        self.assertIsNone(default_account_obj,
-                          f"Default account {default_account} exists")
-
-        account = galera_utils.get_mariadb_account(custom_account)
-        self.assertIsNotNone(
-            account, f"{custom_account} MariaDBAccount missing"
-        )
-        secret_name = account.get('status', {}).get('currentSecret')
-        self.assertTrue(secret_name,
-                        "MariaDBAccount.status.currentSecret not set")
-        LOG.info("MariaDBAccount currentSecret: %s", secret_name)
-
-        root_secret = galera.get('status', {}).get('rootDatabaseSecret')
-        LOG.info("Galera rootDatabaseSecret: %s", root_secret)
-        self.assertEqual(secret_name, root_secret)
-        self._assert_secret_login(secret_name)
+        self._assert_secret_login(
+            galera['metadata']['name'], galera_secret_name)

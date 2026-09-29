@@ -44,6 +44,7 @@ assert_command_ok = _openshift.assert_command_ok
 create_secret = _openshift.create_secret
 get_dataplane_ssh_keypair = _openshift.get_dataplane_ssh_keypair
 has_podified_cp = _openshift.has_podified_cp
+get_controlplane_name = _openshift.get_controlplane_name
 wait_for_controlplane_ready = _openshift.wait_for_controlplane_ready
 assert_controlplane_ready = _openshift.assert_controlplane_ready
 list_rabbitmq_user_names = _openshift.list_rabbitmq_user_names

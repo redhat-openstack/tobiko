@@ -37,12 +37,12 @@ def _assert_auth_script_select_1(pod_name, script_path):
     podified.assert_command_ok(result, command)
 
 
-def _wait_for_secret_convergence(account_name, new_secret, pod_name,
-                                 script_path):
+def _wait_for_secret_convergence(galera_name, account_name, new_secret,
+                                 pod_name, script_path):
     """Check zero-downtime auth while rotation converges to the new secret."""
     for attempt in tobiko.retry(timeout=600, interval=5):
         _assert_auth_script_select_1(pod_name, script_path)
-        galera = galera_utils.get_galera()
+        galera = galera_utils.get_galera_by_name(galera_name)
         current = galera.get('status', {}).get('rootDatabaseSecret')
         if current == new_secret:
             LOG.info("rootDatabaseSecret converged to %s", new_secret)
@@ -110,7 +110,8 @@ def _patch_account_secret(account_name, secret_name):
 def rotate_galera_root_password():
     """Rotate the root password and validate convergence."""
     galera = galera_utils.get_galera()
-    LOG.info("Using Galera CR: %s", galera['metadata']['name'])
+    galera_name = galera['metadata']['name']
+    LOG.info("Using Galera CR: %s", galera_name)
     account_name = galera_utils.get_root_account_name(galera)
     LOG.info("Using MariaDBAccount: %s", account_name)
 
@@ -129,12 +130,12 @@ def rotate_galera_root_password():
     _patch_account_secret(account_name, new_secret)
 
     try:
-        pod_name = galera_utils.get_galera_pod_name()
+        pod_name = galera_utils.get_galera_pod_name(galera_name)
         script_path = galera_utils.get_mysql_root_auth_script_path(
             pod_name)
         LOG.debug("Using mysql_root_auth.sh path: %s", script_path)
         _wait_for_secret_convergence(
-            account_name, new_secret, pod_name, script_path)
+            galera_name, account_name, new_secret, pod_name, script_path)
         _validate_post_rotation(pod_name, script_path, new_secret)
         _wait_for_finalizer_swap(new_secret, old_secret)
     except Exception:

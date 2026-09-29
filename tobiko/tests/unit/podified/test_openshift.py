@@ -15,6 +15,7 @@ from __future__ import absolute_import
 
 from unittest import mock
 
+import tobiko
 from tobiko.podified import _openshift
 from tobiko.tests.unit import _case
 
@@ -103,3 +104,98 @@ class TestAssertControlplaneReady(_case.TobikoUnitTest):
         self.assertRaises(
             _openshift.OcpControlPlaneNotReady,
             _openshift.assert_controlplane_ready)
+
+
+def _make_pod(name, phase, ready=None):
+    status: dict = {'phase': phase}
+    if ready is not None:
+        status['conditions'] = [{'type': 'Ready',
+                                 'status': 'True' if ready else 'False'}]
+    pod = mock.Mock()
+    pod.name.return_value = name
+    pod.as_dict.return_value = {'status': status}
+    return pod
+
+
+class TestIsPodHealthy(_case.TobikoUnitTest):
+    # These tests exercise the private _is_pod_healthy() helper directly.
+    # pylint: disable=protected-access
+
+    def test_succeeded_phase(self):
+        pod = _make_pod('job-1', 'Succeeded')
+        self.assertTrue(_openshift._is_pod_healthy(pod))
+
+    def test_running_and_ready(self):
+        pod = _make_pod('api-0', 'Running', ready=True)
+        self.assertTrue(_openshift._is_pod_healthy(pod))
+
+    def test_running_and_not_ready(self):
+        pod = _make_pod('manila-scheduler-1', 'Running', ready=False)
+        self.assertFalse(_openshift._is_pod_healthy(pod))
+
+    def test_running_without_ready_condition(self):
+        pod = _make_pod('api-0', 'Running')
+        self.assertFalse(_openshift._is_pod_healthy(pod))
+
+    def test_pending_phase(self):
+        pod = _make_pod('api-0', 'Pending')
+        self.assertFalse(_openshift._is_pod_healthy(pod))
+
+
+class TestAssertOcpPodsRunning(_case.TobikoUnitTest):
+
+    def setUp(self):
+        super().setUp()
+        self.mock_get_pods = mock.patch.object(
+            _openshift, 'get_pods').start()
+        self.addCleanup(mock.patch.stopall)
+
+    def test_all_pods_healthy(self):
+        self.mock_get_pods.return_value = [
+            _make_pod('api-0', 'Running', ready=True),
+            _make_pod('job-0', 'Succeeded'),
+        ]
+        _openshift.assert_ocp_pods_running()
+
+    def test_unhealthy_pod_raises(self):
+        self.mock_get_pods.return_value = [
+            _make_pod('manila-scheduler-1', 'Running', ready=False),
+        ]
+        ex = self.assertRaises(
+            _openshift.OcpPodsNotRunning, _openshift.assert_ocp_pods_running)
+        self.assertIn('manila-scheduler-1 (Running)', str(ex))
+
+
+class TestWaitForAllOcpPodsRunning(_case.TobikoUnitTest):
+    """Regression coverage for the Galera-disruption health-check race.
+
+    After a Galera disruption, consumer pods (e.g. manila-scheduler) can
+    stay Running-but-NotReady for a while after the DB cluster itself is
+    already reported healthy. wait_for_all_ocp_pods_running() must retry
+    instead of failing on the first unhealthy snapshot.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.mock_get_pods = mock.patch.object(
+            _openshift, 'get_pods').start()
+        self.addCleanup(mock.patch.stopall)
+
+    def test_waits_until_pods_become_ready(self):
+        self.patch_time()
+        self.mock_get_pods.side_effect = [
+            [_make_pod('manila-scheduler-1', 'Running', ready=False)],
+            [_make_pod('manila-scheduler-1', 'Running', ready=False)],
+            [_make_pod('manila-scheduler-1', 'Running', ready=True)],
+        ]
+        _openshift.wait_for_all_ocp_pods_running(timeout=60)
+        self.assertEqual(3, self.mock_get_pods.call_count)
+
+    def test_raises_after_timeout(self):
+        self.patch_time(time_increment=100.)
+        self.mock_get_pods.return_value = [
+            _make_pod('manila-scheduler-1', 'Running', ready=False),
+        ]
+        self.assertRaises(
+            tobiko.RetryTimeLimitError,
+            _openshift.wait_for_all_ocp_pods_running, timeout=60)

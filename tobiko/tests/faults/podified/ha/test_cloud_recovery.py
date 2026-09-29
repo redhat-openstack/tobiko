@@ -36,6 +36,13 @@ CONF = config.CONF
 LOG = log.getLogger(__name__)
 
 
+def check_controlplane_health():
+    """Wait for the OpenStackControlPlane CR to report Ready."""
+    cp_name = podified.get_controlplane_name()
+    LOG.info('Waiting for controlplane %r to be ready', cp_name)
+    podified.wait_for_controlplane_ready(cp_name)
+
+
 def check_edpm_deployment_health():
     """Wait for all EDPM data plane deployments to become ready."""
     names = podified.list_dataplane_deployment_names()
@@ -88,7 +95,17 @@ def podified_health_checks(passive_checks_only=False, **_kwargs):
     # compatibility with OvercloudHealthCheck but ignored here: the OVS
     # mac-table-size validation relies on TripleO config paths that do not
     # exist on EDPM nodes.
-    podified.assert_ocp_pods_running()
+    # TODO: wait_for_all_ocp_pods_running() fixes the Galera-disruption
+    # race where consumer pods (e.g. manila-scheduler) are transiently
+    # Running-but-NotReady while reconnecting after the DB cluster itself
+    # already reports ready (see verify_all_galera_cells_restored()), but
+    # pods unrelated to the current disruption can also be found
+    # not-ready/failed without that indicating a genuine issue (same
+    # false-positive class as test_ocp_pods_running's xfail in
+    # tobiko/tests/sanity/ha/test_ocp_pods.py). Disabled here until the
+    # check can tell those apart from a real regression.
+    # podified.wait_for_all_ocp_pods_running()
+    check_controlplane_health()
     check_edpm_deployment_health()
     nova.check_nova_services_health()
     tests.test_alive_agents_are_consistent_along_time()

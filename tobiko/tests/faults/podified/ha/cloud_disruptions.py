@@ -74,44 +74,45 @@ def get_galera_pods_per_service(galera_service):
 def kill_all_galera_services():
     """kill all galera processes,
     check in pacemaker it is down"""
-    # get galera pods sorted into 2 different lists:
-    # one with 'cell-galera' an one without
-    for galera_service in ('openstack-cell1-galera', 'openstack-galera'):
+    # iterate every Galera CR found on the cluster (one per cell)
+    for galera_name in galera_utils.list_galera_names():
+        galera_service = galera_utils.get_galera_service_name(galera_name)
         pods = get_galera_pods_per_service(galera_service)
         kill_all_galera_pods(pods)
-        check_all_galera_cells_down(pods[0].name())
-        verify_all_galera_cells_restored(pods)
+        check_all_galera_cells_down(galera_name, pods[0].name())
+        verify_all_galera_cells_restored(galera_name, pods)
 
 
 def remove_all_grastate_galera():
     """shut down galera properly,
     remove all grastate"""
-    for galera_service in ('openstack-cell1-galera', 'openstack-galera'):
+    for galera_name in galera_utils.list_galera_names():
+        galera_service = galera_utils.get_galera_service_name(galera_name)
         pods = get_galera_pods_per_service(galera_service)
         for pod in pods:
             remove_grastate(pod.name())
         # TODO: change kill to graceful stop/ scale down
         kill_all_galera_pods(pods)
-        check_all_galera_cells_down(pods[0].name())
-        verify_all_galera_cells_restored(pods)
+        check_all_galera_cells_down(galera_name, pods[0].name())
+        verify_all_galera_cells_restored(galera_name, pods)
 
 
 def remove_one_grastate_galera():
     """shut down galera properly,
     delete /var/lib/mysql/grastate.dat in a random node,
     check that bootstrap is done from a node with grastate"""
-    for galera_service in ('openstack-cell1-galera', 'openstack-galera'):
+    for galera_name in galera_utils.list_galera_names():
+        galera_service = galera_utils.get_galera_service_name(galera_name)
         pods = get_galera_pods_per_service(galera_service)
         random_pod_name = random.choice(pods).name()
         remove_grastate(random_pod_name)
         # TODO: change kill to graceful stop/ scale down
         kill_all_galera_pods(pods)
-        check_all_galera_cells_down(pods[0].name())
-        verify_all_galera_cells_restored(pods)
+        check_all_galera_cells_down(galera_name, pods[0].name())
+        verify_all_galera_cells_restored(galera_name, pods)
         # Use mariadb-operator logs to see which pod was used for bootstrap.
         # The operator logs explicitly include the pod name selected for the
         # gcomm URI push (bootstrap), which avoids parsing Galera logs.
-        galera_name = galera_service.replace("-galera", "")
         bootstrap_pod = _get_galera_bootstrap_pod(galera_name)
         LOG.info(f'bootstrap {galera_service} is {bootstrap_pod}')
         if not bootstrap_pod:
@@ -162,10 +163,10 @@ def kill_all_galera_pods(galera_pods):
         LOG.info(f'kill galera pod {pod}')
 
 
-def check_all_galera_cells_down(pod_name):
+def check_all_galera_cells_down(galera_name, pod_name):
     retry = tobiko.retry(timeout=30, interval=5)
     for _ in retry:
-        pw = _get_galera_root_password(pod_name)
+        pw = galera_utils.get_root_database_password(galera_name)
         try:
             cluster_size = podified.execute_in_pod(
                 pod_name, GALERA_CLUSTER_SIZE.format(passwd=pw), 'galera')
@@ -353,25 +354,25 @@ def _galera_cr_ready(galera_name: str) -> bool:
     return False
 
 
-def verify_all_galera_cells_restored(pods):
+def verify_all_galera_cells_restored(galera_name, pods):
     # After a full-cluster kill the mariadb-operator must wait for every
     # pod to restart and report its grastate seqno before it can pick a
     # safe bootstrap node, so recovery routinely takes longer than the
     # previous flat 160s poll allowed. Wait on the operator's own Galera
     # CR readiness signal, then confirm the live wsrep_cluster_size.
     pod_name = pods[0].name()
-    galera_name = galera_utils.get_galera_name_from_pod(pod_name)
-    if galera_name is None:
-        LOG.warning('Could not determine Galera CR name from pod %r; '
-                    'skipping CR readiness gate and relying on '
-                    'wsrep_cluster_size only.', pod_name)
+    pw = None
     retry = tobiko.retry(timeout=300, interval=10)
     for _ in retry:
         # First gate: let the operator tell us the cluster is healthy.
-        if galera_name and not _galera_cr_ready(galera_name):
+        if not _galera_cr_ready(galera_name):
             continue
         # Second gate: confirm actual cluster membership from mysql.
-        pw = _get_galera_root_password(pod_name)
+        if pw is None:
+            try:
+                pw = galera_utils.get_root_database_password(galera_name)
+            except (oc.OpenShiftPythonException,) + tobiko.FailureException:
+                continue
         try:
             cluster_size = podified.execute_in_pod(
                 pod_name, GALERA_CLUSTER_SIZE.format(passwd=pw), 'galera')
@@ -388,14 +389,6 @@ def verify_all_galera_cells_restored(pods):
             return
 
     raise RestoredException()
-
-
-def _get_galera_root_password(pod_name: str):
-    galera_name = galera_utils.get_galera_name_from_pod(pod_name)
-    if not galera_name:
-        raise tobiko.TobikoException(
-            f"Unable to determine Galera name from pod '{pod_name}'")
-    return galera_utils.get_root_database_password(galera_name)
 
 
 def _rabbitmq_user_full_name(user_name: str, rabbitmq_users=None):

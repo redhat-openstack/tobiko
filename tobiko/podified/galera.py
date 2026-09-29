@@ -15,8 +15,8 @@
 #    under the License.
 from __future__ import absolute_import
 
+import random
 import shlex
-import re
 
 import openshift_client as oc
 from oslo_log import log
@@ -29,31 +29,29 @@ from tobiko import podified
 LOG = log.getLogger(__name__)
 CONF = config.CONF
 
-GALERA_SERVICE = 'openstack-galera'
-DEFAULT_ACCOUNT_SUFFIX = 'mariadb-root'
 SECRET_PASSWORD_KEYS = ('DatabasePassword', 'databasePassword')
 MYSQL_ROOT_AUTH_SCRIPT_DEFAULT = '/var/lib/operator-scripts/mysql_root_auth.sh'
 MYSQL_SELECT_1 = 'mysql -u root -e "SELECT 1;"'
 
 
-def select_galera_name():
-    """Pick the Galera CR name to test against.
-
-    Prefer names starting with 'openstack'. Otherwise use the first
-    Galera name (sorted).
-    """
+def list_galera_names():
+    """Return the names of all Galera CRs found, sorted."""
     with podified.project_context():
         selector = oc.selector('galera')
         galeras = selector.objects()
     if not galeras:
         tobiko.fail("No Galera resources found")
-    names = sorted(
-        [galera.as_dict()['metadata']['name'] for galera in galeras]
-    )
-    for name in names:
-        if name.startswith('openstack'):
-            return name
-    return names[0]
+    return sorted(galera.as_dict()['metadata']['name'] for galera in galeras)
+
+
+def select_galera_name():
+    """Pick the Galera CR name to test against.
+
+    Any Galera CR works equally well here, so pick one at random to
+    get incidental coverage across cells over time.
+    """
+    galeras = list_galera_names()
+    return random.choice(galeras)
 
 
 def get_galera():
@@ -69,14 +67,6 @@ def get_galera_by_name(galera_name):
         return selector.object().as_dict()
 
 
-def get_galera_name_from_pod(pod_name):
-    """Extract Galera CR name from a Galera pod name."""
-    match = re.match(r"^(.*)-galera-\d+$", pod_name)
-    if match:
-        return match.group(1)
-    return None
-
-
 def get_root_database_password(galera_name):
     """Return Galera root database password from rootDatabaseSecret."""
     galera = get_galera_by_name(galera_name)
@@ -90,16 +80,18 @@ def get_root_database_password(galera_name):
 
 
 def get_root_account_name(galera):
-    """Return the configured root account name, or the default."""
-    root_account = galera.get('spec', {}).get('rootDatabaseAccount')
-    if root_account:
-        return root_account
-    return get_default_root_account_name(galera)
+    """Return the MariaDBAccount name backing the root database.
 
-
-def get_default_root_account_name(galera):
-    """Return the default root account name for a Galera CR."""
-    return f"{galera['metadata']['name']}-{DEFAULT_ACCOUNT_SUFFIX}"
+    Reads status.rootDatabaseAccount, which reflects the actual
+    account name whether it was set via spec.rootDatabaseAccount or
+    auto-generated (see OSPRH-27668).
+    """
+    galera_name = galera['metadata']['name']
+    root_account = galera.get('status', {}).get('rootDatabaseAccount')
+    if not root_account:
+        tobiko.fail(
+            f"status.rootDatabaseAccount not found in galera/{galera_name}")
+    return root_account
 
 
 def get_mariadb_account(account_name):
@@ -117,11 +109,22 @@ def get_mariadb_account_object(account_name):
         return selector.object()
 
 
-def get_galera_pod_name():
-    """Return a stable Galera pod name (sorted by name)."""
-    pods = podified.get_pods(labels={'service': GALERA_SERVICE})
+def get_galera_service_name(galera_name):
+    """Return the Kubernetes service label for a Galera CR's pods."""
+    return f'{galera_name}-galera'
+
+
+def get_galera_pod_name(galera_name):
+    """Return a stable pod name for the given Galera CR (sorted by name).
+
+    galera_name must be the same Galera CR that was selected earlier in
+    the caller's flow (e.g. via get_galera()) since each cell's pods are
+    labeled with their own CR-specific service name.
+    """
+    service = get_galera_service_name(galera_name)
+    pods = podified.get_pods(labels={'service': service})
     if not pods:
-        tobiko.skip_test(f"No pods found for service '{GALERA_SERVICE}'")
+        tobiko.skip_test(f"No pods found for service '{service}'")
     pods = sorted(pods, key=lambda pod: pod.name())
     return pods[0].name()
 
