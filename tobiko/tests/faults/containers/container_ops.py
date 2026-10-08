@@ -14,6 +14,7 @@
 #    under the License.
 from __future__ import absolute_import
 
+import json
 import random
 import re
 
@@ -21,6 +22,7 @@ from oslo_log import log
 
 import tobiko
 from tobiko.openstack import topology
+from tobiko import podified
 from tobiko.shell import sh
 from tobiko.tripleo import pacemaker
 
@@ -140,7 +142,7 @@ def get_node_ovn_containers(node):
     :rtype: list of strings
     """
     neutron_containers = [
-            'ovn_(controller|metadata_agent)',
+            'ovn_(controller|metadata_agent|agent)',
             r'ovn-dbs-bundle-podman-\d*']
     return get_filtered_node_containers(node, neutron_containers)
 
@@ -374,6 +376,156 @@ def rotate_logs(node):
     sh.execute(f'podman exec -u root {container} logrotate '
                '-f /etc/logrotate-crond.conf',
                ssh_client=node.ssh_client, sudo=True)
+
+
+def get_edpm_nodes():
+    """Return the EDPM nodes running neutron/OVN containers
+
+    :return: List of EDPM compute and networker nodes
+    :rtype: list of tobiko.openstack.topology.OpenStackTopologyNode
+    """
+    groups = [podified.ALL_COMPUTES_GROUP_NAME, 'networker']
+    return get_nodes_for_groups(groups)
+
+
+def print_to_container_stdout(node, container, message):
+    """Print a message to the stdout of the main process of a container
+
+    :param node: Node the container runs on
+    :type node: class: tobiko.openstack.topology.OpenStackTopologyNode
+    :param container: Name of the container
+    :type container: string
+    :param message: Message to print
+    :type message: string
+    """
+    pid = sh.execute(
+        f"sudo podman inspect --format '{{{{.State.Pid}}}}' {container}",
+        ssh_client=node.ssh_client).stdout.strip()
+    sh.execute(f"sudo sh -c 'echo {message} > /proc/{pid}/fd/1'",
+               ssh_client=node.ssh_client)
+
+
+def get_journal_log_lines(node, container, since='1h'):
+    """Return the journald entries logged by a container
+
+    :param node: Node to read the journal on
+    :type node: class: tobiko.openstack.topology.OpenStackTopologyNode
+    :param container: Name of the container that logged the entries
+    :type container: string
+    :param since: Age of the oldest entry to return
+    :type since: string
+    :return: List of journal entries
+    :rtype: list of strings
+    """
+    result = sh.execute(
+        f'sudo journalctl CONTAINER_NAME={container} '
+        f'--since -{since} --output cat --no-pager',
+        ssh_client=node.ssh_client,
+        expect_exit_status=None)
+    return [line for line in result.stdout.splitlines() if line.strip()]
+
+
+def get_container_config_mounts(node, container):
+    """Return the {host dir: container dir} config dir mounts of a container
+
+    :param node: Node the container runs on
+    :type node: class: tobiko.openstack.topology.OpenStackTopologyNode
+    :param container: Name of the container to inspect
+    :type container: string
+    :return: Config directories on the node mapped to their mount points
+    :rtype: dict of strings
+    """
+    config_dirs = re.compile(r'^/etc/(neutron|ovn|openvswitch)')
+    result = sh.execute(
+        f'sudo podman inspect {container} '
+        '--format \'{{range .Mounts}}{{.Source}} {{.Destination}}'
+        '{{"\\n"}}{{end}}\'',
+        ssh_client=node.ssh_client)
+    mounts = {}
+    for line in result.stdout.splitlines():
+        fields = line.split()
+        if len(fields) != 2 or not config_dirs.match(fields[1]):
+            continue
+        # only directories have file name to compare, so single file
+        # mounts like rootwrap.conf are skipped.
+        is_dir = sh.execute(f'sudo test -d {fields[0]}',
+                            ssh_client=node.ssh_client,
+                            expect_exit_status=None).exit_status == 0
+        if is_dir:
+            mounts[fields[0]] = fields[1]
+    return mounts
+
+
+def list_files_on_node(node, directory):
+    """Return the names of the files directly under a node directory
+
+    :param node: Node to list the directory on
+    :type node: class: tobiko.openstack.topology.OpenStackTopologyNode
+    :param directory: Path of the directory to list
+    :type directory: string
+    :return: Names of the files found, empty if the directory is missing
+    :rtype: set of strings
+    """
+    result = sh.execute(f'sudo ls -A {directory}',
+                        ssh_client=node.ssh_client,
+                        expect_exit_status=None)
+    return {line.strip()
+            for line in result.stdout.splitlines() if line.strip()}
+
+
+def list_files_in_container(node, container, directory):
+    """Return the names of the files directly under a container directory
+
+    :param node: Node the container runs on
+    :type node: class: tobiko.openstack.topology.OpenStackTopologyNode
+    :param container: Name of the container to list the directory in
+    :type container: string
+    :param directory: Path of the directory within the container
+    :type directory: string
+    :return: Names of the files found, empty if the directory is missing
+    :rtype: set of strings
+    """
+    result = sh.execute(
+        f'sudo podman exec -u root {container} ls -A {directory}',
+        ssh_client=node.ssh_client,
+        expect_exit_status=None)
+    return {line.strip()
+            for line in result.stdout.splitlines() if line.strip()}
+
+
+def get_pod_kolla_config_files(pod_name, container):
+    """Return the (source, dest) config files copied by kolla at start
+
+    :param pod_name: Name of the pod
+    :type pod_name: string
+    :param container: Name of the container within the pod
+    :type container: string
+    :return: Source and destination of every file copied, globs excluded
+    :rtype: list of tuples of strings
+    """
+    result = podified.execute_in_pod(
+        pod_name, 'cat /var/lib/kolla/config_files/config.json', container)
+    config_files = json.loads(result.out())['config_files']
+    return [(f['source'], f['dest']) for f in config_files
+            if '*' not in f['source']]
+
+
+def get_pod_file_md5(pod_name, container, path):
+    """Return the MD5 sum of a file in a container, None if it is missing
+
+    :param pod_name: Name of the pod
+    :type pod_name: string
+    :param container: Name of the container within the pod
+    :type container: string
+    :param path: Path of the file within the container
+    :type path: string
+    :return: MD5 sum of the file
+    :rtype: string or None
+    """
+    result = podified.execute_in_pod(
+        pod_name, f'if [ -e {path} ]; then md5sum {path}; fi', container)
+    output = result.out().split()
+    return output[0] if output else None
 
 
 def has_podman():
