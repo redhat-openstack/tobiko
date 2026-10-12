@@ -21,7 +21,7 @@ import testtools
 
 import tobiko
 from tobiko import podified
-from tobiko.tests.faults.containers import container_ops
+from tobiko.tests.sanity.neutron import container_ops
 
 
 LOG = log.getLogger(__name__)
