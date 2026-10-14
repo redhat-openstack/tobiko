@@ -104,12 +104,10 @@ class PodmanClientFixture(tobiko.SharedFixture):
             sudo chmod -R o=wxr /etc/tmpfiles.d && \
             sudo echo 'd /run/podman 0770 root {username}' >  \
             /etc/tmpfiles.d/podman.conf && \
-            sudo cp /lib/systemd/system/{podman_service} \
-            /etc/systemd/system/{podman_service} && \
-            sudo crudini --set /etc/systemd/system/{podman_service} Socket  \
-            SocketMode 0660 && \
-            sudo crudini --set /etc/systemd/system/{podman_service} Socket  \
-            SocketGroup podman && \
+            sudo mkdir -p /etc/systemd/system/{podman_service}.d && \
+            printf '[Socket]\\nSocketMode=0660\\nSocketGroup=podman\\n' | \
+            sudo tee /etc/systemd/system/{podman_service}.d/tobiko.conf \
+            > /dev/null && \
             sudo systemctl daemon-reload && \
             sudo systemd-tmpfiles --create && \
             sudo systemctl enable --now {podman_service} && \
