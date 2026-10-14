@@ -17,6 +17,7 @@ from __future__ import absolute_import
 from oslo_log import log
 import testtools
 
+import tobiko
 from tobiko import podified
 from tobiko.shell import sh
 from tobiko.tests.sanity.neutron import container_ops
@@ -144,11 +145,14 @@ class PodifiedConfigurationFilesTest(testtools.TestCase):
                     f'Invalid config directory of {container} container of '
                     f'{node.name} node')
 
-    def check_pod_config(self, pod_name, container):
-        """Verify the files copied by kolla match their source"""
+    def check_pod_config(self, pod_name, container, copies, mounts):
+        """Verify the config files of a pod container are up to date
+
+        Files copied by kolla at start must match their source, and files
+        mounted from a Secret key must match the current Secret content.
+        """
         verified = True
-        for source, dest in container_ops.get_pod_kolla_config_files(
-                pod_name, container):
+        for source, dest in copies:
             source_md5 = container_ops.get_pod_file_md5(
                 pod_name, container, source)
             if source_md5 is None:
@@ -159,14 +163,33 @@ class PodifiedConfigurationFilesTest(testtools.TestCase):
                 LOG.error(f'{pod_name}: {dest} of {container} container '
                           f'differs from {source}')
                 verified = False
+        for secret_name, key, path in mounts:
+            secret_md5 = container_ops.get_secret_md5(secret_name, key)
+            file_md5 = container_ops.get_pod_file_md5(
+                pod_name, container, path)
+            if secret_md5 != file_md5:
+                LOG.error(f'{pod_name}: {path} of {container} container '
+                          f'differs from {key} of {secret_name} secret')
+                verified = False
         return verified
 
     def test_neutron_pod_config_files(self):
         pods = podified.get_pods(labels={'service': 'neutron'})
         self.assertNotEqual([], pods, 'No neutron pods found')
+        checked = False
         for pod in pods:
             for container in pod.model.spec.containers:
+                copies = container_ops.get_pod_kolla_config_files(
+                    pod.name(), container.name)
+                mounts = container_ops.get_pod_secret_mounts(
+                    pod, container.name)
+                if not copies and not mounts:
+                    continue
+                checked = True
                 self.assertTrue(
-                    self.check_pod_config(pod.name(), container.name),
+                    self.check_pod_config(pod.name(), container.name,
+                                          copies, mounts),
                     f'Invalid config files of {container.name} container '
                     f'of {pod.name()} pod')
+        if not checked:
+            tobiko.skip_test('No config file to check in neutron pods')

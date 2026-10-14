@@ -14,6 +14,8 @@
 #    under the License.
 from __future__ import absolute_import
 
+import base64
+import hashlib
 import json
 import random
 import re
@@ -500,12 +502,16 @@ def get_pod_kolla_config_files(pod_name, container):
     :type pod_name: string
     :param container: Name of the container within the pod
     :type container: string
-    :return: Source and destination of every file copied, globs excluded
+    :return: Source and destination of every file copied, globs excluded,
+        empty if the container is not started by kolla
     :rtype: list of tuples of strings
     """
+    path = '/var/lib/kolla/config_files/config.json'
     result = podified.execute_in_pod(
-        pod_name, 'cat /var/lib/kolla/config_files/config.json', container)
-    config_files = json.loads(result.out())['config_files']
+        pod_name, f'if [ -e {path} ]; then cat {path}; fi', container)
+    if not result.out().strip():
+        return []
+    config_files = json.loads(result.out()).get('config_files', [])
     return [(f['source'], f['dest']) for f in config_files
             if '*' not in f['source']]
 
@@ -526,6 +532,56 @@ def get_pod_file_md5(pod_name, container, path):
         pod_name, f'if [ -e {path} ]; then md5sum {path}; fi', container)
     output = result.out().split()
     return output[0] if output else None
+
+
+def get_pod_secret_mounts(pod, container):
+    """Return the files of a pod container mounted from a Secret key
+
+    :param pod: Pod to inspect
+    :type pod: class: openshift_client.APIObject
+    :param container: Name of the container within the pod
+    :type container: string
+    :return: Secret name, Secret key and mount path of every such file
+    :rtype: list of tuples of strings
+    """
+    spec = pod.as_dict()['spec']
+    secret_keys = {}
+    for volume in spec.get('volumes', []):
+        secret = volume.get('secret')
+        if secret:
+            paths = {item['path']: item['key']
+                     for item in secret.get('items', [])}
+            secret_keys[volume['name']] = (secret['secretName'], paths)
+    mounts = []
+    for pod_container in spec['containers']:
+        if pod_container['name'] != container:
+            continue
+        for mount in pod_container.get('volumeMounts', []):
+            sub_path = mount.get('subPath')
+            if not sub_path or mount['name'] not in secret_keys:
+                continue
+            secret_name, paths = secret_keys[mount['name']]
+            mounts.append((secret_name, paths.get(sub_path, sub_path),
+                           mount['mountPath']))
+    return mounts
+
+
+def get_secret_md5(secret_name, key):
+    """Return the MD5 sum of a Secret key, None if it is missing
+
+    :param secret_name: Name of the Secret
+    :type secret_name: string
+    :param key: Key within the Secret
+    :type key: string
+    :return: MD5 sum of the decoded value of the key
+    :rtype: string or None
+    """
+    secret = podified.get_secret(secret_name)
+    data = (secret or {}).get('data') or {}
+    if key not in data:
+        return None
+    return hashlib.md5(base64.b64decode(data[key]),
+                       usedforsecurity=False).hexdigest()
 
 
 def has_podman():
