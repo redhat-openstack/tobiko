@@ -168,7 +168,7 @@ class DisruptPodifiedNodesTest(testtools.TestCase):
         rotate_galera_root_password.rotate_galera_root_password()
         PodifiedCloudHealthCheck.run_after()
 
-    def test_hard_reboot_ocp_node(self):
+    def test_z99_hard_reboot_ocp_node(self):
         """Temporary test — remove once the VIP-based tests below are ready."""
         node = random.choice(cloud_disruptions.get_ocp_controller_nodes())
         PodifiedCloudHealthCheck.run_before()
@@ -177,43 +177,43 @@ class DisruptPodifiedNodesTest(testtools.TestCase):
         PodifiedCloudHealthCheck.run_after()
 
     @testtools.skip("VIP-based node selection not yet implemented")
-    def test_hard_reboot_ocp_node_main_vip(self):
+    def test_z99_hard_reboot_ocp_node_main_vip(self):
         PodifiedCloudHealthCheck.run_before()
         cloud_disruptions.hard_reboot_ocp_node_main_vip()
         PodifiedCloudHealthCheck.run_after()
 
     @testtools.skip("VIP-based node selection not yet implemented")
-    def test_hard_reboot_ocp_nodes_non_main_vip(self):
+    def test_z99_hard_reboot_ocp_nodes_non_main_vip(self):
         PodifiedCloudHealthCheck.run_before()
         cloud_disruptions.hard_reboot_ocp_nodes_non_main_vip()
         PodifiedCloudHealthCheck.run_after()
 
     @testtools.skip("VIP-based node selection not yet implemented")
-    def test_soft_reboot_ocp_node_main_vip(self):
+    def test_z99_soft_reboot_ocp_node_main_vip(self):
         PodifiedCloudHealthCheck.run_before()
         cloud_disruptions.soft_reboot_ocp_node_main_vip()
         PodifiedCloudHealthCheck.run_after()
 
     @testtools.skip("VIP-based node selection not yet implemented")
-    def test_soft_reboot_ocp_nodes_non_main_vip(self):
+    def test_z99_soft_reboot_ocp_nodes_non_main_vip(self):
         PodifiedCloudHealthCheck.run_before()
         cloud_disruptions.soft_reboot_ocp_nodes_non_main_vip()
         PodifiedCloudHealthCheck.run_after()
 
     @testtools.skip("VIP-based node selection not yet implemented")
-    def test_crash_ocp_node_main_vip(self):
+    def test_z99_crash_ocp_node_main_vip(self):
         PodifiedCloudHealthCheck.run_before()
         cloud_disruptions.crash_ocp_node_main_vip()
         PodifiedCloudHealthCheck.run_after()
 
     @testtools.skip("VIP-based node selection not yet implemented")
-    def test_crash_ocp_nodes_non_main_vip(self):
+    def test_z99_crash_ocp_nodes_non_main_vip(self):
         PodifiedCloudHealthCheck.run_before()
         cloud_disruptions.crash_ocp_nodes_non_main_vip()
         PodifiedCloudHealthCheck.run_after()
 
     @podified.skip_if_compact_ocp_cluster
-    def test_hard_reboot_all_ocp_nodes(self):
+    def test_z99_hard_reboot_all_ocp_nodes(self):
         PodifiedCloudHealthCheck.run_before()
         cloud_disruptions.hard_reboot_all_ocp_nodes()
         PodifiedCloudHealthCheck.run_after()
