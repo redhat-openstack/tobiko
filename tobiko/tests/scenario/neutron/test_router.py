@@ -99,6 +99,7 @@ class RouterTest(testtools.TestCase):
                       self.stack.network_stack.ipv6_gateway_addresses)
 
     @pytest.mark.flaky(reruns=3, reruns_delay=60)
+    @neutron.skip_unless_is_ovs()
     @neutron.skip_if_missing_networking_extensions('l3_agent_scheduler')
     def test_router_is_scheduled_on_l3_agents(self):
         router = self.router
@@ -109,7 +110,14 @@ class RouterTest(testtools.TestCase):
                                                             unique=True)
         self._check_routers_namespace_on_host(router_agent['host'])
 
+    @neutron.skip_unless_is_ovs()
     def _check_routers_namespace_on_host(self, hostname, state="master"):
+        """Check router namespaces exist on the host where it is scheduled
+
+        Router network namespaces (qrouter-*/snat-*) are only created by
+        the OVS L3 agent. With ML2/OVN routing is implemented by OVN
+        itself and no router namespace is created on the hosts.
+        """
         namespace_ips = self._get_router_ips_from_namespaces(hostname)
         missing_ips = set(self.router_ips) - set(namespace_ips)
         if state == "master":
@@ -142,6 +150,7 @@ class L3HARouterTest(RouterTest):
     #: Resources stack with Nova server to send messages to
     stack = tobiko.required_fixture(stacks.L3haServerStackFixture)
 
+    @neutron.skip_unless_is_ovs()
     @neutron.skip_if_missing_networking_extensions('l3_agent_scheduler')
     def test_router_is_scheduled_on_l3_agents(self):
         master_agent, backup_agents = (
