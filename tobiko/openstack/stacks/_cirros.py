@@ -35,7 +35,7 @@ CONF = config.CONF
 CIRROS_IMAGE_VERSION = '0.5.2'
 
 CIRROS_IMAGE_URL = (
-    'http://download.cirros-cloud.net/{version}/'
+    'https://download.cirros-cloud.net/{version}/'
     'cirros-{version}-x86_64-disk.img').format(
     version=CIRROS_IMAGE_VERSION)
 
