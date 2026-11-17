@@ -33,8 +33,8 @@ LOG = log.getLogger(__name__)
 CONF = config.CONF
 
 
-def _has_ipv6_vip(lb: typing.Any) -> bool:
-    return _client.find_ipv6_vip_on_load_balancer(lb) is not None
+def _has_dual_stack_vips(lb: typing.Any) -> bool:
+    return _client.has_dual_stack_vips_on_load_balancer(lb)
 
 
 def wait_for_status(object_id: str,
@@ -108,25 +108,26 @@ def wait_for_load_balancer(
         attempt.check_limits()
 
 
-def wait_for_ipv6_additional_vip(lb_id: str) -> typing.Optional[typing.Any]:
-    """Wait until the load balancer has an allocated IPv6 additional VIP.
+def wait_for_dual_stack_vips(lb_id: str) -> typing.Optional[typing.Any]:
+    """Wait until the load balancer has allocated IPv4 and IPv6 VIPs.
 
-    :returns: Load balancer when an IPv6 ``additional_vips`` address exists,
-        or ``None`` if the timeout is reached (caller should fail the test).
+    :returns: Load balancer when the primary and additional VIPs include both
+        IP versions, or ``None`` if the timeout is reached (caller should fail
+        the test).
     """
     try:
         return wait_for_load_balancer(
             lb_id,
-            ready=_has_ipv6_vip,
+            ready=_has_dual_stack_vips,
             waiting_log=lambda: (
-                'Waiting for IPv6 additional VIP on load balancer %s...'
+                'Waiting for IPv4 and IPv6 VIPs on load balancer %s...'
                 % lb_id),
         )
     except tobiko.RetryTimeLimitError:
         timeout = CONF.tobiko.octavia.check_timeout
         lb = get_load_balancer(lb_id)
         LOG.warning(
-            'IPv6 additional VIP not allocated on load balancer %s after %ss; '
+            'IPv4 and IPv6 VIPs not allocated on load balancer %s after %ss; '
             'additional_vips=%r provisioning_status=%s vip_address=%s',
             lb_id,
             timeout,

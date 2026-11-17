@@ -53,21 +53,21 @@ def get_external_subnet(ip_version=4):
     LOG.warning('External subnet with IP version %d not found', ip_version)
 
 
-def has_dual_stack_external_network() -> bool:
-    """Return True if the external network has IPv4 and IPv6 subnets."""
-    v4_subnet = get_external_subnet(4)
-    if v4_subnet is None:
-        return False
-    v6_subnet = get_external_subnet(6)
-    if v6_subnet is None:
-        return False
-    return v4_subnet['network_id'] == v6_subnet['network_id']
+def has_dual_stack_tenant_network() -> bool:
+    """Return True if tenant networks get both IPv4 and IPv6 subnets.
+
+    Tobiko tenant networks (see ``stacks.NetworkStackFixture``) get an IPv4
+    and an IPv6 subnet on the same network when both
+    ``tobiko.neutron.ipv4_cidr`` and ``tobiko.neutron.ipv6_cidr`` are set.
+    """
+    return bool(CONF.tobiko.neutron.ipv4_cidr and
+                CONF.tobiko.neutron.ipv6_cidr)
 
 
-skip_unless_has_dual_stack_external = tobiko.skip_unless(
-    'Dual-stack external network (IPv4 and IPv6 on the same network) '
+skip_unless_has_dual_stack_tenant = tobiko.skip_unless(
+    'Dual-stack tenant network (IPv4 and IPv6 subnets on the same network) '
     'not available',
-    has_dual_stack_external_network)
+    has_dual_stack_tenant_network)
 
 
 skip_unless_lb_supports_additional_vips = tobiko.skip_unless(
@@ -78,19 +78,25 @@ skip_unless_lb_supports_additional_vips = tobiko.skip_unless(
 
 def ipv6_vip_from_load_balancer(
         lb: typing.Any) -> typing.Optional[str]:
-    """Return the IPv6 address from an LB's ``additional_vips`` (if any)."""
+    """Return the IPv6 address from an LB's primary or additional VIPs."""
     return _client.find_ipv6_vip_on_load_balancer(lb)
 
 
-def _create_dual_stack_ovn_load_balancer(lb_name: str,
-                                         provider: str) -> typing.Any:
-    v4_subnet = get_external_subnet(4)
-    v6_subnet = get_external_subnet(6)
+def ipv4_vip_from_load_balancer(
+        lb: typing.Any) -> typing.Optional[str]:
+    """Return the IPv4 address from an LB's primary or additional VIPs."""
+    return _client.find_ipv4_vip_on_load_balancer(lb)
+
+
+def _create_dual_stack_ovn_load_balancer(
+        lb_name: str,
+        provider: str,
+        vip_subnet_id: str,
+        additional_vip_subnet_id: str) -> typing.Any:
     lb_kwargs = {
         'provider': provider,
-        'vip_network_id': v4_subnet['network_id'],
-        'vip_subnet_id': v4_subnet['id'],
-        'additional_vips': [{'subnet_id': v6_subnet['id']}],
+        'vip_subnet_id': vip_subnet_id,
+        'additional_vips': [{'subnet_id': additional_vip_subnet_id}],
         'name': lb_name,
     }
     lb = octavia.create_load_balancer(lb_kwargs)
@@ -100,26 +106,41 @@ def _create_dual_stack_ovn_load_balancer(lb_name: str,
     return lb
 
 
-def ensure_dual_stack_ovn_load_balancer(lb_name: str,
-                                        provider: str) -> typing.Any:
+def ensure_dual_stack_ovn_load_balancer(
+        lb_name: str,
+        provider: str,
+        vip_subnet_id: str,
+        additional_vip_subnet_id: str) -> typing.Any:
+    """Find or create a dual-stack OVN load balancer.
+
+    :param vip_subnet_id: subnet where the primary VIP is allocated
+    :param additional_vip_subnet_id: subnet where the additional VIP is
+        allocated; it must be on the same network, and the subnets together
+        must provide IPv4 and IPv6
+    """
     lb = octavia.find_load_balancer(lb_name)
     if lb is None:
-        return _create_dual_stack_ovn_load_balancer(lb_name, provider)
+        return _create_dual_stack_ovn_load_balancer(
+            lb_name, provider,
+            vip_subnet_id=vip_subnet_id,
+            additional_vip_subnet_id=additional_vip_subnet_id)
     lb = octavia.get_load_balancer(lb.id)
-    if _client.find_ipv6_vip_on_load_balancer(lb) is not None:
-        LOG.debug('Loadbalancer %s already exists with IPv6 additional VIP. '
+    if _client.has_dual_stack_vips_on_load_balancer(lb):
+        LOG.debug('Loadbalancer %s already has IPv4 and IPv6 VIPs. '
                   'Skipping its creation', lb.id)
         return lb
     lb_id = lb.id
     LOG.debug(
-        'Existing load balancer %s (%s) has no IPv6 additional VIP yet; '
+        'Existing load balancer %s (%s) does not have both IPv4 and IPv6 '
+        'VIPs yet; '
         'waiting for allocation', lb_name, lb_id)
-    lb = _waiters.wait_for_ipv6_additional_vip(lb_id)
+    lb = _waiters.wait_for_dual_stack_vips(lb_id)
     if lb is not None:
         return lb
     lb = octavia.get_load_balancer(lb_id)
     tobiko.fail(
-        'Existing load balancer %s (%s) has no IPv6 additional VIP after '
+        'Existing load balancer %s (%s) does not have both IPv4 and IPv6 '
+        'VIPs after '
         'waiting; additional_vips=%r provisioning_status=%s'
         % (lb_name, lb_id, getattr(lb, 'additional_vips', None),
            getattr(lb, 'provisioning_status', None)))
@@ -331,22 +352,32 @@ def deploy_ipv4_ovn_lb(protocol: str = _constants.PROTOCOL_TCP,
 
 @tobiko.interworker_synched('deploy_dual_stack_ovn_lb')
 def deploy_dual_stack_ovn_lb(
+        vip_subnet_id: str,
+        additional_vip_subnet_id: str,
         protocol: str = _constants.PROTOCOL_TCP,
         protocol_port: int = 80,
         lb_algorithm: str = _constants.LB_ALGORITHM_SOURCE_IP_PORT,
         servers_stacks=None):
-    """Deploy OVN LB with IPv4 primary VIP and IPv6 additional VIP.
+    """Deploy OVN LB with one IPv4 and one IPv6 VIP.
 
-    Adds both IPv4 and IPv6 members for each server stack so that the IPv4
-    VIP routes to IPv4 members and the IPv6 VIP routes to IPv6 members.
-    OVN requires VIP and member addresses to be the same address family.
-    Requires a dual-stack external network (see
-    :func:`has_dual_stack_external_network`).
+    The primary and additional VIP can use either address family, as long as
+    the load balancer has one IPv4 VIP and one IPv6 VIP. Adds both IPv4 and
+    IPv6 members for each server stack so VIP traffic routes to members using
+    the same address family. OVN requires VIP and member addresses to be the
+    same address family.
 
-    Reuses an existing load balancer when it already has an IPv6 additional
-    VIP, or waits for IPv6 VIP allocation on an existing LB. The dual-stack
-    traffic test also waits after deploy.
+    The VIPs are allocated on the given subnets, which are expected to be
+    the IPv4 and IPv6 subnets of a dual-stack tenant network (see
+    :func:`has_dual_stack_tenant_network`), so the LB does not depend on the
+    external (provider) network being dual-stack.
 
+    Reuses an existing load balancer when it already has both address
+    families allocated, or waits for both VIPs on an existing LB. The
+    dual-stack traffic test also waits after deploy.
+
+    :param vip_subnet_id: subnet for the primary VIP
+    :param additional_vip_subnet_id: subnet for the additional VIP; the two
+        subnets must provide one IPv4 and one IPv6 VIP
     :returns: ``(load_balancer, listener, pool)`` with refreshed LB including
         allocated ``additional_vips``.
     """
@@ -357,7 +388,10 @@ def deploy_dual_stack_ovn_lb(
     member_v6_prefix = _constants.MEMBER_OVN_DUAL_V6_NAME_PREFIX
     provider = octavia.OVN_PROVIDER
 
-    lb = ensure_dual_stack_ovn_load_balancer(lb_name, provider)
+    lb = ensure_dual_stack_ovn_load_balancer(
+        lb_name, provider,
+        vip_subnet_id=vip_subnet_id,
+        additional_vip_subnet_id=additional_vip_subnet_id)
 
     listener = octavia.find_listener(listener_name)
     if listener:
@@ -430,10 +464,10 @@ def deploy_dual_stack_ovn_lb(
                 LOG.debug('IPv6 member %s was deployed successfully with '
                           'id %s', member_v6.name, member_v6.id)
 
-    refreshed = _waiters.wait_for_ipv6_additional_vip(lb.id)
+    refreshed = _waiters.wait_for_dual_stack_vips(lb.id)
     if refreshed is None:
         tobiko.fail(
-            'Octavia OVN did not allocate an IPv6 additional VIP on load '
+            'Octavia OVN did not allocate both IPv4 and IPv6 VIPs on load '
             'balancer %s (id=%s)' % (lb_name, lb.id))
     lb = refreshed
     return lb, listener, pool

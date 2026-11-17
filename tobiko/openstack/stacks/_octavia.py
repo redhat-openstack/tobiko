@@ -30,3 +30,15 @@ class OctaviaServerStackFixture(_advanced_vm.AdvancedServerStackFixture):
 
 class OctaviaOtherServerStackFixture(OctaviaServerStackFixture):
     pass
+
+
+class OctaviaClientServerStackFixture(
+        _advanced_vm.AdvancedServerStackFixture):
+    """Client server used to send traffic to Octavia VIPs from a tenant network
+
+    It is attached to the same tenant network as the backend servers and,
+    unlike them, it gets a floating IP so that tobiko can reach it over SSH.
+    Traffic to the load balancer VIPs is sent from its fixed IPv4/IPv6
+    addresses, so the VIPs do not need to be reachable from outside the
+    cloud. It is not added as a pool member.
+    """

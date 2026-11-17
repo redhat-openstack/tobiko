@@ -241,10 +241,9 @@ class FindIpv6VipOnLoadBalancerTest(testtools.TestCase):
             '2001:db8::2')
 
     def test_skips_ipv4_uses_next(self):
-        lb = SimpleNamespace(additional_vips=[
-            {'ip_address': '203.0.113.1'},
-            {'ip_address': '2001:db8::3'},
-        ])
+        lb = SimpleNamespace(
+            vip_address='2001:db8::3',
+            additional_vips=[{'ip_address': '203.0.113.1'}])
         self.assertEqual(
             _client.find_ipv6_vip_on_load_balancer(lb),
             '2001:db8::3')

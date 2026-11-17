@@ -88,6 +88,7 @@ CloudInitServerStackFixture = _nova.CloudInitServerStackFixture
 # Octavia resources: backend servers
 OctaviaServerStackFixture = _octavia.OctaviaServerStackFixture
 OctaviaOtherServerStackFixture = _octavia.OctaviaOtherServerStackFixture
+OctaviaClientServerStackFixture = _octavia.OctaviaClientServerStackFixture
 
 QosNetworkStackFixture = _qos.QosNetworkStackFixture
 QosPolicyStackFixture = _qos.QosPolicyStackFixture

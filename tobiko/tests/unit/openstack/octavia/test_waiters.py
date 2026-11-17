@@ -23,7 +23,7 @@ import tobiko
 from tobiko.openstack.octavia import _waiters
 
 
-class WaitForIpv6AdditionalVipTest(testtools.TestCase):
+class WaitForDualStackVipsTest(testtools.TestCase):
 
     @mock.patch.object(_waiters, 'wait_for_load_balancer')
     def test_timeout_returns_none(self, wait_for_lb):
@@ -36,7 +36,7 @@ class WaitForIpv6AdditionalVipTest(testtools.TestCase):
         )
         with mock.patch.object(_waiters, 'get_load_balancer',
                                return_value=lb) as get_lb:
-            result = _waiters.wait_for_ipv6_additional_vip('lb-1')
+            result = _waiters.wait_for_dual_stack_vips('lb-1')
 
         self.assertIsNone(result)
         wait_for_lb.assert_called_once()
@@ -47,7 +47,7 @@ class WaitForIpv6AdditionalVipTest(testtools.TestCase):
         lb = SimpleNamespace(id='lb-1')
         wait_for_lb.return_value = lb
         self.assertIs(
-            _waiters.wait_for_ipv6_additional_vip('lb-1'), lb)
+            _waiters.wait_for_dual_stack_vips('lb-1'), lb)
 
 
 class WaitForOvnServiceMonitorStatusTest(testtools.TestCase):

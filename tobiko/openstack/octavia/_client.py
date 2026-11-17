@@ -13,6 +13,7 @@
 #    under the License.
 from __future__ import absolute_import
 
+import ipaddress
 import typing
 
 from octaviaclient.api.v2 import octavia
@@ -209,17 +210,53 @@ def has_lb_additional_vips_support() -> bool:
                 max_version, min_version=LB_ADDITIONAL_VIPS_API_VERSION))
 
 
+def _get_value(obj: typing.Any, key: str) -> typing.Any:
+    if isinstance(obj, dict):
+        return obj.get(key)
+    return getattr(obj, key, None)
+
+
+def _load_balancer_vip_addresses(lb: typing.Any) -> typing.List[str]:
+    addresses = []
+    vip_address = _get_value(lb, 'vip_address')
+    if vip_address:
+        addresses.append(str(vip_address))
+
+    for entry in _get_value(lb, 'additional_vips') or []:
+        address = _get_value(entry, 'ip_address')
+        if address:
+            addresses.append(str(address))
+
+    return addresses
+
+
+def _ip_version(address: str) -> typing.Optional[int]:
+    try:
+        return ipaddress.ip_address(address).version
+    except ValueError:
+        return None
+
+
 def find_ipv6_vip_on_load_balancer(lb: typing.Any) -> typing.Optional[str]:
-    """Return the IPv6 address from ``additional_vips``, or None."""
-    additional = getattr(lb, 'additional_vips', None) or []
-    for entry in additional:
-        if isinstance(entry, dict):
-            addr = entry.get('ip_address')
-        else:
-            addr = getattr(entry, 'ip_address', None)
-        if not addr:
-            continue
-        addr = str(addr)
-        if ':' in addr:
-            return addr
+    """Return the IPv6 address from the primary or additional VIPs."""
+    for address in _load_balancer_vip_addresses(lb):
+        if _ip_version(address) == 6:
+            return address
     return None
+
+
+def find_ipv4_vip_on_load_balancer(lb: typing.Any) -> typing.Optional[str]:
+    """Return the IPv4 address from the primary or additional VIPs."""
+    for address in _load_balancer_vip_addresses(lb):
+        if _ip_version(address) == 4:
+            return address
+    return None
+
+
+def has_dual_stack_vips_on_load_balancer(lb: typing.Any) -> bool:
+    """Return True when the primary and additional VIPs include both IP
+    versions.
+    """
+    ip_versions = {_ip_version(address)
+                   for address in _load_balancer_vip_addresses(lb)}
+    return {4, 6}.issubset(ip_versions)

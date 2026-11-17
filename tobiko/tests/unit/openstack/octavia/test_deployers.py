@@ -25,37 +25,57 @@ from tobiko.openstack.octavia import _deployers
 from tobiko.openstack.octavia import _waiters
 
 
-class HasDualStackExternalNetworkTest(testtools.TestCase):
+SUBNETS = {'vip_subnet_id': 'tenant-v4',
+           'additional_vip_subnet_id': 'tenant-v6'}
+
+
+def _fake_conf(ipv4_cidr=None, ipv6_cidr=None):
+    neutron_conf = SimpleNamespace(ipv4_cidr=ipv4_cidr, ipv6_cidr=ipv6_cidr)
+    return SimpleNamespace(tobiko=SimpleNamespace(neutron=neutron_conf))
+
+
+class HasDualStackTenantNetworkTest(testtools.TestCase):
+
+    def _has_dual_stack(self, **kwargs):
+        with mock.patch.object(_deployers, 'CONF', _fake_conf(**kwargs)):
+            return _deployers.has_dual_stack_tenant_network()
+
+    def test_true_when_ipv4_and_ipv6_cidrs(self):
+        self.assertTrue(self._has_dual_stack(ipv4_cidr='10.100.0.0/16',
+                                             ipv6_cidr='fc00::/48'))
+
+    def test_false_when_no_ipv6_cidr(self):
+        self.assertFalse(self._has_dual_stack(ipv4_cidr='10.100.0.0/16'))
+
+    def test_false_when_empty_ipv6_cidr(self):
+        self.assertFalse(self._has_dual_stack(ipv4_cidr='10.100.0.0/16',
+                                              ipv6_cidr=''))
+
+    def test_false_when_no_ipv4_cidr(self):
+        self.assertFalse(self._has_dual_stack(ipv6_cidr='fc00::/48'))
+
+
+class CreateDualStackOvnLoadBalancerTest(testtools.TestCase):
 
     @mock.patch.object(_deployers, 'get_external_subnet')
-    def test_true_when_both_subnets_same_network(self, get_subnet):
-        get_subnet.side_effect = [
-            {'id': 'v4', 'network_id': 'net-1'},
-            {'id': 'v6', 'network_id': 'net-1'},
-        ]
-        self.assertTrue(_deployers.has_dual_stack_external_network())
-
-    @mock.patch.object(_deployers, 'get_external_subnet')
-    def test_false_when_no_ipv4_subnet(self, get_subnet):
-        get_subnet.return_value = None
-        self.assertFalse(_deployers.has_dual_stack_external_network())
-        get_subnet.assert_called_once_with(4)
-
-    @mock.patch.object(_deployers, 'get_external_subnet')
-    def test_false_when_no_ipv6_subnet(self, get_subnet):
-        get_subnet.side_effect = [
-            {'id': 'v4', 'network_id': 'net-1'},
-            None,
-        ]
-        self.assertFalse(_deployers.has_dual_stack_external_network())
-
-    @mock.patch.object(_deployers, 'get_external_subnet')
-    def test_false_when_subnets_on_different_networks(self, get_subnet):
-        get_subnet.side_effect = [
-            {'id': 'v4', 'network_id': 'net-1'},
-            {'id': 'v6', 'network_id': 'net-2'},
-        ]
-        self.assertFalse(_deployers.has_dual_stack_external_network())
+    @mock.patch.object(_deployers.octavia, 'wait_for_status')
+    @mock.patch.object(_deployers.octavia, 'create_load_balancer')
+    @mock.patch.object(_deployers.octavia, 'find_load_balancer')
+    def test_vips_on_given_tenant_subnets(self, find_lb, create_lb,
+                                          wait_status, get_ext_subnet):
+        find_lb.return_value = None
+        create_lb.return_value = SimpleNamespace(id='lb-1', name='dual-lb')
+        result = _deployers.ensure_dual_stack_ovn_load_balancer(
+            'dual-lb', 'ovn', **SUBNETS)
+        self.assertEqual(result, create_lb.return_value)
+        create_lb.assert_called_once_with({
+            'provider': 'ovn',
+            'vip_subnet_id': 'tenant-v4',
+            'additional_vips': [{'subnet_id': 'tenant-v6'}],
+            'name': 'dual-lb',
+        })
+        wait_status.assert_called_once_with(object_id='lb-1')
+        get_ext_subnet.assert_not_called()
 
 
 class EnsureDualStackOvnLoadBalancerTest(testtools.TestCase):
@@ -66,31 +86,31 @@ class EnsureDualStackOvnLoadBalancerTest(testtools.TestCase):
         find_lb.return_value = None
         create_lb.return_value = SimpleNamespace(id='new-lb')
         result = _deployers.ensure_dual_stack_ovn_load_balancer(
-            'dual-lb', 'ovn')
+            'dual-lb', 'ovn', **SUBNETS)
         self.assertEqual(result, create_lb.return_value)
-        create_lb.assert_called_once_with('dual-lb', 'ovn')
+        create_lb.assert_called_once_with('dual-lb', 'ovn', **SUBNETS)
 
-    @mock.patch.object(_client, 'find_ipv6_vip_on_load_balancer')
+    @mock.patch.object(_client, 'has_dual_stack_vips_on_load_balancer')
     @mock.patch.object(_deployers.octavia, 'get_load_balancer')
     @mock.patch.object(_deployers.octavia, 'find_load_balancer')
-    def test_reuses_lb_with_ipv6_vip(
-            self, find_lb, get_lb, find_vip):
+    def test_reuses_lb_with_ipv4_and_ipv6_vips(
+            self, find_lb, get_lb, has_dual_stack_vips):
         find_lb.return_value = SimpleNamespace(id='lb-1')
-        lb = SimpleNamespace(id='lb-1', additional_vips=[
-            {'ip_address': '2001:db8::1'},
-        ])
+        lb = SimpleNamespace(
+            id='lb-1', vip_address='2001:db8::1',
+            additional_vips=[{'ip_address': '203.0.113.1'}])
         get_lb.return_value = lb
-        find_vip.return_value = '2001:db8::1'
+        has_dual_stack_vips.return_value = True
         result = _deployers.ensure_dual_stack_ovn_load_balancer(
-            'dual-lb', 'ovn')
+            'dual-lb', 'ovn', **SUBNETS)
         self.assertEqual(result, lb)
 
-    @mock.patch.object(_waiters, 'wait_for_ipv6_additional_vip')
-    @mock.patch.object(_client, 'find_ipv6_vip_on_load_balancer')
+    @mock.patch.object(_waiters, 'wait_for_dual_stack_vips')
+    @mock.patch.object(_client, 'has_dual_stack_vips_on_load_balancer')
     @mock.patch.object(_deployers.octavia, 'get_load_balancer')
     @mock.patch.object(_deployers.octavia, 'find_load_balancer')
-    def test_waits_when_existing_lb_has_no_ipv6_vip_yet(
-            self, find_lb, get_lb, find_vip, wait_ipv6):
+    def test_waits_when_existing_lb_has_no_dual_stack_vips_yet(
+            self, find_lb, get_lb, has_dual_stack_vips, wait_dual_stack):
         find_lb.return_value = SimpleNamespace(id='lb-1')
         stale_lb = SimpleNamespace(
             id='lb-1',
@@ -98,25 +118,25 @@ class EnsureDualStackOvnLoadBalancerTest(testtools.TestCase):
             provisioning_status='ACTIVE',
         )
         ready_lb = SimpleNamespace(
-            id='lb-1',
-            additional_vips=[{'ip_address': '2001:db8::1'}],
-            provisioning_status='ACTIVE',
-        )
+            id='lb-1', vip_address='2001:db8::1',
+            additional_vips=[{'ip_address': '203.0.113.1'}],
+            provisioning_status='ACTIVE')
         get_lb.return_value = stale_lb
-        find_vip.return_value = None
-        wait_ipv6.return_value = ready_lb
+        has_dual_stack_vips.return_value = False
+        wait_dual_stack.return_value = ready_lb
         result = _deployers.ensure_dual_stack_ovn_load_balancer(
-            'dual-lb', 'ovn')
+            'dual-lb', 'ovn', **SUBNETS)
         self.assertEqual(result, ready_lb)
-        wait_ipv6.assert_called_once_with('lb-1')
+        wait_dual_stack.assert_called_once_with('lb-1')
 
     @mock.patch.object(_deployers, '_create_dual_stack_ovn_load_balancer')
-    @mock.patch.object(_waiters, 'wait_for_ipv6_additional_vip')
-    @mock.patch.object(_client, 'find_ipv6_vip_on_load_balancer')
+    @mock.patch.object(_waiters, 'wait_for_dual_stack_vips')
+    @mock.patch.object(_client, 'has_dual_stack_vips_on_load_balancer')
     @mock.patch.object(_deployers.octavia, 'get_load_balancer')
     @mock.patch.object(_deployers.octavia, 'find_load_balancer')
-    def test_fails_when_existing_lb_has_no_ipv6_vip_after_wait(
-            self, find_lb, get_lb, find_vip, wait_ipv6, create_lb):
+    def test_fails_when_existing_lb_has_no_dual_stack_vips_after_wait(
+            self, find_lb, get_lb, has_dual_stack_vips, wait_dual_stack,
+            create_lb):
         find_lb.return_value = SimpleNamespace(id='lb-1')
         stale_lb = SimpleNamespace(
             id='lb-1',
@@ -124,14 +144,15 @@ class EnsureDualStackOvnLoadBalancerTest(testtools.TestCase):
             provisioning_status='ACTIVE',
         )
         get_lb.return_value = stale_lb
-        find_vip.return_value = None
-        wait_ipv6.return_value = None
+        has_dual_stack_vips.return_value = False
+        wait_dual_stack.return_value = None
         ex = self.assertRaises(
             tobiko.FailureException,
             _deployers.ensure_dual_stack_ovn_load_balancer,
-            'dual-lb', 'ovn')
-        self.assertIn('no IPv6 additional VIP after waiting', str(ex))
-        wait_ipv6.assert_called_once_with('lb-1')
+            'dual-lb', 'ovn', **SUBNETS)
+        self.assertIn('not have both IPv4 and IPv6 VIPs after waiting',
+                      str(ex))
+        wait_dual_stack.assert_called_once_with('lb-1')
         create_lb.assert_not_called()
 
 
