@@ -65,4 +65,8 @@ get_pod_names = _openshift.get_pod_names
 assert_ocp_pods_running = _openshift.assert_ocp_pods_running
 wait_for_all_ocp_pods_running = _openshift.wait_for_all_ocp_pods_running
 
+get_openstack_controlplane = _openshift.get_openstack_controlplane
+get_openstack_controlplane_spec = _openshift.get_openstack_controlplane_spec
+patch_openstack_controlplane = _openshift.patch_openstack_controlplane
+
 get_container_runtime_name = containers.get_container_runtime_name

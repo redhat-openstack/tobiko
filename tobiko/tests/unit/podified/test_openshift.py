@@ -106,6 +106,96 @@ class TestAssertControlplaneReady(_case.TobikoUnitTest):
             _openshift.assert_controlplane_ready)
 
 
+class TestGetOpenstackControlplane(_case.TobikoUnitTest):
+    """Tests for get_openstack_controlplane.
+
+    Looks up the OpenStackControlPlane CR via openshift_client. Returns the
+    first object when present; raises OcpControlPlaneNotFound when none.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.mock_oc = mock.patch.object(_openshift, 'oc').start()
+        self.addCleanup(mock.patch.stopall)
+
+    def test_returns_first_controlplane(self):
+        controlplane = mock.Mock()
+        self.mock_oc.selector.return_value.objects.return_value = [
+            controlplane]
+        self.assertIs(
+            controlplane, _openshift.get_openstack_controlplane())
+
+    def test_raises_when_missing(self):
+        self.mock_oc.selector.return_value.objects.return_value = []
+        self.assertRaises(
+            _openshift.OcpControlPlaneNotFound,
+            _openshift.get_openstack_controlplane)
+
+
+class TestGetOpenstackControlplaneSpec(_case.TobikoUnitTest):
+    """Tests for get_openstack_controlplane_spec.
+
+    Convenience wrapper that returns the CR ``spec`` dict, or ``{}`` when
+    ``spec`` is missing.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.mock_get = mock.patch.object(
+            _openshift, 'get_openstack_controlplane').start()
+        self.addCleanup(mock.patch.stopall)
+
+    def test_returns_spec(self):
+        controlplane = mock.Mock()
+        controlplane.as_dict.return_value = {
+            'spec': {'designate': {'enabled': True}}}
+        self.mock_get.return_value = controlplane
+        self.assertEqual(
+            {'designate': {'enabled': True}},
+            _openshift.get_openstack_controlplane_spec())
+
+    def test_returns_empty_when_spec_missing(self):
+        controlplane = mock.Mock()
+        controlplane.as_dict.return_value = {}
+        self.mock_get.return_value = controlplane
+        self.assertEqual({}, _openshift.get_openstack_controlplane_spec())
+
+
+class TestPatchOpenstackControlplane(_case.TobikoUnitTest):
+    """Tests for patch_openstack_controlplane.
+
+    Merge-patches the OpenStackControlPlane CR. On OpenShift API errors the
+    helper raises OcpControlPlanePatchFailed.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.mock_get = mock.patch.object(
+            _openshift, 'get_openstack_controlplane').start()
+        self.mock_oc = mock.patch.object(_openshift, 'oc').start()
+        # Real Exception subclass so "except oc.OpenShiftPythonException" works
+        # while oc itself is mocked.
+        self.openshift_error = type(
+            'OpenShiftPythonException', (Exception,), {})
+        self.mock_oc.OpenShiftPythonException = self.openshift_error
+        self.controlplane = mock.Mock()
+        self.mock_get.return_value = self.controlplane
+        self.addCleanup(mock.patch.stopall)
+
+    def test_patches_with_merge_strategy(self):
+        patch_body = {'spec': {'designate': {}}}
+        _openshift.patch_openstack_controlplane(patch_body)
+        self.controlplane.patch.assert_called_once_with(
+            patch_body, strategy='merge')
+
+    def test_raises_on_openshift_error(self):
+        self.controlplane.patch.side_effect = self.openshift_error('boom')
+        self.assertRaises(
+            _openshift.OcpControlPlanePatchFailed,
+            _openshift.patch_openstack_controlplane,
+            {'spec': {}})
+
+
 def _make_pod(name, phase, ready=None):
     status: dict = {'phase': phase}
     if ready is not None:

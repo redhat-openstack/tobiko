@@ -187,6 +187,14 @@ class OcpControlPlaneNotReady(tobiko.TobikoException):
     message = "OpenStackControlPlane {name!r} is not Ready"
 
 
+class OcpControlPlaneNotFound(tobiko.TobikoException):
+    message = ("No OpenStackControlPlane in namespace {namespace!r}")
+
+
+class OcpControlPlanePatchFailed(tobiko.TobikoException):
+    message = ("OpenStackControlPlane {strategy}-patch failed: {error}")
+
+
 def assert_controlplane_ready():
     """Assert the OpenStackControlPlane CR reports Ready.
 
@@ -200,6 +208,61 @@ def assert_controlplane_ready():
     if not is_controlplane_ready(cp_obj):
         raise OcpControlPlaneNotReady(name=cp_name)
     LOG.debug(f"OpenStackControlPlane {cp_name!r} is Ready.")
+
+
+def get_openstack_controlplane() -> typing.Any:
+    """Return the OpenStackControlPlane custom resource object.
+
+    Looks up the CR in tobiko.conf ``[podified] osp_project``. Raises
+    :class:`OcpControlPlaneNotFound` if none exists. Same idea as
+    ``oc get openstackcontrolplane -n <namespace>``.
+
+    :return: openshift_client object for the control plane CR.
+    :raises OcpControlPlaneNotFound: when no CR exists in the namespace.
+    """
+    with project_context():
+        controlplanes = oc.selector(OSP_CONTROLPLANE).objects()
+    if not controlplanes:
+        raise OcpControlPlaneNotFound(
+            namespace=CONF.tobiko.podified.osp_project)
+    return controlplanes[0]
+
+
+def get_openstack_controlplane_spec() -> typing.Dict[str, typing.Any]:
+    """Return the OpenStackControlPlane ``spec`` dict.
+
+    Convenience wrapper around :func:`get_openstack_controlplane` for callers
+    that only need ``spec`` (e.g. ``spec.designate``, ``spec.neutron``).
+
+    :return: Spec mapping, or ``{}`` if ``spec`` is missing.
+    """
+    return (get_openstack_controlplane().as_dict().get('spec') or {})
+
+
+def patch_openstack_controlplane(
+        patch_body: typing.Dict[str, typing.Any],
+        strategy: str = 'merge') -> None:
+    """Merge-patch (or otherwise patch) the OpenStackControlPlane CR.
+
+    Used to change service templates under ``spec`` without rewriting the
+    whole CR. Default *strategy* is JSON merge-patch (``null`` deletes a key).
+
+    :param patch_body: Patch document, e.g. ``{'spec': {'designate': ...}}``.
+    :param strategy: Patch strategy passed to openshift_client (default
+        ``merge``).
+    :return: None.
+    :raises OcpControlPlanePatchFailed: when the OpenShift API rejects the
+        patch.
+    """
+    controlplane = get_openstack_controlplane()
+    LOG.info('Patching OpenStackControlPlane %s (strategy=%s)',
+             controlplane.name(), strategy)
+    LOG.debug('patch payload: %s', patch_body)
+    try:
+        controlplane.patch(patch_body, strategy=strategy)
+    except oc.OpenShiftPythonException as exc:
+        raise OcpControlPlanePatchFailed(
+            strategy=strategy, error=exc) from exc
 
 
 def get_dataplane_ssh_keypair():
